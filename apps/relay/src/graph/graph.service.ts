@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import type { CyclicSchedule } from '../bundle/bundle.types';
+import type { CyclicSchedule, DualContact } from '../bundle/bundle.types';
 import type { RelayRuntimeConfig } from '../config';
 import { RELAY_CONFIG } from '../relay.tokens';
 import { edgeKey, emptyGraph, mergeSummary } from './graph-merge';
@@ -77,12 +77,48 @@ export class GraphService {
   }
 
   applyJoin(remote: JoinRemote): void {
+    this.cfg.eidByNode[remote.nodeId] = remote.eid;
     this.upsertDirectPeer(
       remote.nodeId,
       remote.peerUrl,
       { id: remote.nodeId, eid: remote.eid, x: remote.x, y: remote.y },
       DEFAULT_JOIN_SCHEDULE,
     );
+  }
+
+  /**
+   * Joiner side of POST /api/peer/join: record the bootstrap as a direct peer
+   * (always-open cyclic contact) and merge the returned summary.
+   */
+  acceptBootstrap(bootstrapUrl: string, response: JoinResponse): void {
+    const id = response.summary.from;
+    const found = response.summary.nodes.find((n) => n.id === id);
+    const node: GraphNode = {
+      id,
+      eid: found?.eid || response.localEid,
+      x: found?.x ?? 0,
+      y: found?.y ?? 0,
+    };
+    this.cfg.eidByNode[id] = node.eid;
+    this.upsertDirectPeer(id, bootstrapUrl.replace(/\/$/, ''), node, DEFAULT_JOIN_SCHEDULE);
+    this.ingestSummary(response.summary);
+  }
+
+  /** Direct edges incident to this node, as contact-plan rows for ContactService. */
+  directContacts(): DualContact[] {
+    const me = this.cfg.nodeId;
+    const out: DualContact[] = [];
+    for (const edge of this.graph.edges.values()) {
+      if (!edge.direct) continue;
+      if (edge.a !== me && edge.b !== me) continue;
+      out.push({
+        a: edge.a,
+        b: edge.b,
+        delayMs: edge.delayMs,
+        schedule: edge.schedule,
+      });
+    }
+    return out;
   }
 
   buildJoinResponse(): JoinResponse {

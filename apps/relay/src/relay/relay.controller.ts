@@ -5,6 +5,7 @@ import {
   Get,
   Headers,
   Inject,
+  Optional,
   Param,
   Post,
   Query,
@@ -21,6 +22,8 @@ import type { RelayBundle } from '../bundle/bundle.types';
 import { ContactService } from '../contact/contact.service';
 import type { RelayRuntimeConfig } from '../config';
 import { RELAY_CONFIG } from '../relay.tokens';
+import { GraphService, type JoinRemote } from '../graph/graph.service';
+import type { GraphSummary } from '../graph/graph.types';
 
 function mediaType(contentType?: string): string {
   return (contentType ?? '').split(';')[0].trim().toLowerCase();
@@ -40,7 +43,8 @@ export class RelayController {
   constructor(
     @Inject(BundleService) private readonly bundles: BundleService,
     @Inject(ContactService) private readonly contacts: ContactService,
-    @Inject(RELAY_CONFIG) private readonly cfg: RelayRuntimeConfig
+    @Inject(RELAY_CONFIG) private readonly cfg: RelayRuntimeConfig,
+    @Optional() @Inject(GraphService) private readonly graph?: GraphService,
   ) {}
 
   @Get('health')
@@ -56,6 +60,45 @@ export class RelayController {
   @Get('contacts')
   contactsState() {
     return this.contacts.snapshot();
+  }
+
+  @Get('graph')
+  graphSnapshot() {
+    return this.requireGraph().snapshot();
+  }
+
+  /**
+   * Bootstrap side of join. Records the caller as a direct peer with an
+   * always-open cyclic contact (period 30s, openDuration 30s) and returns
+   * this node's summary. The caller records the reverse edge via postJoin.
+   */
+  @Post('peer/join')
+  peerJoin(@Body() body: JoinRemote) {
+    if (
+      !body?.nodeId ||
+      !body.eid ||
+      !body.peerUrl ||
+      typeof body.port !== 'number' ||
+      typeof body.x !== 'number' ||
+      typeof body.y !== 'number'
+    ) {
+      throw new BadRequestException({
+        ok: false,
+        error: 'nodeId, eid, port, x, y, peerUrl required',
+      });
+    }
+    const graph = this.requireGraph();
+    graph.applyJoin(body);
+    return graph.buildJoinResponse();
+  }
+
+  @Post('peer/graph')
+  peerGraph(@Body() body: GraphSummary) {
+    if (!body || typeof body.from !== 'string' || !Array.isArray(body.nodes) || !Array.isArray(body.edges)) {
+      throw new BadRequestException({ ok: false, error: 'GraphSummary required' });
+    }
+    this.requireGraph().ingestSummary(body);
+    return { ok: true as const };
   }
 
   @Get('bundles')
@@ -202,6 +245,13 @@ export class RelayController {
    * destination, a different closed segment must not 503. A relay likewise
    * stores while its own outgoing hop is still closed.
    */
+  private requireGraph(): GraphService {
+    if (!this.graph) {
+      throw new ServiceUnavailableException({ ok: false, error: 'graph unavailable' });
+    }
+    return this.graph;
+  }
+
   private ingestContactOpen(bundle: RelayBundle, from: string): boolean {
     const deliveringLocally = bundle.dst === this.cfg.nodeId;
     if (deliveringLocally) return this.contacts.isOpenTo(from);

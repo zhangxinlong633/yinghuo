@@ -1,7 +1,8 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { CyclicSchedule, DualContact } from '../bundle/bundle.types';
 import { RELAY_CONFIG } from '../relay.tokens';
 import type { RelayRuntimeConfig } from '../config';
+import { GraphService } from '../graph/graph.service';
 import { isCyclicOpen } from './contact-window';
 
 export interface ContactState {
@@ -40,34 +41,36 @@ export interface ContactLinkState {
  */
 @Injectable()
 export class ContactService {
-  private readonly contacts: DualContact[];
-  private readonly localContact: DualContact;
-  private readonly peerName: string;
+  private readonly planContacts: DualContact[];
+  /** Static plan contact for this node. Absent in graph mode until a peer joins. */
+  private readonly anchored?: DualContact;
 
-  constructor(@Inject(RELAY_CONFIG) private readonly cfg: RelayRuntimeConfig) {
-    this.contacts = cfg.plan.contacts;
-    const local = this.contacts.find((x) => x.a === cfg.nodeId || x.b === cfg.nodeId);
-    if (!local) {
+  constructor(
+    @Inject(RELAY_CONFIG) private readonly cfg: RelayRuntimeConfig,
+    @Optional() @Inject(GraphService) private readonly graph?: GraphService,
+  ) {
+    this.planContacts = cfg.plan.contacts;
+    const local = this.planContacts.find((x) => x.a === cfg.nodeId || x.b === cfg.nodeId);
+    if (!local && !cfg.graphMode) {
       throw new Error(`No contact involving ${cfg.nodeId}`);
     }
-    this.localContact = local;
-    this.peerName = this.peerOf(local);
+    this.anchored = local;
   }
 
   getPeerName(): string {
-    return this.peerName;
+    return this.peerOf(this.primaryContact());
   }
 
   isOpen(now = Date.now()): boolean {
-    return isCyclicOpen(now, this.localContact.schedule);
+    return isCyclicOpen(now, this.primaryContact().schedule);
   }
 
   delayMs(): number {
-    return this.localContact.delayMs;
+    return this.primaryContact().delayMs;
   }
 
   listLinks(now = Date.now()): ContactLinkState[] {
-    return this.contacts.map((c) => {
+    return this.mergedContacts().map((c) => {
       const timing = this.windowTiming(c.schedule, now);
       const link: ContactLinkState = {
         a: c.a,
@@ -91,7 +94,7 @@ export class ContactService {
   }
 
   delayTo(nextHopName: string): number {
-    const link = this.contacts.find(
+    const link = this.mergedContacts().find(
       (c) =>
         (c.a === this.cfg.nodeId || c.b === this.cfg.nodeId) && this.peerOf(c) === nextHopName
     );
@@ -99,15 +102,16 @@ export class ContactService {
   }
 
   getState(now = Date.now()): ContactState {
-    const timing = this.windowTiming(this.localContact.schedule, now);
+    const contact = this.primaryContact();
+    const timing = this.windowTiming(contact.schedule, now);
     return {
-      peer: this.peerName,
+      peer: this.peerOf(contact),
       open: timing.open,
-      delayMs: this.localContact.delayMs,
-      schedule: this.localContact.schedule,
+      delayMs: contact.delayMs,
+      schedule: contact.schedule,
       nextChangeAt: timing.nextChangeAt,
       phase: timing.phase,
-      contact: this.localContact,
+      contact,
     };
   }
 
@@ -119,6 +123,44 @@ export class ContactService {
       localEid: this.cfg.eid,
       eidByNode: this.cfg.eidByNode,
       wireFormat: 'application/cbor',
+    };
+  }
+
+  /**
+   * Plan contacts plus direct edges upserted by join.
+   * A plan row for the same peer wins so static windows stay unchanged.
+   */
+  private mergedContacts(): DualContact[] {
+    const dynamic = this.graph?.directContacts() ?? [];
+    if (dynamic.length === 0) return this.planContacts;
+    const plannedPeers = new Set(
+      this.planContacts
+        .filter((c) => c.a === this.cfg.nodeId || c.b === this.cfg.nodeId)
+        .map((c) => this.peerOf(c)),
+    );
+    const extras = dynamic.filter((c) => {
+      const peer = this.peerOf(c);
+      return peer.length > 0 && !plannedPeers.has(peer);
+    });
+    return extras.length === 0 ? this.planContacts : [...this.planContacts, ...extras];
+  }
+
+  private primaryContact(): DualContact {
+    if (this.anchored) return this.anchored;
+    const dynamic = this.mergedContacts().find(
+      (c) => c.a === this.cfg.nodeId || c.b === this.cfg.nodeId,
+    );
+    if (dynamic) return dynamic;
+    return {
+      a: this.cfg.nodeId,
+      b: '',
+      delayMs: 0,
+      schedule: {
+        type: 'cyclic',
+        periodMs: 30_000,
+        openOffsetMs: 0,
+        openDurationMs: 0,
+      },
     };
   }
 
