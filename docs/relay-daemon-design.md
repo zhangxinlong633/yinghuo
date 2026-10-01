@@ -122,7 +122,36 @@ npm run relay:earth   # 另开终端 relay:mars、relay:relay
 
 概览与存储深度仍来自 `/api/status` 三库计数。
 
-## 10. 包与脚本
+## 10. 接触图模式（join）
+
+静态三节点计划仍是默认启动方式。`DTN_GRAPH_MODE=1`（或计划 `mode: "graph"`）改为局部接触图：
+
+| 变量 | 作用 |
+|------|------|
+| `DTN_GRAPH_MODE=1` | 启用图模式；`NODE_ID` 可以不在接触计划里 |
+| `BOOTSTRAP_URL` | 已在网中的引导节点，如 `http://127.0.0.1:3320`。不设则本进程是引导岛 |
+| `PEER_URL` | 本节点可被回调的地址；join 请求体必填，缺了会停在单机岛 |
+| `NODE_X` / `NODE_Y` | 平面坐标，覆盖计划里的坐标 |
+| `EID` | 本节点 EID；计划里没有该 `NODE_ID` 时必须设置 |
+| `PORT` / `DATA_DIR` | 与静态模式相同，每进程独立 |
+
+`POST /api/peer/join` 把对方记为直连种子，并给出一条周期 30s、全程打开的接触，响应里带接触摘要。之后仅在对该邻居窗口打开时 `POST /api/peer/graph`（间隔约 2s）。`GET /api/graph` 是本机已知节点与边；`GET /api/graph/route?dst=` 是只读选路（更近邻居里时延最小；失败邻居会标 unhealthy）。
+
+业务 `POST /api/send` 与 `GET /api/inbox` 形状不变。
+
+10 进程验收：
+
+```bash
+bash apps/relay/scripts/join-cluster.sh
+```
+
+`node0` 监听 `BASE_PORT`（默认 3320），不设引导。`node1`–`node9` 的 `BOOTSTRAP_URL` 指向它。坐标把 `node0` 放在 x=0、`node9` 放在 x=100、其余放在负 x：星型加入时只有引导持有全部 peer URL，贪心选路会把负 x 上的节点裁掉，从而 `node0` 直送 `node9`。脚本等待 gossip（`node1` 的图里出现 `hopCount > 0` 的边，且已知全部节点）再发送，并在 `JOIN_TIMEOUT_SEC`（默认 120）内轮询 `node9` 的 inbox。摘要里的 `direct` 标记会原样合并，所以这些边在 `GET /api/graph` 上仍可能是 `kind: "direct"`。
+
+`JOIN_KEEP=1` 留下进程后，可用 `DTN_LIVE_GRAPH=1` 跑 `apps/relay/src/live-graph-join.test.ts`（默认跳过）。
+
+可选故障：停掉负 x 上的某一台不改变这条直连。要验证替代下一跳，种子坐标上需要两条都能更接近目的地、且下一跳自己还能转发的方向。
+
+## 11. 包与脚本
 
 | 包 | 角色 |
 |----|------|

@@ -65,6 +65,24 @@ npm run web
 
 环境变量：`NODE_ID`、`PORT`、`PEER_URL`、`DATA_DIR`、`CONTACT_PLAN`；CLI 用 `DTN_RELAY_URL` 或 `DTN_NODE=Earth|Relay|Mars`。
 
+### 接触图模式（动态加入）
+
+`DTN_GRAPH_MODE=1` 时不使用计划里的静态 `nextHop`。第一台不设 `BOOTSTRAP_URL`（引导岛）；其余节点设置 `BOOTSTRAP_URL`、本机 `PEER_URL`、`EID`、`NODE_X` / `NODE_Y`、独立 `PORT`。加入后双方是直连邻居，接触在 30s 周期内全程打开；摘要约每 2s 在打开的直连边上 gossip。选路只把包交给**几何上更近**的直连邻居。
+
+10 节点冒烟（引导 `node0`，`node1`–`node9` 都加入它；`node1`–`node8` 在 x 负半轴，避免被选成下一跳，因为它们除了引导没有别的 peer URL）：
+
+```bash
+bash apps/relay/scripts/join-cluster.sh
+# 默认端口 3320–3329，收件箱等待 JOIN_TIMEOUT_SEC=120
+# JOIN_KEEP=1 时脚本结束后进程仍在，便于 live 测试：
+JOIN_KEEP=1 bash apps/relay/scripts/join-cluster.sh
+DTN_LIVE_GRAPH=1 npm test -w @dtn-demo/relay -- src/live-graph-join.test.ts
+```
+
+未设置 `DTN_LIVE_GRAPH=1` 时该测试跳过，`npm run test:relay` 不依赖这 10 个进程。
+
+杀掉 `node1`–`node8` 里某一台**不会**改变 `node0 → node9` 的直连。要观察“中间节点挂了改走另一方向”，拓扑上需要至少两个更近、且自己还能往前送的邻居（网状或短链），不能只靠这棵星。
+
 **BPv7 编解码（bplib FFI）**
 
 | 变量 | 说明 |
