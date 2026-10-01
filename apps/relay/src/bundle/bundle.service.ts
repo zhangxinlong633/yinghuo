@@ -459,14 +459,46 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       );
       this.lastContactOpen = open;
     }
-    const acks = this.takeSendableAcks(Date.now());
+    const now = Date.now();
+    const acks = this.takeSendableAcks(now);
     const ids = await this.store.listPendingBundleIds();
     const forwards: ForwardJob[] = [];
     for (const id of ids) {
       const job = await this.prepareForward(id);
       if (job) forwards.push(job);
     }
+    await this.expireDeliveredInbox(now);
     return { acks, forwards };
+  }
+
+  /**
+   * Destination delivery does not take custody, so TTL must be applied to the
+   * local inbox itself. A payload still sitting unread is voided when it expires.
+   */
+  private async expireDeliveredInbox(now: number): Promise<void> {
+    for (const msg of this.store.peekInbox()) {
+      const carried = msg as DeliveredMessage & { createdAt?: number; ttlMs?: number };
+      let createdAt = carried.createdAt;
+      let ttlMs = carried.ttlMs;
+      const bundle = await this.store.getBundle(msg.id);
+      if (createdAt === undefined || ttlMs === undefined) {
+        if (!bundle) {
+          this.store.dropInbox(msg.id);
+          continue;
+        }
+        createdAt = bundle.createdAt;
+        ttlMs = bundle.ttlMs;
+      }
+      if (now - createdAt < ttlMs) continue;
+
+      if (bundle && bundle.state !== 'EXPIRED') {
+        const expired = markExpired(toTracked(bundle), now, this.cfg.nodeId);
+        await this.store.putBundle(fromTracked(expired, bundle.delivered));
+      }
+      this.store.dropInbox(msg.id);
+      this.rememberBundle(msg.id);
+      this.pushEvent('EXPIRE', `${msg.id} TTL exceeded — drop inbox`);
+    }
   }
 
   /** Most recently touched first. Custody-only ids (after restart) follow. */
