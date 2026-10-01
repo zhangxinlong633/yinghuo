@@ -34,7 +34,7 @@ TypeScript monorepo：**常驻 NestJS relay daemon** 为主路径；本地 **CLI
 ## 仓库结构
 
 ```
-lightlink/
+萤火/
 ├── AGENTS.md
 ├── README.md
 ├── docs/relay-daemon-design.md
