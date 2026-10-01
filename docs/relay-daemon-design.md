@@ -1,5 +1,7 @@
 # Relay Daemon 设计 — Dual-Relay DTN（双中继）
 
+> **默认路径**：三节点 Earth–Relay–Mars 以 [`docs/superpowers/specs/2026-10-01-dtn-three-node-design.md`](./superpowers/specs/2026-10-01-dtn-three-node-design.md) 为准（默认计划 `contact-plan.tri.json`、端口 3101 / 3103 / 3102）。**下文**若只描述 Earth↔Mars 两进程、直连 peer 与 `contact-plan.dual.json`，指的是保留作对照的**旧双节点模式**，不是当前推荐启动方式。
+
 > English identifiers kept as-is. 本文描述 **resident relay daemon** 架构；进程内离散仿真（`@dtn-demo/core` Simulator）仍保留作教学对照，**daemon 为新的主路径**。
 
 ## 1. 目标与范围
