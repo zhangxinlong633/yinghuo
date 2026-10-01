@@ -72,12 +72,22 @@ function lastRetryAt(events: RelayBundle['events']): number | null {
   return last;
 }
 
+interface PendingAck {
+  bundleId: string;
+  upstream: string;
+  events: BundleEvent[];
+}
+
 @Injectable()
 export class BundleService implements OnModuleInit, OnModuleDestroy {
   private readonly log = new Logger(BundleService.name);
   private timer: ReturnType<typeof setInterval> | null = null;
   private events: Array<{ t: number; event: string; msg: string }> = [];
   private lastContactOpen: boolean | null = null;
+  /** Process-local pacing for forward attempts, including successful resends. */
+  private readonly lastForwardAttempt = new Map<string, number>();
+  /** Upstream acks held until the return contact opens. */
+  private readonly pendingAcks: PendingAck[] = [];
 
   constructor(
     @Inject(RELAY_CONFIG) private readonly cfg: RelayRuntimeConfig,
@@ -225,33 +235,74 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     const acked = applyAck(toTracked(bundle), now, this.cfg.nodeId, from, downstreamEvents);
     await this.store.putBundle(fromTracked(acked, bundle.delivered));
     this.pushEvent('ACK', `${bundleId} acked by ${from} — release custody`);
+    this.lastForwardAttempt.delete(bundleId);
     if (custody) await this.store.releaseCustody(bundleId);
-    if (upstream) {
-      void this.peer.sendAck(peerUrlFor(this.cfg, upstream), bundleId, acked.events);
+    if (upstream) this.notifyUpstream(bundleId, upstream, acked.events, now);
+  }
+
+  private notifyUpstream(
+    bundleId: string,
+    upstream: string,
+    events: BundleEvent[],
+    now: number
+  ): void {
+    if (this.contacts.isOpenTo(upstream, now)) {
+      void this.peer.sendAck(peerUrlFor(this.cfg, upstream), bundleId, events);
+      return;
     }
+    this.pendingAcks.push({ bundleId, upstream, events });
+  }
+
+  private async flushPendingAcks(now: number): Promise<void> {
+    const stillPending: PendingAck[] = [];
+    for (const pending of this.pendingAcks) {
+      if (!this.contacts.isOpenTo(pending.upstream, now)) {
+        stillPending.push(pending);
+        continue;
+      }
+      void this.peer.sendAck(
+        peerUrlFor(this.cfg, pending.upstream),
+        pending.bundleId,
+        pending.events
+      );
+    }
+    this.pendingAcks.length = 0;
+    this.pendingAcks.push(...stillPending);
   }
 
   private async tryForward(bundleId: string): Promise<void> {
     const custody = await this.store.getCustody(bundleId);
-    if (!custody || custody.waitingAck) return;
+    if (!custody) return;
     const bundle = await this.store.getBundle(bundleId);
     if (!bundle || bundle.delivered) return;
     if (bundle.state === 'ACKED' || bundle.state === 'EXPIRED' || bundle.state === 'ARRIVED') return;
 
     const now = Date.now();
-    if (!shouldRetry(lastRetryAt(bundle.events), now)) return;
-
     if (now - bundle.createdAt >= bundle.ttlMs) {
       const expired = markExpired(toTracked(bundle), now, this.cfg.nodeId);
       await this.store.putBundle(fromTracked(expired, bundle.delivered));
       await this.store.releaseCustody(bundleId);
       this.store.dropInbox(bundleId);
+      this.lastForwardAttempt.delete(bundleId);
       this.pushEvent('EXPIRE', `${bundleId} TTL exceeded — drop`);
       return;
     }
 
     const next = this.cfg.nextHop[bundle.dst] ?? bundle.dst;
-    if (!this.contacts.isOpenTo(next, now)) {
+    const contactOpen = this.contacts.isOpenTo(next, now);
+
+    if (custody.waitingAck) {
+      if (!contactOpen) return;
+      if (!shouldRetry(this.lastForwardAttempt.get(bundleId) ?? null, now)) return;
+      this.lastForwardAttempt.set(bundleId, now);
+      const result = await this.peer.forwardTo(peerUrlFor(this.cfg, next), bundle);
+      if (!result.ok) await this.noteForwardAttemptFailed(bundle, result.error);
+      return;
+    }
+
+    if (!shouldRetry(lastRetryAt(bundle.events), now)) return;
+
+    if (!contactOpen) {
       if (bundle.state !== 'WAITING') {
         const waiting: RelayBundle = {
           ...bundle,
@@ -275,27 +326,26 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
         { t: now, node: this.cfg.nodeId, kind: 'FORWARD', msg: 'FORWARDING' },
       ],
     };
+    this.lastForwardAttempt.set(bundleId, now);
     custody.waitingAck = true;
     await this.store.putCustody(custody);
     await this.store.putBundle(forwarding);
     this.pushEvent('FORWARD', `${bundleId} → ${next} (contact open)`);
 
     const result = await this.peer.forwardTo(peerUrlFor(this.cfg, next), forwarding);
-    if (!result.ok) {
-      const failed = noteForwardFailed(
-        toTracked(forwarding),
-        Date.now(),
-        this.cfg.nodeId,
-        result.error ?? 'forward failed'
-      );
-      await this.store.putBundle(fromTracked(failed, false));
-      const current = await this.store.getCustody(bundleId);
-      if (current) {
-        current.waitingAck = false;
-        await this.store.putCustody(current);
-      }
-      this.pushEvent('RETRY', `${bundleId} forward failed: ${result.error ?? 'forward failed'}`);
+    if (!result.ok) await this.noteForwardAttemptFailed(forwarding, result.error);
+  }
+
+  private async noteForwardAttemptFailed(bundle: RelayBundle, error: string | undefined): Promise<void> {
+    const reason = error ?? 'forward failed';
+    const failed = noteForwardFailed(toTracked(bundle), Date.now(), this.cfg.nodeId, reason);
+    await this.store.putBundle(fromTracked(failed, false));
+    const current = await this.store.getCustody(bundle.id);
+    if (current) {
+      current.waitingAck = false;
+      await this.store.putCustody(current);
     }
+    this.pushEvent('RETRY', `${bundle.id} forward failed: ${reason}`);
   }
 
   private async tick(): Promise<void> {
@@ -308,6 +358,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       );
       this.lastContactOpen = open;
     }
+    await this.flushPendingAcks(Date.now());
     const ids = await this.store.listPendingBundleIds();
     for (const id of ids) {
       await this.tryForward(id);
