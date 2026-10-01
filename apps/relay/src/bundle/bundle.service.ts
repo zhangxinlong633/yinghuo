@@ -93,6 +93,8 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
   private lastContactOpen: boolean | null = null;
   /** Process-local pacing for forward attempts, including successful resends. */
   private readonly lastForwardAttempt = new Map<string, number>();
+  /** Bundle ids whose HTTP forward has not settled. Blocks a second forwardTo. */
+  private readonly forwardsInFlight = new Set<string>();
   /** Upstream acks held until the return contact opens. */
   private readonly pendingAcks: PendingAck[] = [];
   /** Serializes send, ingest, ack, and tick so store writes cannot interleave. */
@@ -323,6 +325,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
   }
 
   private async prepareForward(bundleId: string): Promise<ForwardJob | null> {
+    if (this.forwardsInFlight.has(bundleId)) return null;
     const custody = await this.store.getCustody(bundleId);
     if (!custody) return null;
     const bundle = await this.store.getBundle(bundleId);
@@ -346,6 +349,8 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     if (custody.waitingAck) {
       if (!contactOpen) return null;
       if (!shouldRetry(this.lastForwardAttempt.get(bundleId) ?? null, now)) return null;
+      if (this.forwardsInFlight.has(bundleId)) return null;
+      this.forwardsInFlight.add(bundleId);
       this.lastForwardAttempt.set(bundleId, now);
       return { bundleId, next, bundle };
     }
@@ -380,13 +385,19 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     custody.waitingAck = true;
     await this.store.putCustody(custody);
     await this.store.putBundle(forwarding);
+    this.forwardsInFlight.add(bundleId);
     this.pushEvent('FORWARD', `${bundleId} → ${next} (contact open)`);
     return { bundleId, next, bundle: forwarding };
   }
 
   /** Peer HTTP. Must run while the bundle mutex is not held. */
   private async finishForward(job: ForwardJob): Promise<void> {
-    const result = await this.peer.forwardTo(peerUrlFor(this.cfg, job.next), job.bundle);
+    let result: { ok: boolean; error?: string };
+    try {
+      result = await this.peer.forwardTo(peerUrlFor(this.cfg, job.next), job.bundle);
+    } finally {
+      this.forwardsInFlight.delete(job.bundleId);
+    }
     if (!result.ok) {
       await this.enqueue(() => this.applyForwardFailure(job.bundleId, result.error));
     }
@@ -394,6 +405,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
   /** Re-read after HTTP. Only WAITING + clear waitingAck while still FORWARDING with custody. */
   private async applyForwardFailure(bundleId: string, error: string | undefined): Promise<void> {
+    if (this.forwardsInFlight.has(bundleId)) return;
     const stored = await this.store.getBundle(bundleId);
     const custody = await this.store.getCustody(bundleId);
     if (!stored || !custody) return;
