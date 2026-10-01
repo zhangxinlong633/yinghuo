@@ -52,7 +52,7 @@
 
 **Interfaces:**
 - Consumes: 无
-- Produces: `npm test -w @dtn-demo/relay` 运行 `node --import tsx --test src/**/*.test.ts`
+- Produces: `npm test -w @lightlink/relay` 运行 `node --import tsx --test src/**/*.test.ts`
 
 - [ ] **Step 1: 加上测试脚本**
 
@@ -65,12 +65,12 @@
 根 `package.json` 的 `scripts` 增加：
 
 ```json
-"test:relay": "npm test -w @dtn-demo/relay"
+"test:relay": "npm test -w @lightlink/relay"
 ```
 
 - [ ] **Step 2: 确认脚本能启动**
 
-Run: `npm test -w @dtn-demo/relay`
+Run: `npm test -w @lightlink/relay`
 Expected: 进程退出码 0 或 1 均可，输出里不能是 `Missing script`。此时还没有测试文件时，Node 可能报 `Could not find`；那也算脚本已接上。若如此，Task 2 会补上第一个测试文件。
 
 - [ ] **Step 3: Commit**
@@ -121,7 +121,7 @@ test('open at start and closed at duration', () => {
 
 - [ ] **Step 2: 跑测试确认失败**
 
-Run: `npm test -w @dtn-demo/relay`
+Run: `npm test -w @lightlink/relay`
 Expected: FAIL，`Cannot find module './contact-window'`
 
 - [ ] **Step 3: 实现**
@@ -138,7 +138,7 @@ export function isCyclicOpen(
 
 - [ ] **Step 4: 跑测试确认通过**
 
-Run: `npm test -w @dtn-demo/relay`
+Run: `npm test -w @lightlink/relay`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -261,7 +261,7 @@ test('retry waits 1000ms', () => {
 
 - [ ] **Step 2: 跑测试确认失败**
 
-Run: `npm test -w @dtn-demo/relay`
+Run: `npm test -w @lightlink/relay`
 Expected: FAIL，`Cannot find module './bundle-machine'`
 
 - [ ] **Step 3: 实现 `bundle-machine.ts`**
@@ -377,7 +377,7 @@ events?: Array<{ t: number; node: string; kind: string; msg: string }>;
 
 - [ ] **Step 4: 跑测试确认通过**
 
-Run: `npm test -w @dtn-demo/relay`
+Run: `npm test -w @lightlink/relay`
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -445,7 +445,7 @@ test('down peer does not move the bundle', () => {
 
 - [ ] **Step 2: 跑测试确认通过**
 
-Run: `npm test -w @dtn-demo/relay`
+Run: `npm test -w @lightlink/relay`
 Expected: PASS。这一任务不新增生产代码；若失败，只修正测试里对 Task 3 返回值的假设，不放宽断言。
 
 - [ ] **Step 3: Commit**
@@ -597,7 +597,7 @@ delayTo(nextHopName: string): number
 
 - [ ] **Step 3: 跑现有测试**
 
-Run: `npm test -w @dtn-demo/relay`
+Run: `npm test -w @lightlink/relay`
 Expected: PASS。本任务不新增测试文件；窗口数学已由 Task 2 覆盖。
 
 - [ ] **Step 4: Commit**
@@ -675,7 +675,7 @@ const tracked = createBundle({ id, src: this.cfg.nodeId, dst, payload, createdAt
 
 - [ ] **Step 3: 跑测试**
 
-Run: `npm test -w @dtn-demo/relay`
+Run: `npm test -w @lightlink/relay`
 Expected: PASS
 
 - [ ] **Step 4: Commit**
@@ -735,7 +735,7 @@ async bundle(@Param('id') id: string) {
 
 - [ ] **Step 3: 跑测试**
 
-Run: `npm test -w @dtn-demo/relay`
+Run: `npm test -w @lightlink/relay`
 Expected: PASS
 
 - [ ] **Step 4: Commit**
@@ -770,7 +770,7 @@ git commit -m "feat: expose bundle timeline over HTTP"
 
 去掉写死的 `PEER_URL`，让计划文件里的 `peers` 生效。
 
-根 `package.json` 增加 `"relay:relay": "npm run start:relay -w @dtn-demo/relay"`。
+根 `package.json` 增加 `"relay:relay": "npm run start:relay -w @lightlink/relay"`。
 
 - [ ] **Step 2: CLI**
 

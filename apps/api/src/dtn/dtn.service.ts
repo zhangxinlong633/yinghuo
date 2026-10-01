@@ -7,7 +7,7 @@ import {
   Simulator,
   SimEvent,
   defaultContactPlan,
-} from '@dtn-demo/core';
+} from '@lightlink/core';
 import { RunsStore, RunSummary, SavedRun } from './runs.store';
 
 export interface SimulateResult {

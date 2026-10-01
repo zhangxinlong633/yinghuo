@@ -1,4 +1,4 @@
-/** Built-in relay UI at GET / — Earth :3101 / Mars :3102 (OpenRouter-like green). */
+/** Built-in 萤火控制台 / LightLink Console at GET /. */
 export function buildConsoleHtml(opts: {
   nodeId: string;
   port: number;
@@ -13,7 +13,7 @@ export function buildConsoleHtml(opts: {
 <head>
   <meta charset="utf-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
-  <title>DTN Relay — ${nodeId}</title>
+  <title>萤火控制台 — ${nodeId}</title>
   <script>
     (function () {
       var theme = localStorage.getItem('dtn-console-theme');
@@ -22,59 +22,57 @@ export function buildConsoleHtml(opts: {
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Noto+Sans+SC:wght@400;500;600;700&family=Syne:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+SC:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      --bg: #f6f3ec;
-      --bg-soft: #eee8dc;
-      --surface: rgba(255,252,247,0.72);
-      --panel: rgba(255,252,247,0.88);
-      --border: rgba(42, 58, 46, 0.12);
-      --border-soft: rgba(42, 58, 46, 0.07);
-      --text: #1c2a22;
-      --muted: #5a6d61;
-      --faint: #8a9a90;
-      --accent: #0f7a4e;
-      --accent-2: #0b5c3b;
-      --accent-soft: rgba(15, 122, 78, 0.12);
-      --accent-hover: #0b5c3b;
-      --ok: #0f7a4e;
-      --ok-soft: rgba(15, 122, 78, 0.12);
-      --warn: #9a6700;
-      --danger: #b42318;
-      --danger-soft: rgba(180, 35, 24, 0.1);
+      --bg: #fcfcfe;
+      --bg-soft: #f4f4f7;
+      --surface: #ffffff;
+      --panel: #ffffff;
+      --border: rgba(3, 8, 10, 0.10);
+      --border-soft: rgba(3, 8, 10, 0.06);
+      --text: #03080a;
+      --muted: rgba(3, 8, 10, 0.69);
+      --faint: rgba(3, 8, 10, 0.45);
+      --accent: #7624f4;
+      --accent-2: #5b12d4;
+      --accent-soft: rgba(118, 36, 244, 0.10);
+      --accent-hover: #6418db;
+      --ok: #0d9f6e;
+      --ok-soft: rgba(13, 159, 110, 0.10);
+      --warn: #b45309;
+      --danger: #dc2626;
+      --danger-soft: rgba(220, 38, 38, 0.10);
       --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      --sans: "Noto Sans SC", "Syne", ui-sans-serif, system-ui, sans-serif;
-      --display: "Syne", "Noto Sans SC", sans-serif;
-      --serif: "Instrument Serif", "Noto Serif SC", Georgia, serif;
-      --nav-h: 72px;
-      --radius: 18px;
-      --radius-sm: 10px;
-      --shadow: none;
-      --nav-bg: rgba(246, 243, 236, 0.7);
+      --sans: "Plus Jakarta Sans", "Noto Sans SC", ui-sans-serif, system-ui, -apple-system, sans-serif;
+      --nav-h: 56px;
+      --radius: 10px;
+      --radius-sm: 6px;
+      --shadow: 0 1px 2px rgba(3, 8, 10, 0.04);
+      --nav-bg: rgba(252, 252, 254, 0.86);
       color-scheme: light;
     }
     html[data-theme="dark"] {
-      --bg: #0c1410;
-      --bg-soft: #14201a;
-      --surface: rgba(18, 32, 26, 0.75);
-      --panel: rgba(20, 36, 28, 0.9);
-      --border: rgba(200, 230, 210, 0.12);
-      --border-soft: rgba(200, 230, 210, 0.07);
-      --text: #e7f2eb;
-      --muted: #9bb5a6;
-      --faint: #6f8a7b;
-      --accent: #3dcf8e;
-      --accent-2: #7aefb4;
-      --accent-soft: rgba(61, 207, 142, 0.14);
-      --accent-hover: #2fb87a;
-      --ok: #3dcf8e;
-      --ok-soft: rgba(61, 207, 142, 0.14);
-      --warn: #e6b84d;
-      --danger: #f07167;
-      --danger-soft: rgba(240, 113, 103, 0.14);
+      --bg: #0b0c10;
+      --bg-soft: #14161c;
+      --surface: #12141a;
+      --panel: #12141a;
+      --border: rgba(252, 252, 254, 0.12);
+      --border-soft: rgba(252, 252, 254, 0.07);
+      --text: #fcfcfe;
+      --muted: rgba(252, 252, 254, 0.68);
+      --faint: rgba(252, 252, 254, 0.42);
+      --accent: #9b5cff;
+      --accent-2: #b58aff;
+      --accent-soft: rgba(155, 92, 255, 0.16);
+      --accent-hover: #8a45ff;
+      --ok: #34d399;
+      --ok-soft: rgba(52, 211, 153, 0.14);
+      --warn: #fbbf24;
+      --danger: #f87171;
+      --danger-soft: rgba(248, 113, 113, 0.14);
       --shadow: none;
-      --nav-bg: rgba(12, 20, 16, 0.72);
+      --nav-bg: rgba(11, 12, 16, 0.88);
       color-scheme: dark;
     }
     * { box-sizing: border-box; }
@@ -83,22 +81,9 @@ export function buildConsoleHtml(opts: {
       background: var(--bg); color: var(--text);
       font-family: var(--sans);
       -webkit-font-smoothing: antialiased;
-      letter-spacing: 0.01em;
-      font-size: 16.5px;
-      font-weight: 400;
-    }
-    body {
-      background:
-        radial-gradient(1200px 560px at 12% -20%, rgba(15, 122, 78, 0.16), transparent 58%),
-        radial-gradient(900px 480px at 88% 8%, rgba(180, 140, 60, 0.10), transparent 52%),
-        radial-gradient(700px 400px at 50% 100%, rgba(15, 122, 78, 0.06), transparent 55%),
-        linear-gradient(180deg, #f8f5ee 0%, #f1efe6 100%);
-    }
-    html[data-theme="dark"] body {
-      background:
-        radial-gradient(1100px 520px at 10% -18%, rgba(61, 207, 142, 0.14), transparent 55%),
-        radial-gradient(800px 420px at 92% 0%, rgba(90, 120, 80, 0.12), transparent 50%),
-        linear-gradient(180deg, #0c1410 0%, #101a15 100%);
+      letter-spacing: -0.01em;
+      font-size: 15px;
+      font-weight: 450;
     }
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
@@ -112,8 +97,8 @@ export function buildConsoleHtml(opts: {
     .mast {
       flex-shrink: 0;
       background: var(--nav-bg);
-      border-bottom: 1px solid var(--border-soft);
-      backdrop-filter: blur(18px) saturate(1.2);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(12px);
       position: sticky; top: 0; z-index: 20;
     }
     .mast-row {
@@ -122,149 +107,173 @@ export function buildConsoleHtml(opts: {
       align-items: center;
       gap: 1rem;
       min-height: var(--nav-h);
-      padding: 0.65rem clamp(1rem, 3vw, 2rem);
+      padding: 0 1.25rem;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
     }
     .mast-left {
-      display: flex; align-items: baseline; gap: 0.65rem 0.85rem;
+      display: flex; align-items: center; gap: 0.65rem 0.85rem;
       flex-wrap: wrap;
       justify-self: start;
       min-width: 0;
     }
     .brand {
-      font-family: var(--display);
       font-weight: 700;
-      font-size: clamp(1.25rem, 2vw, 1.55rem);
-      letter-spacing: -0.03em;
+      font-size: 0.98rem;
+      letter-spacing: -0.02em;
       line-height: 1;
       color: var(--text);
       white-space: nowrap;
     }
     .brand .port {
-      font-family: var(--serif);
-      font-weight: 400;
-      font-style: italic;
+      font-weight: 500;
+      font-style: normal;
       font-size: 0.92em;
-      color: var(--muted);
-      letter-spacing: 0;
-      margin-left: 0.15rem;
+      color: var(--faint);
+      margin-left: 0.2rem;
     }
     .mast-status {
-      display: inline-flex; align-items: center; gap: 0.45rem;
+      display: inline-flex; align-items: center; gap: 0.5rem;
       flex-wrap: wrap;
     }
     .status-chip {
-      font-size: 0.78rem;
+      font-size: 0.72rem;
       font-weight: 600;
-      letter-spacing: 0.04em;
+      letter-spacing: 0.02em;
       text-transform: uppercase;
       color: var(--muted);
-      padding: 0.2rem 0;
-      border-bottom: 1px solid transparent;
+      padding: 0.18rem 0.5rem;
+      border-radius: 999px;
+      background: var(--bg-soft);
+      border: 1px solid var(--border-soft);
     }
-    .status-chip.ok { color: var(--ok); border-bottom-color: var(--ok); }
-    .status-chip.bad { color: var(--danger); border-bottom-color: var(--danger); }
+    .status-chip.ok {
+      color: var(--ok);
+      background: var(--ok-soft);
+      border-color: transparent;
+    }
+    .status-chip.bad {
+      color: var(--danger);
+      background: var(--danger-soft);
+      border-color: transparent;
+    }
     .status-chip.muted { color: var(--faint); }
     .mast-uptime {
       font-family: var(--mono);
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       color: var(--faint);
-      letter-spacing: 0.02em;
     }
     .nav {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 0.15rem 1.15rem;
+      gap: 0.1rem;
       justify-self: center;
       flex-wrap: wrap;
     }
     .nav-btn {
       display: inline-flex; align-items: center;
       background: transparent; border: none; color: var(--muted);
-      padding: 0.35rem 0.1rem 0.45rem;
-      border-radius: 0;
+      padding: 0.4rem 0.7rem;
+      border-radius: 6px;
       cursor: pointer;
-      font-size: 0.95rem;
-      font-weight: 600;
-      font-family: var(--display);
-      letter-spacing: 0.06em;
+      font-size: 0.875rem;
+      font-weight: 500;
+      font-family: var(--sans);
+      letter-spacing: -0.01em;
       white-space: nowrap;
-      position: relative;
-      transition: color 0.18s ease;
+      transition: color 0.12s ease, background 0.12s ease;
     }
-    .nav-btn::after {
-      content: "";
-      position: absolute; left: 0; right: 0; bottom: 0;
-      height: 1px;
-      background: var(--accent);
-      transform: scaleX(0);
-      transform-origin: center;
-      transition: transform 0.2s ease;
+    .nav-btn::after { display: none; }
+    .nav-btn:hover { color: var(--text); background: var(--bg-soft); }
+    .nav-btn.active {
+      color: var(--text);
+      background: var(--bg-soft);
+      font-weight: 600;
     }
-    .nav-btn:hover { color: var(--text); }
-    .nav-btn:hover::after { transform: scaleX(0.35); }
-    .nav-btn.active { color: var(--text); }
-    .nav-btn.active::after { transform: scaleX(1); }
-    html[data-theme="dark"] .nav-btn.active { color: var(--accent-2); }
+    html[data-theme="dark"] .nav-btn.active {
+      color: var(--text);
+      background: var(--bg-soft);
+    }
     .mast-tools {
-      display: flex; align-items: center; gap: 0.55rem;
+      display: flex; align-items: center; gap: 0.4rem;
       justify-self: end;
       flex-shrink: 0;
     }
     .peer-link {
       display: inline-flex; align-items: center;
-      padding: 0.25rem 0;
-      border: none; background: transparent;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid var(--border);
+      background: var(--surface);
       color: var(--text);
-      font-family: var(--serif);
-      font-style: italic;
-      font-weight: 400;
-      font-size: 1rem;
+      font-family: var(--sans);
+      font-style: normal;
+      font-weight: 600;
+      font-size: 0.82rem;
       white-space: nowrap;
-      border-bottom: 1px solid var(--border);
+      border-radius: 6px;
     }
-    .peer-link:hover { border-bottom-color: var(--accent); text-decoration: none; color: var(--accent-2); }
+    .peer-link:hover {
+      border-color: var(--accent);
+      text-decoration: none;
+      color: var(--accent);
+      background: var(--accent-soft);
+    }
     .lang-switch {
       display: inline-flex;
-      gap: 0.35rem;
-      border: none;
-      background: transparent;
+      gap: 0;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--surface);
+      overflow: hidden;
       width: auto;
     }
     .lang-btn, .theme-btn {
       background: transparent; color: var(--faint); border: none; border-radius: 0;
-      padding: 0.2rem 0.35rem; font-size: 0.8rem; font-weight: 600;
-      font-family: var(--display);
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
+      padding: 0.3rem 0.55rem; font-size: 0.75rem; font-weight: 600;
+      font-family: var(--sans);
+      letter-spacing: 0.02em;
+      text-transform: none;
     }
-    .lang-btn:hover, .theme-btn:hover { color: var(--text); }
+    .lang-btn:hover, .theme-btn:hover { color: var(--text); background: var(--bg-soft); }
     .lang-btn.active, .theme-btn.active {
-      color: var(--accent-2);
-      background: transparent;
-      box-shadow: inset 0 -1px 0 var(--accent);
+      color: #fff;
+      background: var(--accent);
+      box-shadow: none;
     }
-    .lang-btn.active:hover, .theme-btn.active:hover { color: var(--accent-2); background: transparent; }
+    .lang-btn.active:hover, .theme-btn.active:hover {
+      color: #fff;
+      background: var(--accent-hover);
+    }
     .ghost.refresh-btn {
-      border: none;
-      background: transparent;
+      border: 1px solid var(--border);
+      background: var(--surface);
       color: var(--muted);
-      font-family: var(--display);
-      font-size: 0.8rem;
+      font-family: var(--sans);
+      font-size: 0.75rem;
       font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 0.2rem 0.35rem;
+      letter-spacing: 0;
+      text-transform: none;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
     }
-    .ghost.refresh-btn:hover { color: var(--text); background: transparent; }
+    .ghost.refresh-btn:hover {
+      color: var(--text);
+      background: var(--bg-soft);
+      border-color: var(--border);
+    }
     .main {
       flex: 1;
       min-height: 0;
-      padding: 1.6rem clamp(1.2rem, 3vw, 2.4rem) 2rem;
+      padding: 1.25rem 1.25rem 1.75rem;
       overflow: auto;
       min-width: 0;
       display: flex;
       flex-direction: column;
+      max-width: 1400px;
+      margin: 0 auto;
+      width: 100%;
     }
     .view { display: none; }
     .view.active {
@@ -275,129 +284,224 @@ export function buildConsoleHtml(opts: {
       min-height: 0;
     }
     .view-title {
-      margin: 0 0 0.15rem;
-      font-family: var(--serif);
-      font-size: clamp(1.85rem, 3vw, 2.35rem);
-      font-weight: 400;
-      font-style: italic;
-      letter-spacing: -0.02em;
-      line-height: 1.15;
+      margin: 0;
+      font-family: var(--sans);
+      font-size: 1.35rem;
+      font-weight: 700;
+      font-style: normal;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
       color: var(--text);
     }
-    .grid { display: grid; gap: 1rem; }
+    .grid { display: grid; gap: 0.85rem; }
     .grid.stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .grid.ops-grid { flex: 1; min-height: 0; align-items: stretch; }
+    .grid.ops-grid > .card { min-height: 100%; }
     .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .card.stretch {
       flex: 1;
       min-height: 0;
       display: flex;
       flex-direction: column;
+      align-items: stretch;
+    }
+    .card.stretch > button,
+    .card.stretch > .btn {
+      align-self: flex-start;
+      width: auto;
+    }
+    .card.stretch > .form-row,
+    .card.stretch > .ops-actions,
+    .card.stretch > .field {
+      width: 100%;
     }
     .card.stretch pre, .card.stretch .logbox {
       flex: 1;
+      width: 100%;
       max-height: none;
-      min-height: 180px;
+      min-height: 160px;
+    }
+    #view-ops .ops-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.55rem;
+      margin-bottom: 0.75rem;
+    }
+    #view-ops .ops-actions .hint { margin: 0; }
+    #view-ops .route-check {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.45rem;
+      height: 2.35rem;
+      color: var(--muted);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    #view-ops .route-check input {
+      width: 1rem;
+      height: 1rem;
+      margin: 0;
+      accent-color: var(--accent);
+      flex: none;
+    }
+    .route-cols {
+      align-items: stretch;
+    }
+    .route-cols .k {
+      color: var(--faint);
+      font-size: 0.78rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+    .route-cols > div {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .route-cols pre {
+      flex: 1;
+      min-height: 5.5rem;
+      margin: 0;
     }
     .card {
       background: var(--panel);
-      border: 1px solid var(--border-soft);
+      border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 1.15rem 1.25rem;
+      padding: 1rem 1.1rem;
       box-shadow: var(--shadow);
-      backdrop-filter: blur(10px);
     }
     .card.stat-card {
-      transition: transform 0.2s ease, border-color 0.2s ease;
-      border-color: transparent;
-      background: linear-gradient(160deg, rgba(255,252,247,0.9), rgba(238,232,220,0.55));
+      transition: border-color 0.12s ease, box-shadow 0.12s ease;
+      background: var(--panel);
+      border-color: var(--border);
     }
     html[data-theme="dark"] .card.stat-card {
-      background: linear-gradient(160deg, rgba(24,40,32,0.9), rgba(18,30,24,0.55));
+      background: var(--panel);
     }
     .card.stat-card:hover {
-      border-color: var(--accent);
-      transform: translateY(-2px);
+      border-color: rgba(118, 36, 244, 0.35);
+      transform: none;
+      box-shadow: 0 0 0 3px var(--accent-soft);
     }
     .card h3 {
-      margin: 0 0 0.65rem;
-      font-family: var(--display);
-      font-size: 0.95rem;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-      color: var(--muted);
+      margin: 0 0 0.55rem;
+      font-family: var(--sans);
+      font-size: 0.92rem;
+      font-weight: 650;
+      letter-spacing: -0.01em;
+      text-transform: none;
+      color: var(--text);
     }
     .stat-val {
-      font-size: clamp(1.85rem, 2.4vw, 2.35rem);
+      font-size: 1.65rem;
       font-weight: 700;
-      font-family: var(--display);
-      line-height: 1.05;
-      letter-spacing: -0.04em;
+      font-family: var(--sans);
+      line-height: 1.1;
+      letter-spacing: -0.03em;
       color: var(--text);
     }
     .stat-label {
       color: var(--muted);
-      font-size: 0.88rem;
-      margin-top: 0.4rem;
+      font-size: 0.8rem;
+      margin-top: 0.35rem;
       font-weight: 500;
-      letter-spacing: 0.01em;
+      letter-spacing: 0;
     }
-    .kv { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 0.45rem 0.85rem; font-size: 0.98rem; }
+    .kv { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 0.45rem 0.85rem; font-size: 0.92rem; }
     .kv .k { color: var(--faint); font-weight: 500; }
-    .kv .v { font-family: var(--mono); word-break: break-all; font-size: 0.94rem; color: var(--text); }
+    .kv .v { font-family: var(--mono); word-break: break-all; font-size: 0.88rem; color: var(--text); }
     .badge-open { color: var(--ok); font-weight: 700; }
     .badge-closed { color: var(--danger); font-weight: 700; }
     button, .btn {
-      background: var(--accent); color: #fff; border: 1px solid transparent; border-radius: 6px;
-      padding: 0.55rem 1.15rem; font-weight: 650; cursor: pointer; font-size: 0.95rem;
-      font-family: var(--display);
-      letter-spacing: 0.02em;
-      transition: background 0.15s, transform 0.08s, box-shadow 0.15s;
+      background: var(--accent); color: #fcfcfe; border: 1px solid transparent; border-radius: 6px;
+      padding: 0.48rem 1rem; font-weight: 600; cursor: pointer; font-size: 0.875rem;
+      font-family: var(--sans);
+      letter-spacing: -0.01em;
+      transition: background 0.12s, transform 0.08s;
     }
     button:hover { background: var(--accent-hover); }
     button:active { transform: scale(0.98); }
     button.secondary {
-      background: transparent; color: var(--text);
+      background: var(--surface); color: var(--text);
       border: 1px solid var(--border);
     }
-    button.secondary:hover { background: var(--bg-soft); border-color: var(--accent); }
+    button.secondary:hover { background: var(--bg-soft); border-color: var(--border); }
     button.ghost {
       background: transparent; border: 1px solid var(--border); color: var(--muted);
-      padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.92rem;
+      padding: 0.35rem 0.7rem; border-radius: 6px; font-size: 0.875rem;
     }
-    button.ghost:hover { color: var(--text); border-color: var(--accent); }
+    button.ghost:hover { color: var(--text); border-color: var(--border); background: var(--bg-soft); }
     button.ghost.refresh-btn {
-      border: none;
-      background: transparent;
+      border: 1px solid var(--border);
+      background: var(--surface);
       color: var(--muted);
-      font-family: var(--display);
-      font-size: 0.8rem;
+      font-family: var(--sans);
+      font-size: 0.75rem;
       font-weight: 600;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      padding: 0.2rem 0.35rem;
-      border-radius: 0;
+      letter-spacing: 0;
+      text-transform: none;
+      padding: 0.3rem 0.6rem;
+      border-radius: 6px;
     }
-    button.ghost.refresh-btn:hover { color: var(--text); background: transparent; border: none; }
+    button.ghost.refresh-btn:hover {
+      color: var(--text);
+      background: var(--bg-soft);
+      border: 1px solid var(--border);
+    }
     input, select, textarea {
       background: var(--surface); color: var(--text);
       border: 1px solid var(--border); border-radius: var(--radius-sm);
-      padding: 0.5rem 0.7rem; font-size: 1rem; font-family: var(--sans);
+      padding: 0.48rem 0.7rem; font-size: 0.9rem; font-family: var(--sans);
+      line-height: 1.2;
+    }
+    select {
+      appearance: none;
+      background-image: linear-gradient(45deg, transparent 50%, var(--faint) 50%), linear-gradient(135deg, var(--faint) 50%, transparent 50%);
+      background-position: calc(100% - 14px) calc(50% - 2px), calc(100% - 9px) calc(50% - 2px);
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+      padding-right: 1.75rem;
     }
     input:focus, select:focus, textarea:focus {
       outline: none; border-color: var(--accent);
-      box-shadow: 0 0 0 2px var(--accent-soft);
+      box-shadow: 0 0 0 3px var(--accent-soft);
     }
-    .form-row { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: flex-end; margin-bottom: 0.7rem; }
-    .field { display: flex; flex-direction: column; gap: 0.25rem; }
-    .field label { font-size: 0.9rem; color: var(--faint); font-weight: 600; }
-    .field input { min-width: 9rem; }
-    .field input#payload { min-width: 18rem; flex: 1; }
+    .form-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
+      gap: 0.75rem;
+      align-items: start;
+      margin-bottom: 0.75rem;
+    }
+    .form-row.form-row-inline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      gap: 0.75rem;
+    }
+    .field { display: flex; flex-direction: column; gap: 0.35rem; min-width: 0; }
+    .field label {
+      font-size: 0.8rem;
+      color: var(--faint);
+      font-weight: 600;
+      line-height: 1.3;
+      min-height: 1.3em;
+    }
+    .field input,
+    .field select {
+      width: 100%;
+      min-width: 0;
+      height: 2.35rem;
+    }
+    .field input#payload { min-width: 0; }
     pre, .logbox {
       margin: 0; white-space: pre-wrap; word-break: break-word;
-      font-family: var(--mono); font-size: 0.92rem; line-height: 1.55;
+      font-family: var(--mono); font-size: 0.84rem; line-height: 1.55;
       max-height: min(52vh, 480px); overflow: auto; color: var(--text);
       background: var(--bg-soft); border: 1px solid var(--border-soft);
       border-radius: var(--radius-sm); padding: 0.75rem 0.85rem;
@@ -412,21 +516,21 @@ export function buildConsoleHtml(opts: {
       background: var(--accent); border-radius: 999px;
       width: 0%; transition: width 0.35s ease;
     }
-    .depth-meta { display: flex; justify-content: space-between; font-size: 0.95rem; }
+    .depth-meta { display: flex; justify-content: space-between; font-size: 0.88rem; }
     .depth-meta .name { color: var(--muted); }
     .depth-meta .count { font-family: var(--mono); font-weight: 650; color: var(--accent); }
     .toast {
       position: fixed; right: 0.85rem; bottom: 0.85rem; z-index: 50;
       background: var(--panel); color: var(--ok);
-      border: 1px solid rgba(47,158,110,0.35);
-      padding: 0.55rem 0.85rem; border-radius: var(--radius); font-size: 0.88rem;
+      border: 1px solid var(--border);
+      padding: 0.55rem 0.85rem; border-radius: var(--radius); font-size: 0.84rem;
       opacity: 0; transform: translateY(6px); transition: all 0.2s; pointer-events: none;
-      max-width: 340px; font-family: var(--mono);
+      max-width: 340px; font-family: var(--sans);
       box-shadow: var(--shadow);
     }
     .toast.show { opacity: 1; transform: translateY(0); }
-    .toast.err { color: var(--danger); border-color: rgba(196,92,92,0.4); }
-    .hint { color: var(--muted); font-size: 0.95rem; margin: 0.2rem 0 0.75rem; line-height: 1.5; }
+    .toast.err { color: var(--danger); border-color: var(--danger); }
+    .hint { color: var(--muted); font-size: 0.875rem; margin: 0.15rem 0 0.65rem; line-height: 1.5; }
     .progress-ring {
       height: 5px; background: var(--bg-soft); border-radius: 999px; overflow: hidden; margin-top: 0.65rem;
       border: 1px solid var(--border-soft);
@@ -436,11 +540,11 @@ export function buildConsoleHtml(opts: {
       transition: width 0.35s linear, background 0.15s;
     }
     .progress-ring.closed > span { background: var(--danger); }
-    table.simple { width: 100%; border-collapse: collapse; font-size: 0.98rem; }
+    table.simple { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
     table.simple th, table.simple td {
       text-align: left; padding: 0.45rem 0.35rem; border-bottom: 1px solid var(--border-soft);
     }
-    table.simple th { color: var(--faint); font-weight: 600; font-size: 0.88rem; }
+    table.simple th { color: var(--faint); font-weight: 600; font-size: 0.78rem; }
     table.simple td.mono { font-family: var(--mono); }
     tr[data-id] { cursor: pointer; }
     tr[data-id]:hover { background: var(--bg-soft); }
@@ -466,10 +570,10 @@ export function buildConsoleHtml(opts: {
     #cn-svg .edge-hit { stroke: transparent; stroke-width: 16; cursor: pointer; }
     #cn-svg .node circle { fill: var(--surface); stroke: var(--accent-2); stroke-width: 2; }
     #cn-svg .node.self circle { fill: var(--accent); stroke: var(--accent-2); }
-    #cn-svg .node text { fill: var(--text); font-size: 13px; font-family: var(--sans); font-weight: 650; }
+    #cn-svg .node text { fill: var(--text); font-size: 12px; font-family: var(--sans); font-weight: 600; }
     #cn-svg .edge.selected { stroke: var(--warn); }
     .cn-detail { margin-top: 0.85rem; }
-    .cn-detail > summary { cursor: pointer; font-weight: 650; color: var(--muted); }
+    .cn-detail > summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     .route-cols pre { min-height: 4.5rem; }
     @media (max-width: 1100px) {
       .grid.stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -698,13 +802,13 @@ export function buildConsoleHtml(opts: {
                 <select id="dst"><option value="${defaultDst}">${defaultDst}</option></select>
               </div>
               <div class="field">
-                <label for="ttl" data-i18n="ttl">存活时间（毫秒，可选）</label>
-                <input id="ttl" type="number" placeholder="120000" style="min-width:7rem"/>
+                <label for="ttl" data-i18n="ttl">TTL（毫秒，可选）</label>
+                <input id="ttl" type="number" placeholder="120000"/>
               </div>
             </div>
-            <div class="field" style="margin-bottom:0.7rem">
+            <div class="field" style="margin-bottom:0.75rem">
               <label for="payload" data-i18n="payload">载荷</label>
-              <input id="payload" value="${defaultPayload}" style="width:100%"/>
+              <input id="payload" value="${defaultPayload}"/>
             </div>
             <button type="button" id="btn-send" data-i18n="send">发送</button>
             <h3 style="margin-top:0.85rem" data-i18n="response">响应</h3>
@@ -714,10 +818,10 @@ export function buildConsoleHtml(opts: {
           <div class="card stretch">
             <h3 data-i18n="inboxTitle">本地投递收件箱</h3>
             <p class="hint" data-i18n="recvHint">查看不取出；接收会清空本地收件箱。</p>
-            <div class="form-row">
+            <div class="ops-actions">
               <button type="button" id="btn-inbox-peek" class="secondary" data-i18n="peek">查看收件箱</button>
               <button type="button" id="btn-inbox-recv" data-i18n="recv">接收并清空</button>
-              <span class="hint" style="margin:0"><span data-i18n="depthNow">当前深度</span> <code id="st2-inbox">0</code></span>
+              <span class="hint"><span data-i18n="depthNow">当前深度</span> <code id="st2-inbox">0</code></span>
             </div>
             <pre id="inbox-out">[]</pre>
           </div>
@@ -725,12 +829,12 @@ export function buildConsoleHtml(opts: {
         <div class="card" id="route-strip">
           <h3 data-i18n="routeTitle">选路</h3>
           <p class="hint" data-i18n="routeHint">对试算目的或当前打开的束调用 /api/graph/route，对照被裁掉、时延候选和下一跳。</p>
-          <div class="form-row">
-            <div class="field">
+          <div class="form-row form-row-inline">
+            <div class="field" style="min-width:10rem; flex:0 1 12rem">
               <label for="route-dst" data-i18n="trialDst">试算目的</label>
               <select id="route-dst"><option value="${defaultDst}">${defaultDst}</option></select>
             </div>
-            <label class="hint" style="display:flex;align-items:center;gap:0.4rem;margin:0">
+            <label class="route-check" for="route-follow">
               <input type="checkbox" id="route-follow" checked/>
               <span data-i18n="followBundle">跟随当前束</span>
             </label>
@@ -783,7 +887,7 @@ export function buildConsoleHtml(opts: {
         <h2 class="view-title" data-i18n="logsTitle">日志</h2>
         <p class="hint" data-i18n="logsHint">来自 /api/status 的 recentEvents，大约每秒刷新。</p>
         <div class="card stretch">
-          <div class="form-row">
+          <div class="form-row form-row-inline">
             <button type="button" class="secondary" id="btn-clear-logview" data-i18n="clear">清空视图</button>
             <span class="hint" style="margin:0" id="log-count">0 条事件</span>
           </div>
@@ -831,7 +935,7 @@ export function buildConsoleHtml(opts: {
       opsTitle: '操作', opsHint: '在本节点发送报文，并查看或取走本地收件箱。',
       sendTitle: '发送', sendHint: '经本节点 /api/send 注入；接触关闭时先存储，开窗后转发到对端。',
       recvHint: '查看不取出；接收会清空本地收件箱。',
-      dst: '目的地', payload: '载荷', ttl: '存活时间（毫秒，可选）', send: '发送', response: '响应',
+      dst: '目的地', payload: '载荷', ttl: 'TTL（毫秒，可选）', send: '发送', response: '响应',
       routeTitle: '选路', routeHint: '对试算目的或当前打开的束调用 /api/graph/route，对照被裁掉、时延候选和下一跳。',
       trialDst: '试算目的', followBundle: '跟随当前束', routeCulled: '被裁掉', routeCandidates: '时延排序', routeNext: '下一跳',
       logsTitle: '日志', logsHint: '来自 /api/status 的 recentEvents，大约每秒刷新。',

@@ -30,7 +30,7 @@ async function bootstrap(): Promise<void> {
   });
   await app.listen(cfg.port);
   console.log(
-    `DTN Relay daemon [${cfg.nodeId}] http://localhost:${cfg.port}/  peer=${cfg.peerUrl}`
+    `LightLink [${cfg.nodeId}] http://localhost:${cfg.port}/  peer=${cfg.peerUrl}`
   );
   console.log(`  dataDir=${cfg.dataDir}`);
   console.log(`  plan=${cfg.planPath}`);

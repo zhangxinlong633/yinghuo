@@ -103,7 +103,7 @@ test('maps node names to plan EIDs', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm test -w @dtn-demo/relay -- src/bp/eid.test.ts`  
+Run: `npm test -w @lightlink/relay -- src/bp/eid.test.ts`  
 Expected: FAIL（模块或导不存在）
 
 - [ ] **Step 3: Implement mapping + plan fields**
@@ -115,7 +115,7 @@ Expected: FAIL（模块或导不存在）
 
 - [ ] **Step 4: Run test to verify it passes**
 
-Run: `npm test -w @dtn-demo/relay -- src/bp/eid.test.ts`  
+Run: `npm test -w @lightlink/relay -- src/bp/eid.test.ts`  
 Expected: PASS
 
 - [ ] **Step 5: Commit**
@@ -292,7 +292,7 @@ export function inspectBundle(buf: Buffer): BpInspect;
 - [ ] **Step 1: Install koffi and write failing test**
 
 ```bash
-npm install koffi -w @dtn-demo/relay
+npm install koffi -w @lightlink/relay
 ```
 
 ```ts
@@ -322,7 +322,7 @@ test('roundtrip payload through bplib codec', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm test -w @dtn-demo/relay -- src/bp/bp-codec.test.ts`  
+Run: `npm test -w @lightlink/relay -- src/bp/bp-codec.test.ts`  
 Expected: FAIL
 
 - [ ] **Step 3: Implement koffi bindings**
@@ -343,8 +343,8 @@ Expected: FAIL
 Run:
 
 ```bash
-npm run native:build -w @dtn-demo/relay
-npm test -w @dtn-demo/relay -- src/bp/bp-codec.test.ts
+npm run native:build -w @lightlink/relay
+npm test -w @lightlink/relay -- src/bp/bp-codec.test.ts
 ```
 
 Expected: PASS
@@ -387,7 +387,7 @@ async function bootstrap() {
 
 - [ ] **Step 2: Manually verify failure mode**
 
-Run: `DTN_BP_CODEC_LIB=/nonexistent.dylib npm run start:earth -w @dtn-demo/relay`  
+Run: `DTN_BP_CODEC_LIB=/nonexistent.dylib npm run start:earth -w @lightlink/relay`  
 Expected: 进程退出，日志含库路径错误；不监听 3101。
 
 - [ ] **Step 3: Commit**
@@ -437,7 +437,7 @@ test('toWireBundle uses plan EIDs', () => {
 
 - [ ] **Step 2: Run test to verify it fails**
 
-Run: `npm test -w @dtn-demo/relay -- src/bp/wire.test.ts`  
+Run: `npm test -w @lightlink/relay -- src/bp/wire.test.ts`  
 Expected: FAIL
 
 - [ ] **Step 3: Implement wire helpers + peer/controller**
@@ -598,7 +598,7 @@ EOF
 README 增加：
 
 ```bash
-npm run native:build -w @dtn-demo/relay
+npm run native:build -w @lightlink/relay
 npm run relay:earth   # 另两终端 relay / mars
 ```
 

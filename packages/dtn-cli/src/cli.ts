@@ -12,7 +12,7 @@
  *   DTN_RELAY_URL  default http://127.0.0.1:3101
  *   DTN_NODE       Earth|Relay|Mars  (sets default URL if DTN_RELAY_URL unset)
  */
-import { DtnClient } from '@dtn-demo/sdk';
+import { DtnClient } from '@lightlink/sdk';
 
 function resolveUrl(): string {
   if (process.env.DTN_RELAY_URL) return process.env.DTN_RELAY_URL;

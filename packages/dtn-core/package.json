@@ -1,5 +1,5 @@
 {
-  "name": "@dtn-demo/core",
+  "name": "@lightlink/core",
   "version": "1.0.0",
   "private": true,
   "main": "src/index.ts",

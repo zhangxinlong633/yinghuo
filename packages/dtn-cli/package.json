@@ -1,5 +1,5 @@
 {
-  "name": "@dtn-demo/cli",
+  "name": "@lightlink/cli",
   "version": "1.0.0",
   "private": true,
   "bin": {
@@ -10,7 +10,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@dtn-demo/sdk": "*"
+    "@lightlink/sdk": "*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

@@ -1,7 +1,7 @@
 /**
  * Live three-node smoke. Requires Earth:3101 Relay:3103 Mars:3102 running
  * with the default tri contact plan. Run:
- *   DTN_LIVE_SMOKE=1 npm test -w @dtn-demo/relay -- src/live-tri-smoke.test.ts
+ *   DTN_LIVE_SMOKE=1 npm test -w @lightlink/relay -- src/live-tri-smoke.test.ts
  */
 import assert from 'node:assert/strict';
 import test from 'node:test';
