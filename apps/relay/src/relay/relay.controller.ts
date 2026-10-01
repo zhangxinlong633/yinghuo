@@ -24,6 +24,8 @@ import type { RelayRuntimeConfig } from '../config';
 import { RELAY_CONFIG } from '../relay.tokens';
 import { GraphService, type JoinRemote } from '../graph/graph.service';
 import type { GraphSummary } from '../graph/graph.types';
+import { PeerService } from '../peer/peer.service';
+import { ContactPlanReloadService } from '../contact/contact-plan-reload.service';
 
 function mediaType(contentType?: string): string {
   return (contentType ?? '').split(';')[0].trim().toLowerCase();
@@ -45,6 +47,8 @@ export class RelayController {
     @Inject(ContactService) private readonly contacts: ContactService,
     @Inject(RELAY_CONFIG) private readonly cfg: RelayRuntimeConfig,
     @Optional() @Inject(GraphService) private readonly graph?: GraphService,
+    @Optional() @Inject(PeerService) private readonly peer?: PeerService,
+    @Optional() @Inject(ContactPlanReloadService) private readonly plans?: ContactPlanReloadService,
   ) {}
 
   @Get('health')
@@ -59,7 +63,41 @@ export class RelayController {
 
   @Get('contacts')
   contactsState() {
-    return this.contacts.snapshot();
+    return {
+      ...this.contacts.snapshot(),
+      plan: this.plans?.getStatus() ?? this.cfg.planStatus,
+    };
+  }
+
+  @Get('plan')
+  planStatus() {
+    return this.plans?.getStatus() ?? this.cfg.planStatus;
+  }
+
+  /**
+   * Hot-reload contact plan from disk, or apply JSON body without writing disk.
+   * Failed validation keeps the previous effective plan.
+   */
+  @Post('plan/reload')
+  reloadPlan(@Body() body: unknown) {
+    const service = this.plans;
+    if (!service) {
+      throw new ServiceUnavailableException({ ok: false, error: 'plan reload unavailable' });
+    }
+    const hasBody =
+      body != null &&
+      typeof body === 'object' &&
+      !Array.isArray(body) &&
+      Object.keys(body as object).length > 0;
+    const result = hasBody ? service.reloadFromBody(body) : service.reloadFromDisk('http');
+    if (!result.ok) {
+      throw new BadRequestException({
+        ok: false,
+        errors: result.errors,
+        plan: service.getStatus(),
+      });
+    }
+    return { ok: true as const, version: result.version, source: result.source, plan: service.getStatus() };
   }
 
   @Get('graph')
@@ -74,6 +112,39 @@ export class RelayController {
       throw new BadRequestException({ ok: false, error: 'dst required' });
     }
     return this.requireGraph().decide(dst, Date.now());
+  }
+
+  /**
+   * Join another bootstrap after start (bridge / multi-island).
+   * Same body shape as startup BOOTSTRAP_URL join.
+   */
+  @Post('graph/join')
+  async graphJoin(@Body() body: { url?: string }) {
+    const url = body?.url?.trim();
+    if (!url) {
+      throw new BadRequestException({ ok: false, error: 'url required' });
+    }
+    this.requireGraph();
+    const peer = this.peer;
+    if (!peer) {
+      throw new ServiceUnavailableException({ ok: false, error: 'peer service unavailable' });
+    }
+    const result = await peer.postJoin(url, {
+      nodeId: this.cfg.nodeId,
+      eid: this.cfg.eid,
+      port: this.cfg.port,
+      x: this.cfg.x,
+      y: this.cfg.y,
+      peerUrl: this.cfg.peerUrl || `http://127.0.0.1:${this.cfg.port}`,
+      role: this.cfg.role,
+    });
+    if (result.ok !== true) {
+      throw new BadRequestException({
+        ok: false,
+        error: 'error' in result ? result.error : 'join failed',
+      });
+    }
+    return { ok: true as const, summary: result.summary };
   }
 
   /**

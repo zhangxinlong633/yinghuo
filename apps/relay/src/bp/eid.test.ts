@@ -16,6 +16,16 @@ function cfg(partial: Partial<RelayRuntimeConfig> & Pick<RelayRuntimeConfig, 'ei
     dataDir: '',
     plan: { nodes: [], contacts: [] },
     planPath: '',
+    planStatus: {
+      path: '',
+      version: 't',
+      loadedAt: 0,
+      source: 'boot',
+      ok: true,
+      lastError: null,
+      lastFailedAt: null,
+      watchEnabled: false,
+    },
     startedAt: 0,
     ...partial,
   };
@@ -26,6 +36,7 @@ test('maps node names to plan EIDs', () => {
     nodeId: 'Earth',
     eid: 'ipn:1.1',
     eidByNode: { Earth: 'ipn:1.1', Relay: 'ipn:2.1', Mars: 'ipn:3.1' },
+    roleByNode: {},
   });
   assert.equal(eidForNode(c, 'Mars'), 'ipn:3.1');
   assert.equal(nodeForEid(c, 'ipn:2.1'), 'Relay');

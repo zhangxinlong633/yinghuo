@@ -1,5 +1,5 @@
 {
-  "description": "Earth\u2013Relay\u2013Mars staggered contacts",
+  "description": "Earth\u2013Relay\u2013Mars absolute contact arcs (offsets from process start)",
   "mode": "tri",
   "nodes": [
     {
@@ -50,25 +50,39 @@
     {
       "a": "Earth",
       "b": "Relay",
-      "delayMs": 200,
-      "bandwidthBps": 1000000,
+      "delayMs": 15000,
+      "bandwidthBps": 100000,
       "schedule": {
-        "type": "cyclic",
-        "periodMs": 30000,
-        "openOffsetMs": 0,
-        "openDurationMs": 10000
+        "type": "absolute",
+        "windows": [
+          {
+            "offsetStartMs": 5000,
+            "offsetEndMs": 65000
+          },
+          {
+            "offsetStartMs": 180000,
+            "offsetEndMs": 240000
+          }
+        ]
       }
     },
     {
       "a": "Relay",
       "b": "Mars",
-      "delayMs": 200,
-      "bandwidthBps": 1000000,
+      "delayMs": 30000,
+      "bandwidthBps": 100000,
       "schedule": {
-        "type": "cyclic",
-        "periodMs": 30000,
-        "openOffsetMs": 15000,
-        "openDurationMs": 10000
+        "type": "absolute",
+        "windows": [
+          {
+            "offsetStartMs": 90000,
+            "offsetEndMs": 150000
+          },
+          {
+            "offsetStartMs": 270000,
+            "offsetEndMs": 330000
+          }
+        ]
       }
     }
   ]

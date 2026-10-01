@@ -9,6 +9,7 @@ function sampleCfg(): RelayRuntimeConfig {
     nodeId: 'Earth',
     eid: 'ipn:1.1',
     eidByNode: { Earth: 'ipn:1.1', Relay: 'ipn:2.1', Mars: 'ipn:3.1' },
+    roleByNode: {},
     port: 3101,
     peerUrl: '',
     peers: {},
@@ -20,6 +21,16 @@ function sampleCfg(): RelayRuntimeConfig {
     dataDir: '',
     plan: { nodes: [], contacts: [] },
     planPath: '',
+    planStatus: {
+      path: '',
+      version: 't',
+      loadedAt: 0,
+      source: 'boot',
+      ok: true,
+      lastError: null,
+      lastFailedAt: null,
+      watchEnabled: false,
+    },
     startedAt: 0,
   };
 }

@@ -91,3 +91,18 @@ test('graph mode can start a node that is not in the contact plan', () => {
     },
   );
 });
+
+test('ROLE env overrides plan role in graph mode', () => {
+  withEnv(
+    {
+      NODE_ID: 'Probe',
+      DTN_GRAPH_MODE: '1',
+      EID: 'ipn:10.1',
+      PORT: '3210',
+      ROLE: 'relay',
+    },
+    () => {
+      assert.equal(loadRelayConfig().role, 'relay');
+    },
+  );
+});

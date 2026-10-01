@@ -570,8 +570,17 @@ export function buildConsoleHtml(opts: {
     #cn-svg .edge-hit { stroke: transparent; stroke-width: 16; cursor: pointer; }
     #cn-svg .node circle { fill: var(--surface); stroke: var(--accent-2); stroke-width: 2; }
     #cn-svg .node.self circle { fill: var(--accent); stroke: var(--accent-2); }
+    #cn-svg .node.c0 circle { stroke: #0d9488; }
+    #cn-svg .node.c1 circle { stroke: #c2410c; }
+    #cn-svg .node.c2 circle { stroke: #1d4ed8; }
+    #cn-svg .node.c3 circle { stroke: #a16207; }
+    #cn-svg .node.c0.self circle, #cn-svg .node.c1.self circle,
+    #cn-svg .node.c2.self circle, #cn-svg .node.c3.self circle { fill: var(--accent); }
     #cn-svg .node text { fill: var(--text); font-size: 12px; font-family: var(--sans); font-weight: 600; }
+    #cn-svg .edge.heard.stale { stroke: #b91c1c; stroke-dasharray: 3 4; opacity: 0.75; }
     #cn-svg .edge.selected { stroke: var(--warn); }
+    .cluster-legend { font-size: 0.78rem; color: var(--muted); margin-top: 0.4rem; }
+    .unhealthy-banner { font-size: 0.8rem; color: #b91c1c; margin-top: 0.35rem; min-height: 1.2em; }
     .cn-detail { margin-top: 0.85rem; }
     .cn-detail > summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     .route-cols pre { min-height: 4.5rem; }
@@ -658,9 +667,14 @@ export function buildConsoleHtml(opts: {
             <div class="kv">
               <div class="k">nodeId</div><div class="v" id="ov-node">${nodeId}</div>
               <div class="k">role</div><div class="v" id="ov-role">—</div>
+              <div class="k">mission</div><div class="v" id="ov-mission">—</div>
+              <div class="k">capabilities</div><div class="v" id="ov-caps">—</div>
+              <div class="k" data-i18n="custodySem">保管语义</div><div class="v" id="ov-custody-sem">—</div>
+              <div class="k" data-i18n="routeBias">选路偏好</div><div class="v" id="ov-route-bias">—</div>
               <div class="k">port</div><div class="v">:${port}</div>
               <div class="k">peerUrl</div><div class="v" id="ov-peer">${peerUrl}</div>
               <div class="k">dataDir</div><div class="v" id="ov-datadir">—</div>
+              <div class="k">plan</div><div class="v" id="ov-plan">—</div>
               <div class="k">uptime</div><div class="v" id="ov-uptime">—</div>
             </div>
           </div>
@@ -670,7 +684,8 @@ export function buildConsoleHtml(opts: {
               <div class="k">peer</div><div class="v" id="ov-c-peer">—</div>
               <div class="k">link</div><div class="v" id="ov-c-link">—</div>
               <div class="k">phase</div><div class="v" id="ov-c-phase">—</div>
-              <div class="k">delayMs</div><div class="v" id="ov-c-delay">—</div>
+              <div class="k">delay</div><div class="v" id="ov-c-delay">—</div>
+              <div class="k">remain</div><div class="v" id="ov-c-remain">—</div>
               <div class="k">nextChange</div><div class="v" id="ov-c-next">—</div>
             </div>
             <div class="progress-ring" id="ov-c-bar"><span style="width:40%"></span></div>
@@ -726,6 +741,8 @@ export function buildConsoleHtml(opts: {
           <div class="card cn-map-card">
             <h3 data-i18n="netMap">网络图</h3>
             <svg id="cn-svg" viewBox="0 0 640 420" role="img" aria-label="contact graph"></svg>
+            <div class="cluster-legend" id="cn-cluster-legend">—</div>
+            <div class="unhealthy-banner" id="cn-unhealthy">—</div>
           </div>
           <div class="card" id="cn-edge">
             <h3 data-i18n="edgeSide">选中边</h3>
@@ -756,7 +773,8 @@ export function buildConsoleHtml(opts: {
               <div class="k" data-i18n="wireFormat">线上格式</div><div class="v" id="cn-wire">—</div>
               <div class="k">status</div><div class="v" id="cn-status">—</div>
               <div class="k">phase</div><div class="v" id="cn-phase">—</div>
-              <div class="k">delayMs</div><div class="v" id="cn-delay">—</div>
+              <div class="k">delay</div><div class="v" id="cn-delay">—</div>
+              <div class="k">remain</div><div class="v" id="cn-remain">—</div>
               <div class="k">bandwidth</div><div class="v" id="cn-bw">—</div>
             </div>
           </div>
@@ -919,6 +937,10 @@ export function buildConsoleHtml(opts: {
       themeLight: '浅', themeDark: '深', refresh: '刷新',
       overviewTitle: '概览', statBundles: '报文 · LevelDB', statCustody: '托管 · 持有', statIndex: '索引 · 键', statInbox: '收件箱 · 本地',
       statNodes: '已知节点', statSeeds: '种子邻居', statAge: '摘要最大年龄', statDests: '可试算目的',
+      clusters: '簇', clusterLegend: '弱连通簇：{n}（描边色区分 componentId）',
+      unhealthyNone: '无可达故障邻居', unhealthyList: 'unhealthy', unhealthyShort: '故障',
+      staleShort: '陈旧听说边',
+      custodySem: '保管语义', routeBias: '选路偏好', sendDisabledRole: '当前角色不可注入业务报文',
       nodeInfo: '节点信息', contactWin: '接触窗口', contactHint: '周期开窗时链路可转发；关闭时先存储再转发。',
       recent: '最近事件', storageTitle: '存储',
       storageHint: '三层存储深度来自 /api/status 的 store（bundles / custody / index）。收发在「操作」页。',
@@ -959,6 +981,10 @@ export function buildConsoleHtml(opts: {
       themeLight: 'Light', themeDark: 'Dark', refresh: 'Refresh',
       overviewTitle: 'Overview', statBundles: 'Bundles · LevelDB', statCustody: 'Custody · held', statIndex: 'Index · keys', statInbox: 'Inbox · local',
       statNodes: 'Known nodes', statSeeds: 'Seed peers', statAge: 'Summary age', statDests: 'Trial dests',
+      clusters: 'clusters', clusterLegend: 'Weak components: {n} (stroke color = componentId)',
+      unhealthyNone: 'No unhealthy neighbors', unhealthyList: 'unhealthy', unhealthyShort: 'down',
+      staleShort: 'stale heard',
+      custodySem: 'Custody', routeBias: 'Route bias', sendDisabledRole: 'This role cannot inject traffic',
       nodeInfo: 'Node', contactWin: 'Contact', contactHint: 'Forward while the window is open; store-and-forward while it is closed.',
       recent: 'Recent events', storageTitle: 'Storage',
       storageHint: 'Depths come from /api/status store (bundles / custody / index). Send and receive live on Ops.',
@@ -1064,9 +1090,30 @@ export function buildConsoleHtml(opts: {
   function contactProgress(contact) {
     if (!contact || !contact.schedule) return { pct: 50, open: false };
     const s = contact.schedule;
+    const open = !!contact.open;
+    if (s.type === 'absolute') {
+      const now = Date.now();
+      const windows = s.windows || [];
+      if (open) {
+        const cur = windows.find((w) => now >= w.startMs && now < w.endMs);
+        const dur = cur ? Math.max(1, cur.endMs - cur.startMs) : 1;
+        const rem = contact.remainMs != null
+          ? contact.remainMs
+          : (cur ? Math.max(0, cur.endMs - now) : 0);
+        return { pct: Math.max(2, Math.min(100, (rem / dur) * 100)), open };
+      }
+      const rem = contact.remainMs;
+      if (!Number.isFinite(rem) || rem <= 0) return { pct: 0, open };
+      const next = windows.find((w) => w.startMs > now);
+      if (!next) return { pct: 0, open };
+      const prev = windows.filter((w) => w.endMs <= next.startMs).pop();
+      const gapStart = prev ? prev.endMs : (windows[0] ? windows[0].startMs - rem : now);
+      const gap = Math.max(1, next.startMs - gapStart);
+      const into = Math.max(0, Math.min(gap, gap - rem));
+      return { pct: Math.max(2, Math.min(100, (into / gap) * 100)), open };
+    }
     const now = Date.now();
     const elapsed = now % s.periodMs;
-    const open = !!contact.open;
     let pct;
     if (open) {
       const closeAt = s.openOffsetMs + s.openDurationMs;
@@ -1080,6 +1127,34 @@ export function buildConsoleHtml(opts: {
       pct = Math.max(2, Math.min(100, (after / Math.max(1, closedTail)) * 100));
     }
     return { pct, open };
+  }
+
+  function formatScheduleFields(sch, remainLabel) {
+    if (!sch || !sch.type) {
+      return { type: '—', period: '—', offset: '—', duration: '—' };
+    }
+    if (sch.type === 'absolute') {
+      const n = (sch.windows || []).length;
+      const first = (sch.windows || [])[0];
+      const span = first ? Math.max(0, first.endMs - first.startMs) : null;
+      return {
+        type: 'absolute',
+        period: n + ' window' + (n === 1 ? '' : 's'),
+        offset: first ? 'first @ ' + first.startMs : '—',
+        duration: span != null ? span + ' ms' : '—',
+      };
+    }
+    const period = sch.periodMs != null
+      ? (remainLabel && sch.periodMs >= 60000
+        ? Math.round(sch.periodMs / 1000) + 's (' + sch.periodMs + ' ms)'
+        : String(sch.periodMs) + ' ms')
+      : '—';
+    return {
+      type: sch.type || 'cyclic',
+      period,
+      offset: sch.openOffsetMs != null ? String(sch.openOffsetMs) : '—',
+      duration: sch.openDurationMs != null ? String(sch.openDurationMs) : '—',
+    };
   }
 
   function applyBar(el, contact) {
@@ -1121,6 +1196,7 @@ export function buildConsoleHtml(opts: {
     const open = !!contact.open;
     $('tb-role').textContent = s.role || '—';
     $('tb-role').className = 'status-chip muted';
+    if (s.missionRole) $('tb-role').title = s.missionRole + (s.routeBias ? ' — ' + s.routeBias : '');
     setContactPill(open, contact.phase);
     $('tb-uptime').textContent = fmtUptime(s.uptimeMs);
 
@@ -1131,13 +1207,36 @@ export function buildConsoleHtml(opts: {
 
     $('ov-node').textContent = s.nodeId;
     $('ov-role').textContent = s.role || '—';
+    if ($('ov-mission')) $('ov-mission').textContent = s.missionRole || '—';
+    if ($('ov-caps')) {
+      const c = s.capabilities || {};
+      $('ov-caps').textContent = 'inject=' + (c.canInject ? 'yes' : 'no') + ' · relay=' + (c.canRelay ? 'yes' : 'no');
+    }
+    if ($('ov-custody-sem')) $('ov-custody-sem').textContent = s.custodySemantics || '—';
+    if ($('ov-route-bias')) $('ov-route-bias').textContent = s.routeBias || '—';
+    const sendBtn = $('btn-send');
+    if (sendBtn) {
+      const allow = !(s.capabilities && s.capabilities.canInject === false);
+      sendBtn.disabled = !allow;
+      sendBtn.title = allow ? '' : t('sendDisabledRole');
+    }
     $('ov-peer').textContent = s.peerUrl || '—';
     $('ov-datadir').textContent = s.dataDir || '—';
+    if ($('ov-plan')) {
+      const p = s.plan || {};
+      let planText = (p.version ? p.version : '—') + (p.source ? ' · ' + p.source : '');
+      if (p.ok === false && p.lastError) planText += ' · ERR ' + p.lastError;
+      else if (p.ok === false) planText += ' · error';
+      $('ov-plan').textContent = planText;
+      $('ov-plan').title = p.path || '';
+    }
     $('ov-uptime').textContent = fmtUptime(s.uptimeMs);
     $('ov-c-peer').textContent = contact.peer || '—';
     $('ov-c-link').innerHTML = linkHtml(open);
     $('ov-c-phase').textContent = contact.phase || '—';
-    $('ov-c-delay').textContent = contact.delayMs != null ? String(contact.delayMs) : '—';
+    $('ov-c-delay').textContent = contact.delayLabel
+      || (contact.delayMs != null ? String(contact.delayMs) + ' ms' : '—');
+    $('ov-c-remain').textContent = contact.remainLabel || '—';
     $('ov-c-next').textContent = contact.nextChangeAt
       ? new Date(contact.nextChangeAt).toLocaleString() + ' (' + fmtTime(contact.nextChangeAt) + ')'
       : '—';
@@ -1160,7 +1259,9 @@ export function buildConsoleHtml(opts: {
     $('cn-status').innerHTML = linkHtml(open);
     $('cn-link-cell').innerHTML = linkHtml(open);
     $('cn-phase').textContent = contact.phase || '—';
-    $('cn-delay').textContent = contact.delayMs != null ? String(contact.delayMs) : '—';
+    $('cn-delay').textContent = contact.delayLabel
+      || (contact.delayMs != null ? String(contact.delayMs) + ' ms' : '—');
+    if ($('cn-remain')) $('cn-remain').textContent = contact.remainLabel || '—';
     applyBar($('cn-bar'), contact);
     $('cn-next').textContent = contact.nextChangeAt
       ? new Date(contact.nextChangeAt).toLocaleString()
@@ -1344,10 +1445,14 @@ export function buildConsoleHtml(opts: {
       lastLinks = c.links || [];
       renderLinks(lastLinks);
       const sch = c.schedule || (c.contact && c.contact.schedule) || {};
-      $('cn-sched').textContent = sch.type || '—';
-      $('cn-period').textContent = sch.periodMs != null ? String(sch.periodMs) : '—';
-      $('cn-offset').textContent = sch.openOffsetMs != null ? String(sch.openOffsetMs) : '—';
-      $('cn-duration').textContent = sch.openDurationMs != null ? String(sch.openDurationMs) : '—';
+      const fields = formatScheduleFields(sch, c.remainLabel);
+      $('cn-sched').textContent = fields.type;
+      $('cn-period').textContent = fields.period;
+      if (c.remainLabel && $('cn-remain')) $('cn-remain').textContent = c.remainLabel;
+      if (c.delayLabel) $('cn-delay').textContent = c.delayLabel;
+      if (c.phase) $('cn-phase').textContent = c.phase;
+      $('cn-offset').textContent = fields.offset;
+      $('cn-duration').textContent = fields.duration;
       const bw = c.contact && c.contact.bandwidthBps;
       $('cn-bw').textContent = bw != null ? bw + ' bps' : '—';
       eidByNode = c.eidByNode || {};
@@ -1361,8 +1466,10 @@ export function buildConsoleHtml(opts: {
       }
       if (s && s.contact) {
         s.contact.schedule = sch;
+        s.contact.remainMs = c.remainMs;
+        s.contact.open = c.open;
         applyBar($('ov-c-bar'), s.contact);
-        applyBar($('cn-bar'), Object.assign({}, s.contact, { schedule: sch, open: c.open }));
+        applyBar($('cn-bar'), Object.assign({}, s.contact, { schedule: sch, open: c.open, remainMs: c.remainMs }));
       }
     } catch (_) { /* ignore */ }
   }
@@ -1393,16 +1500,18 @@ export function buildConsoleHtml(opts: {
     selectedEdge = edge || null;
     if (!edge) return;
     const sch = edge.schedule || {};
+    const fields = formatScheduleFields(sch);
     const direct = edge.kind === 'direct' || edge.direct;
     $('eg-ends').textContent = edge.a + ' ↔ ' + edge.b;
     $('eg-kind').textContent = direct ? t('kindDirect') : t('kindHeard');
     $('eg-delay').textContent = edge.delayMs != null ? String(edge.delayMs) : '—';
     $('eg-hops').textContent = edge.hopCount != null ? String(edge.hopCount) : '—';
     $('eg-age').textContent = edge.originatedAt != null ? fmtAge(Math.max(0, Date.now() - edge.originatedAt)) : '—';
-    $('eg-sched').textContent = sch.type || '—';
-    $('eg-period').textContent = sch.periodMs != null ? String(sch.periodMs) : '—';
-    $('eg-offset').textContent = sch.openOffsetMs != null ? String(sch.openOffsetMs) : '—';
-    $('eg-duration').textContent = sch.openDurationMs != null ? String(sch.openDurationMs) : '—';
+    if (edge.stale) $('eg-age').textContent += ' · stale';
+    $('eg-sched').textContent = fields.type;
+    $('eg-period').textContent = fields.period;
+    $('eg-offset').textContent = fields.offset;
+    $('eg-duration').textContent = fields.duration;
   }
 
   function renderMap(g) {
@@ -1430,25 +1539,53 @@ export function buildConsoleHtml(opts: {
       if (!a || !b) return '';
       const key = edgeKeyOf(e);
       const cls = (e.kind === 'direct' || e.direct) ? 'direct' : 'heard';
+      const stale = e.stale ? ' stale' : '';
       const sel = selectedEdge && edgeKeyOf(selectedEdge) === key ? ' selected' : '';
-      return '<line class="edge ' + cls + sel + '" x1="' + px(a) + '" y1="' + py(a) + '" x2="' + px(b) + '" y2="' + py(b) + '"/>' +
+      return '<line class="edge ' + cls + stale + sel + '" x1="' + px(a) + '" y1="' + py(a) + '" x2="' + px(b) + '" y2="' + py(b) + '"/>' +
         '<line class="edge-hit" data-edge="' + esc(key) + '" x1="' + px(a) + '" y1="' + py(a) + '" x2="' + px(b) + '" y2="' + py(b) + '"/>';
     }).join('');
     const dots = nodes.map((n) => {
       const self = n.id === NODE_ID ? ' self' : '';
+      const cid = n.componentId != null ? Number(n.componentId) : 0;
+      const cluster = ' c' + (cid % 4);
       const r = n.id === NODE_ID ? 12 : 8;
-      return '<g class="node' + self + '" transform="translate(' + px(n) + ',' + py(n) + ')">' +
+      return '<g class="node' + self + cluster + '" data-component="' + cid + '" transform="translate(' + px(n) + ',' + py(n) + ')">' +
         '<circle r="' + r + '"/><text y="-16" text-anchor="middle">' + esc(n.id) + '</text></g>';
     }).join('');
     svg.innerHTML = lines + dots;
+    const legend = $('cn-cluster-legend');
+    if (legend) {
+      const nComp = (g.stats && g.stats.componentCount != null)
+        ? g.stats.componentCount
+        : new Set(nodes.map((n) => n.componentId)).size || 1;
+      legend.textContent = t('clusterLegend').replace('{n}', String(nComp));
+    }
+    const uh = $('cn-unhealthy');
+    if (uh) {
+      const list = g.unhealthy || [];
+      if (!list.length) uh.textContent = t('unhealthyNone');
+      else {
+        uh.textContent = t('unhealthyList') + ': ' + list.map((u) => {
+          const rem = u.remainMs != null ? Math.ceil(u.remainMs / 1000) + 's' : '?';
+          return u.id + ' (' + rem + ')';
+        }).join(', ');
+      }
+    }
   }
 
   function renderOverviewGraph(g) {
     const stats = (g && g.stats) || {};
     const nodes = (g && g.nodes) || [];
     $('st-nodes').textContent = String(stats.nodeCount != null ? stats.nodeCount : nodes.length);
-    $('st-seeds').textContent = String(stats.peerCount != null ? stats.peerCount : ((g && g.peers) || []).length);
-    $('st-age').textContent = fmtAge(stats.maxEdgeAgeMs || 0);
+    const seeds = stats.peerCount != null ? stats.peerCount : ((g && g.peers) || []).length;
+    const uhCount = stats.unhealthyCount != null ? stats.unhealthyCount : ((g && g.unhealthy) || []).length;
+    $('st-seeds').textContent = uhCount > 0 ? seeds + ' · ' + uhCount + ' ' + t('unhealthyShort') : String(seeds);
+    const ageBase = fmtAge(stats.maxEdgeAgeMs || 0);
+    const staleN = stats.heardStaleCount != null ? stats.heardStaleCount : 0;
+    let ageText = ageBase;
+    if (stats.componentCount != null) ageText += ' · ' + stats.componentCount + ' ' + t('clusters');
+    if (staleN > 0) ageText += ' · ' + staleN + ' ' + t('staleShort');
+    $('st-age').textContent = ageText;
     $('st-dests').textContent = String(nodes.filter((n) => n.id !== NODE_ID).length);
     const ids = nodes.map((n) => n.id).concat(Object.keys(eidByNode || {}));
     const choices = ids.filter((id, i) => id && id !== NODE_ID && ids.indexOf(id) === i);
@@ -1483,7 +1620,9 @@ export function buildConsoleHtml(opts: {
         ? culled.map((c) => c.neighbor + '  cost=' + c.costMs + '  closer=' + c.closer).join('\\n')
         : '—';
       $('route-candidates').textContent = cands.length
-        ? cands.map((c) => c.neighbor + '  cost=' + c.costMs + '  wait=' + c.waitMs).join('\\n')
+        ? cands.map((c) => c.neighbor + '  cost=' + c.costMs + '  wait=' + c.waitMs
+          + (c.rolePenaltyMs ? '  role+' + c.rolePenaltyMs : '')
+          + (c.neighborRole ? '  (' + c.neighborRole + ')' : '')).join('\\n')
         : '—';
       $('route-next').textContent = d.nextHop ? String(d.nextHop) : (d.reason || '—');
     } catch (e) {

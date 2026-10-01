@@ -28,6 +28,7 @@ import { ContactService } from '../contact/contact.service';
 import type { RelayRuntimeConfig } from '../config';
 import { GraphService } from '../graph/graph.service';
 import type { RouteDecision } from '../graph/graph-route';
+import { roleCapabilities } from '../role/role-policy';
 import { LevelStore } from '../store/level-store';
 import { PeerService } from '../peer/peer.service';
 import { RELAY_CONFIG } from '../relay.tokens';
@@ -173,8 +174,8 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     payload: string,
     ttlMs: number
   ): Promise<{ bundle: RelayBundle; job: ForwardJob | null }> {
-    if (this.cfg.role === 'relay') {
-      throw new Error('role=relay cannot inject application traffic');
+    if (!roleCapabilities(this.cfg.role).canInject) {
+      throw new Error(`role=${this.cfg.role} cannot inject application traffic`);
     }
     const now = Date.now();
     const id = newBundleId(this.cfg.nodeId);
@@ -278,13 +279,16 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       };
     }
 
-    if (this.cfg.role === 'endpoint') {
-      this.pushEvent('REJECT', `${bundle.id} role=endpoint refuses to relay (dst=${bundle.dst})`);
+    if (!roleCapabilities(this.cfg.role).canRelay) {
+      this.pushEvent(
+        'REJECT',
+        `${bundle.id} role=${this.cfg.role} refuses to relay (dst=${bundle.dst})`,
+      );
       return {
         accepted: false,
         delivered: false,
         event: 'REJECT',
-        msg: 'endpoint will not store-and-forward for others',
+        msg: `${this.cfg.role} will not store-and-forward for others`,
       };
     }
 
@@ -762,9 +766,18 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
   async status(): Promise<RelayStatus> {
     const counts = await this.store.counts();
     const contact = this.contacts.getState();
+    const caps = roleCapabilities(this.cfg.role);
     return {
       nodeId: this.cfg.nodeId,
       role: this.cfg.role,
+      missionRole: caps.mission,
+      capabilities: {
+        canInject: caps.canInject,
+        canRelay: caps.canRelay,
+      },
+      custodySemantics: caps.custodySemantics,
+      routeBias: caps.routeBias,
+      plan: this.cfg.planStatus,
       port: this.cfg.port,
       peerUrl: this.cfg.peerUrl,
       uptimeMs: Date.now() - this.cfg.startedAt,

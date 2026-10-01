@@ -51,6 +51,7 @@ function cfg(eidByNode: Record<string, string>): RelayRuntimeConfig {
     nodeId: 'Earth',
     eid: eidByNode.Earth ?? 'ipn:1.1',
     eidByNode,
+    roleByNode: {},
     port: 3101,
     peerUrl: 'http://127.0.0.1:9',
     peers: { Mars: 'http://127.0.0.1:9' },
@@ -77,6 +78,16 @@ function cfg(eidByNode: Record<string, string>): RelayRuntimeConfig {
       ],
     },
     planPath: '',
+    planStatus: {
+      path: '',
+      version: 't',
+      loadedAt: 0,
+      source: 'boot',
+      ok: true,
+      lastError: null,
+      lastFailedAt: null,
+      watchEnabled: false,
+    },
     startedAt: 0,
   };
 }

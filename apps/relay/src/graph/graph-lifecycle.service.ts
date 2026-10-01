@@ -40,6 +40,7 @@ export class GraphLifecycleService implements OnModuleInit, OnModuleDestroy {
       x: this.cfg.x,
       y: this.cfg.y,
       peerUrl: this.cfg.peerUrl,
+      role: this.cfg.role,
     });
     if (result.ok !== true) {
       const err = 'error' in result ? result.error : 'unknown';

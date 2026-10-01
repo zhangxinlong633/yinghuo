@@ -1,5 +1,5 @@
 {
-  "description": "Earth\u2013Relay\u2013Mars staggered contacts",
+  "description": "Earth\u2013Relay\u2013Mars long-delay arcs (vision-scale cyclic windows)",
   "mode": "tri",
   "nodes": [
     {
@@ -50,25 +50,25 @@
     {
       "a": "Earth",
       "b": "Relay",
-      "delayMs": 200,
-      "bandwidthBps": 1000000,
+      "delayMs": 15000,
+      "bandwidthBps": 100000,
       "schedule": {
         "type": "cyclic",
-        "periodMs": 30000,
+        "periodMs": 300000,
         "openOffsetMs": 0,
-        "openDurationMs": 10000
+        "openDurationMs": 90000
       }
     },
     {
       "a": "Relay",
       "b": "Mars",
-      "delayMs": 200,
-      "bandwidthBps": 1000000,
+      "delayMs": 30000,
+      "bandwidthBps": 100000,
       "schedule": {
         "type": "cyclic",
-        "periodMs": 30000,
-        "openOffsetMs": 15000,
-        "openDurationMs": 10000
+        "periodMs": 300000,
+        "openOffsetMs": 150000,
+        "openDurationMs": 90000
       }
     }
   ]

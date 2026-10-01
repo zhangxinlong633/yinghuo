@@ -1,16 +1,26 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
-import type { CyclicSchedule, DualContact } from '../bundle/bundle.types';
+import type { ContactSchedule, DualContact } from '../bundle/bundle.types';
 import { RELAY_CONFIG } from '../relay.tokens';
 import type { RelayRuntimeConfig } from '../config';
 import { GraphService } from '../graph/graph.service';
-import { isCyclicOpen } from './contact-window';
+import {
+  formatDurationMs,
+  isContactOpen,
+  msUntilClose,
+  msUntilOpen,
+} from './contact-window';
 
 export interface ContactState {
   peer: string;
   open: boolean;
   delayMs: number;
-  schedule: CyclicSchedule;
+  /** Human label for propagation delay (e.g. 30s, 1m 5s). */
+  delayLabel: string;
+  schedule: ContactSchedule;
   nextChangeAt: number;
+  /** ms until next open/close boundary. */
+  remainMs: number;
+  remainLabel: string;
   phase: string;
   contact: DualContact;
 }
@@ -29,30 +39,45 @@ export interface ContactLinkState {
   local: boolean;
   open: boolean;
   delayMs: number;
-  schedule: CyclicSchedule;
+  delayLabel: string;
+  schedule: ContactSchedule;
   nextChangeAt: number;
+  remainMs: number;
+  remainLabel: string;
   phase: string;
   bandwidthBps?: number;
 }
 
 /**
- * Wall-clock cyclic contact windows.
- * Within each periodMs: open for [openOffsetMs, openOffsetMs+openDurationMs).
+ * Contact windows: cyclic (period modulo) or absolute (epoch / load-normalized).
  */
 @Injectable()
 export class ContactService {
-  private readonly planContacts: DualContact[];
+  private planContacts: DualContact[];
   /** Static plan contact for this node. Absent in graph mode until a peer joins. */
-  private readonly anchored?: DualContact;
+  private anchored?: DualContact;
 
   constructor(
     @Inject(RELAY_CONFIG) private readonly cfg: RelayRuntimeConfig,
     @Optional() @Inject(GraphService) private readonly graph?: GraphService,
   ) {
     this.planContacts = cfg.plan.contacts;
-    const local = this.planContacts.find((x) => x.a === cfg.nodeId || x.b === cfg.nodeId);
-    if (!local && !cfg.graphMode) {
-      throw new Error(`No contact involving ${cfg.nodeId}`);
+    this.reanchor();
+  }
+
+  /**
+   * Hot-reload plan contacts (same process). Recomputes the anchored local row.
+   * Throws if non-graph mode and no contact involves this node.
+   */
+  replacePlanContacts(contacts: DualContact[]): void {
+    this.planContacts = contacts;
+    this.reanchor();
+  }
+
+  private reanchor(): void {
+    const local = this.planContacts.find((x) => x.a === this.cfg.nodeId || x.b === this.cfg.nodeId);
+    if (!local && !this.cfg.graphMode) {
+      throw new Error(`No contact involving ${this.cfg.nodeId}`);
     }
     this.anchored = local;
   }
@@ -62,7 +87,7 @@ export class ContactService {
   }
 
   isOpen(now = Date.now()): boolean {
-    return isCyclicOpen(now, this.primaryContact().schedule);
+    return isContactOpen(now, this.primaryContact().schedule);
   }
 
   delayMs(): number {
@@ -79,8 +104,11 @@ export class ContactService {
         local: c.a === this.cfg.nodeId || c.b === this.cfg.nodeId,
         open: timing.open,
         delayMs: c.delayMs,
+        delayLabel: formatDurationMs(c.delayMs),
         schedule: c.schedule,
         nextChangeAt: timing.nextChangeAt,
+        remainMs: timing.remainMs,
+        remainLabel: timing.remainLabel,
         phase: timing.phase,
       };
       if (c.bandwidthBps !== undefined) link.bandwidthBps = c.bandwidthBps;
@@ -108,8 +136,11 @@ export class ContactService {
       peer: this.peerOf(contact),
       open: timing.open,
       delayMs: contact.delayMs,
+      delayLabel: formatDurationMs(contact.delayMs),
       schedule: contact.schedule,
       nextChangeAt: timing.nextChangeAt,
+      remainMs: timing.remainMs,
+      remainLabel: timing.remainLabel,
       phase: timing.phase,
       contact,
     };
@@ -171,25 +202,18 @@ export class ContactService {
   }
 
   private windowTiming(
-    schedule: CyclicSchedule,
+    schedule: ContactSchedule,
     now: number
-  ): { open: boolean; nextChangeAt: number; phase: string } {
-    const s = schedule;
-    const elapsed = ((now % s.periodMs) + s.periodMs) % s.periodMs;
-    const open = isCyclicOpen(now, s);
-    let nextChangeAt: number;
-    let phase: string;
-    if (open) {
-      const closeAt = s.openOffsetMs + s.openDurationMs;
-      nextChangeAt = now + (closeAt - elapsed);
-      phase = `OPEN until +${closeAt - elapsed}ms in period`;
-    } else if (elapsed < s.openOffsetMs) {
-      nextChangeAt = now + (s.openOffsetMs - elapsed);
-      phase = `CLOSED — opens in ${s.openOffsetMs - elapsed}ms`;
-    } else {
-      nextChangeAt = now + (s.periodMs - elapsed + s.openOffsetMs);
-      phase = `CLOSED — opens in ${s.periodMs - elapsed + s.openOffsetMs}ms`;
-    }
-    return { open, nextChangeAt, phase };
+  ): { open: boolean; nextChangeAt: number; remainMs: number; remainLabel: string; phase: string } {
+    const open = isContactOpen(now, schedule);
+    const remainMs = open ? msUntilClose(now, schedule) : msUntilOpen(now, schedule);
+    const remainLabel = formatDurationMs(remainMs);
+    const nextChangeAt = Number.isFinite(remainMs) ? now + remainMs : Number.POSITIVE_INFINITY;
+    const phase = open
+      ? `OPEN — closes in ${remainLabel}`
+      : remainMs === Number.POSITIVE_INFINITY
+        ? 'CLOSED — no further windows'
+        : `CLOSED — opens in ${remainLabel}`;
+    return { open, nextChangeAt, remainMs, remainLabel, phase };
   }
 }

@@ -1,11 +1,19 @@
-import type { CyclicSchedule } from '../bundle/bundle.types';
+import type { ContactSchedule } from '../bundle/bundle.types';
+import type { NodeRole } from '../role/role-policy';
 
-export type GraphNode = { id: string; eid: string; x: number; y: number };
+export type GraphNode = {
+  id: string;
+  eid: string;
+  x: number;
+  y: number;
+  role?: NodeRole;
+  componentId?: number;
+};
 export type GraphEdge = {
   a: string;
   b: string;
   delayMs: number;
-  schedule: CyclicSchedule;
+  schedule: ContactSchedule;
   originatedAt: number;
   hopCount: number;
   direct?: boolean;

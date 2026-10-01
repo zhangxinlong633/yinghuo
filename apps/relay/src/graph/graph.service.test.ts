@@ -17,6 +17,7 @@ function cfg(partial: Partial<RelayRuntimeConfig> = {}): RelayRuntimeConfig {
     nodeId: 'Earth',
     eid: 'ipn:1.1',
     eidByNode: { Earth: 'ipn:1.1' },
+    roleByNode: {},
     port: 3101,
     peerUrl: 'http://127.0.0.1:3101',
     peers: {},
@@ -25,6 +26,16 @@ function cfg(partial: Partial<RelayRuntimeConfig> = {}): RelayRuntimeConfig {
     dataDir: '',
     plan: { nodes: [], contacts: [] },
     planPath: '',
+    planStatus: {
+      path: '',
+      version: 't',
+      loadedAt: 0,
+      source: 'boot',
+      ok: true,
+      lastError: null,
+      lastFailedAt: null,
+      watchEnabled: false,
+    },
     startedAt: 0,
     graphMode: true,
     x: 0,
@@ -131,9 +142,65 @@ test('applyJoin records a direct peer and buildJoinResponse exports it', () => {
   const snap = graph.snapshot(1_000);
   const snapEdge = snap.edges.find((e) => edgeKey(e.a, e.b) === edgeKey('Earth', 'Probe'));
   assert.equal(snapEdge?.kind, 'direct');
-  assert.deepEqual(snap.peers, [{ id: 'Probe', url: 'http://127.0.0.1:3200' }]);
+  assert.deepEqual(snap.peers, [
+    { id: 'Probe', url: 'http://127.0.0.1:3200', unhealthy: false, unhealthyRemainMs: 0 },
+  ]);
   assert.equal(snap.stats.nodeCount, 2);
   assert.equal(snap.stats.peerCount, 1);
+  assert.equal(snap.stats.unhealthyCount, 0);
+  assert.deepEqual(snap.unhealthy, []);
+});
+
+test('snapshot exposes unhealthy peers and heard stale flags', () => {
+  const prevU = process.env.DTN_UNHEALTHY_MS;
+  const prevS = process.env.DTN_HEARD_STALE_MS;
+  process.env.DTN_UNHEALTHY_MS = '5000';
+  process.env.DTN_HEARD_STALE_MS = '1000';
+  try {
+    const graph = new GraphService(cfg());
+    graph.upsertDirectPeer(
+      'Near',
+      'http://127.0.0.1:1',
+      { id: 'Near', eid: 'ipn:2.1', x: 1, y: 0 },
+      openNow,
+      0,
+    );
+    graph.ingestSummary(
+      {
+        from: 'Near',
+        nodes: [{ id: 'Mars', eid: 'ipn:3.1', x: 10, y: 0 }],
+        edges: [
+          {
+            a: 'Near',
+            b: 'Mars',
+            delayMs: 1,
+            schedule: openNow,
+            originatedAt: 0,
+            hopCount: 0,
+          },
+        ],
+      },
+      0,
+    );
+    graph.markUnhealthy('Near', 10_000);
+    const snap = graph.snapshot(10_500);
+    assert.equal(snap.stats.unhealthyMs, 5000);
+    assert.equal(snap.stats.heardStaleMs, 1000);
+    assert.equal(snap.stats.unhealthyCount, 1);
+    assert.equal(snap.unhealthy[0]?.id, 'Near');
+    assert.equal(snap.unhealthy[0]?.remainMs, 4500);
+    assert.equal(snap.peers.find((p) => p.id === 'Near')?.unhealthy, true);
+    const heard = snap.edges.find((e) => e.a === 'Mars' || e.b === 'Mars');
+    assert.equal(heard?.kind, 'heard');
+    assert.equal(heard?.stale, true);
+    assert.ok((heard?.ageMs ?? 0) >= 10_500);
+    assert.equal(snap.stats.heardStaleCount, 1);
+  } finally {
+    if (prevU === undefined) delete process.env.DTN_UNHEALTHY_MS;
+    else process.env.DTN_UNHEALTHY_MS = prevU;
+    if (prevS === undefined) delete process.env.DTN_HEARD_STALE_MS;
+    else process.env.DTN_HEARD_STALE_MS = prevS;
+  }
 });
 
 test('decide uses direct peers and skips unhealthy neighbors', () => {
@@ -155,6 +222,17 @@ test('decide uses direct peers and skips unhealthy neighbors', () => {
 
   const recovered = graph.decide('Mars', Date.now() + 60_000);
   assert.equal(recovered.nextHop, 'Near');
+});
+
+test('ingestSummary copies node EIDs into eidByNode', () => {
+  const runtime = cfg();
+  const graph = new GraphService(runtime);
+  graph.ingestSummary({
+    from: 'Near',
+    nodes: [{ id: 'dst', eid: 'ipn:9.9', x: 10, y: 0 }],
+    edges: [],
+  });
+  assert.equal(runtime.eidByNode.dst, 'ipn:9.9');
 });
 
 test('ingest does not overwrite local coordinates', () => {

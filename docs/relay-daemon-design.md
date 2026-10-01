@@ -53,24 +53,53 @@
 
 与旧仿真 API 的单一 `apps/api/data/dtn-runs` **分离**；daemon 数据目录已 gitignore。
 
-## 5. 接触计划（wall-clock cyclic）
+## 5. 接触计划（cyclic / absolute）
 
-文件：`apps/relay/contact-plan.dual.json`
+文件：`apps/relay/contact-plan.tri.json`（默认三节点）、`contact-plan.dual.json`、`contact-plan.tri-long.json`、`contact-plan.tri-absolute.json`。
+
+**cyclic**
 
 - `schedule.type = cyclic`
-- `periodMs = 20000`，`openOffsetMs = 5000`，`openDurationMs = 10000`
-- 即每个 20s 周期内：**[5s, 15s) OPEN**，其余 CLOSED
-- 演示路径：窗口关闭时 CLI `send` → Earth **STORE**；窗口打开 → **FORWARD** → Mars **DELIVER** → SDK/`recv` 取走
+- 例：`periodMs = 20000`，`openOffsetMs = 5000`，`openDurationMs = 10000` → 每 20s 周期内 **[5s, 15s) OPEN**
 
-延迟：`delayMs` 模拟传播（默认 200ms）。
+**absolute**
+
+- `schedule.type = absolute`，`windows: [{ startMs, endMs } | { offsetStartMs, offsetEndMs }, …]`
+- 加载时 `normalizeContactPlan`：相对偏移（或 `startMs < 1e12`）加上进程 `startedAt` 转为墙钟；空窗丢弃并按起点排序
+- 无后续窗口时 `phase` 为 `CLOSED — no further windows`，`msUntilOpen` 为 `Infinity`
+
+演示路径：窗口关闭时 CLI `send` → Earth **STORE**；窗口打开 → **FORWARD** → Mars **DELIVER** → SDK/`recv` 取走。`delayMs` 模拟传播时延。
+
+### 节点角色
+
+计划字段 `role`（可用 `ROLE`／`DTN_ROLE` 覆盖）：`ground`／`orbiter`／`lander`／`cruise`；旧名 `endpoint`→lander、`relay`→orbiter、`hybrid`→cruise。
+
+| 角色 | inject | relay | 选路 |
+|------|:------:|:-----:|------|
+| ground | ✓ | ✗ | 偏好 orbiter |
+| orbiter | ✗ | ✓ | 同成本偏好其它 orbiter |
+| lander | ✓ | ✗ | 强偏好 orbiter，回避 ground |
+| cruise | ✓ | ✓ | 偏好 ground／orbiter 出口 |
+
+`GET /api/status` 含 `missionRole`、`capabilities`、`custodySemantics`、`routeBias`。图选路 `costMs = wait+delay+rolePenaltyMs`。
+
+### 接触计划热更新
+
+- 启动与 Nest 共用同一 `RelayRuntimeConfig`（同一 `startedAt`）；absolute 偏移窗热更时仍相对该历元。
+- `POST /api/plan/reload`：无 body 则重读 `planPath`；有 JSON body 则内存应用（不写盘）。
+- 默认监视计划文件（debounce ~400ms）；`DTN_PLAN_WATCH=0` 关闭。
+- 校验失败：HTTP 400 + `errors[]`，**保留上一份生效计划**；`plan.lastError`／`lastFailedAt` 可见。
+- `GET /api/plan` 与 `status.plan`／`contacts.plan`：`version`（内容 hash）、`source`（boot｜watch｜http）、`ok`。
 
 ## 6. HTTP API（daemon）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | GET | `/api/health` | 健康检查 |
-| GET | `/api/status` | 节点、三库深度、接触状态、近期事件 |
-| GET | `/api/contacts` | 当前接触窗口状态 |
+| GET | `/api/status` | 节点、角色能力／保管语义、计划版本、三库深度、接触状态、近期事件 |
+| GET | `/api/contacts` | 当前接触窗口状态（含 `plan` 元数据） |
+| GET | `/api/plan` | 接触计划版本／来源／校验错误 |
+| POST | `/api/plan/reload` | 热更新：重读磁盘或 body JSON；失败保留旧计划 |
 | POST | `/api/send` | 本地注入 `{ dst, payload, ttlMs? }`；成功 JSON **仅** `ok,id,src,dst,payload,ttlMs` |
 | GET | `/api/recv?clear=` | 轮询本地投递 inbox（业务字段，无 EID） |
 | GET | `/api/inbox` | 窥视 inbox（不清空） |
@@ -150,6 +179,32 @@ bash apps/relay/scripts/join-cluster.sh
 `JOIN_KEEP=1` 留下进程后，可用 `DTN_LIVE_GRAPH=1` 跑 `apps/relay/src/live-graph-join.test.ts`（默认跳过）。
 
 可选故障：停掉负 x 上的某一台不改变这条直连。要验证替代下一跳，种子坐标上需要两条都能更接近目的地、且下一跳自己还能转发的方向。
+
+### 多岛与桥
+
+两个无 `BOOTSTRAP_URL` 的进程即两个引导岛；gossip 只沿直连 peer，岛间默认互不可见。`GET /api/graph` 的 `stats.componentCount` 与各节点 `componentId` 标注本机视图上的弱连通簇。桥节点可先加入一岛，再 `POST /api/graph/join` `{ "url": "<另一引导>" }` 并入第二岛；合并后桥上通常 `componentCount === 1`，随后 gossip 把对岸节点带到原岛。
+
+```bash
+bash apps/relay/scripts/dual-island.sh              # 两岛隔离
+BRIDGE=1 bash apps/relay/scripts/dual-island.sh    # 再经 bridge 合并
+JOIN_KEEP=1 BRIDGE=1 bash apps/relay/scripts/dual-island.sh
+DTN_LIVE_DUAL=1 DTN_LIVE_DUAL_BRIDGE=1 npm test -w @yinghuo/relay -- src/live-dual-island.test.ts
+```
+
+### 故障邻居与听说边年龄
+
+| 项 | 行为 |
+|----|------|
+| 触发 | graph 模式转发失败 → `markUnhealthy(nextHop)` |
+| 回避窗口 | `DTN_UNHEALTHY_MS`（默认 30000）；选路跳过该邻居；束约 1s `RETRY` |
+| 可观测 | `GET /api/graph` → `unhealthy[]`、`stats.unhealthyCount`、`peers[].unhealthy`；控制台连接页红字列表 |
+| 听说边 `stale` | `ageMs > DTN_HEARD_STALE_MS`（默认 60000）时标注；**不改变选路**（时延候选仍仅直连） |
+
+```bash
+bash apps/relay/scripts/unhealthy-retry.sh
+```
+
+脚本：`dst` 引导；`alt`／`near` 加入；`src` 先 join `alt` 再 `/api/graph/join` → `near`。杀 `alt` 后 `src→dst` 改走 `near`，inbox 投递成功，再等 unhealthy 窗口清除。
 
 ## 11. 包与脚本
 

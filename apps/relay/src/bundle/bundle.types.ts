@@ -1,3 +1,4 @@
+import type { NodeRole } from '../role/role-policy';
 import type { BpInspect } from '../bp/bp-codec';
 
 /** Educational Bundle (simplified BP primary block) for relay daemons. */
@@ -58,17 +59,30 @@ export interface CyclicSchedule {
   openDurationMs: number;
 }
 
+export interface AbsoluteContactWindow {
+  startMs: number;
+  endMs: number;
+}
+
+/** Absolute epoch windows, or offset windows resolved at plan load. */
+export interface AbsoluteSchedule {
+  type: 'absolute';
+  windows: AbsoluteContactWindow[];
+}
+
+export type ContactSchedule = CyclicSchedule | AbsoluteSchedule;
+
 export interface DualContact {
   a: string;
   b: string;
   delayMs: number;
   bandwidthBps?: number;
-  schedule: CyclicSchedule;
+  schedule: ContactSchedule;
 }
 
 export interface DualNodeConfig {
   name: string;
-  role: 'endpoint' | 'relay' | 'hybrid';
+  role: NodeRole;
   port: number;
   peerUrl: string;
   peers?: Record<string, string>;
@@ -93,9 +107,29 @@ export interface DualContactPlan {
   };
 }
 
+export interface PlanStatus {
+  path: string;
+  version: string;
+  loadedAt: number;
+  source: 'boot' | 'watch' | 'http';
+  ok: boolean;
+  lastError: string | null;
+  lastFailedAt: number | null;
+  watchEnabled: boolean;
+}
+
 export interface RelayStatus {
   nodeId: string;
-  role: string;
+  role: NodeRole;
+  /** Canonical mission role after alias resolve. */
+  missionRole: string;
+  capabilities: {
+    canInject: boolean;
+    canRelay: boolean;
+  };
+  custodySemantics: string;
+  routeBias: string;
+  plan: PlanStatus;
   port: number;
   peerUrl: string;
   uptimeMs: number;
@@ -110,7 +144,7 @@ export interface RelayStatus {
     peer: string;
     open: boolean;
     delayMs: number;
-    schedule: CyclicSchedule;
+    schedule: ContactSchedule;
     nextChangeAt: number;
     phase: string;
   };

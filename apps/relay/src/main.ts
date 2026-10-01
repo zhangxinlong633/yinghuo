@@ -4,7 +4,7 @@ import { NestFactory } from '@nestjs/core';
 import { raw, type NextFunction, type Request, type Response } from 'express';
 import { AppModule } from './app.module';
 import { loadBpCodec } from './bp/bp-codec';
-import { loadRelayConfig } from './config';
+import { getOrLoadRelayConfig } from './config';
 
 /** Nest's JSON parser skips non-JSON. Capture CBOR before the route handler. */
 function peerIngestCbor(req: Request, res: Response, next: NextFunction): void {
@@ -18,7 +18,7 @@ function peerIngestCbor(req: Request, res: Response, next: NextFunction): void {
 
 async function bootstrap(): Promise<void> {
   loadBpCodec();
-  const cfg = loadRelayConfig();
+  const cfg = getOrLoadRelayConfig();
   const app = await NestFactory.create(AppModule);
   app.use('/api/peer/ingest', peerIngestCbor);
   app.enableCors({ origin: true });

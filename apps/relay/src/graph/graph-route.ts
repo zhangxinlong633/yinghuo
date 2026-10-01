@@ -1,6 +1,7 @@
 import { msUntilOpen } from '../contact/contact-window';
 import { edgeKey } from './graph-merge';
 import type { LocalGraph } from './graph.types';
+import { roleRoutePenalty, type NodeRole } from '../role/role-policy';
 
 export type RouteCandidate = {
   neighbor: string;
@@ -8,8 +9,10 @@ export type RouteCandidate = {
   distNb: number;
   waitMs: number;
   delayMs: number;
+  rolePenaltyMs: number;
   costMs: number;
   closer: boolean;
+  neighborRole?: NodeRole;
 };
 
 export type RouteDecision = {
@@ -32,8 +35,10 @@ export function decideNextHop(input: {
   peerIds: string[];
   unhealthy: Set<string>;
   now: number;
+  meRole?: NodeRole | string;
 }): RouteDecision {
   const { me, dst, graph, peerIds, unhealthy, now } = input;
+  const meRole = input.meRole ?? graph.nodes.get(me)?.role ?? 'endpoint';
 
   const meNode = graph.nodes.get(me);
   const dstNode = graph.nodes.get(dst);
@@ -72,14 +77,18 @@ export function decideNextHop(input: {
     const closer = distNb < distMe;
     const waitMs = msUntilOpen(now, edge.schedule);
     const delayMs = edge.delayMs;
+    const nbRole = nbNode.role ?? 'endpoint';
+    const rolePenaltyMs = roleRoutePenalty(meRole, nbRole);
     const entry: RouteCandidate = {
       neighbor,
       distMe,
       distNb,
       waitMs,
       delayMs,
-      costMs: waitMs + delayMs,
+      rolePenaltyMs,
+      costMs: waitMs + delayMs + rolePenaltyMs,
       closer,
+      neighborRole: nbRole,
     };
 
     if (closer) {
@@ -106,9 +115,16 @@ export function decideNextHop(input: {
     }
   }
 
+  const bias =
+    best.rolePenaltyMs > 0
+      ? `; rolePenalty ${best.rolePenaltyMs}ms`
+      : best.neighborRole
+        ? `; via ${best.neighborRole}`
+        : '';
+
   return {
     nextHop: best.neighbor,
-    reason: `selected ${best.neighbor} (cost ${best.costMs}ms)`,
+    reason: `selected ${best.neighbor} (cost ${best.costMs}ms${bias})`,
     candidates,
     culled,
   };

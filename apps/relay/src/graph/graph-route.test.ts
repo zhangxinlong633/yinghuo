@@ -29,11 +29,11 @@ function upsertEdge(graph: ReturnType<typeof emptyGraph>, edge: GraphEdge): void
 
 test('culls farther neighbors then picks lowest wait+delay', () => {
   const graph = emptyGraph();
-  upsertNode(graph, { id: 'me', eid: 'ipn:1.1', x: 0, y: 0 });
-  upsertNode(graph, { id: 'dst', eid: 'ipn:3.1', x: 10, y: 0 });
-  upsertNode(graph, { id: 'A', eid: 'ipn:2.1', x: 3, y: 0 });
-  upsertNode(graph, { id: 'B', eid: 'ipn:2.2', x: 8, y: 0 });
-  upsertNode(graph, { id: 'C', eid: 'ipn:2.3', x: -1, y: 0 });
+  upsertNode(graph, { id: 'me', eid: 'ipn:1.1', x: 0, y: 0, role: 'orbiter' });
+  upsertNode(graph, { id: 'dst', eid: 'ipn:3.1', x: 10, y: 0, role: 'lander' });
+  upsertNode(graph, { id: 'A', eid: 'ipn:2.1', x: 3, y: 0, role: 'orbiter' });
+  upsertNode(graph, { id: 'B', eid: 'ipn:2.2', x: 8, y: 0, role: 'orbiter' });
+  upsertNode(graph, { id: 'C', eid: 'ipn:2.3', x: -1, y: 0, role: 'orbiter' });
 
   const base = { schedule: openNow, originatedAt: 1, hopCount: 0, direct: true };
   upsertEdge(graph, { a: 'me', b: 'A', delayMs: 100, ...base, schedule: openIn5s });
@@ -47,6 +47,7 @@ test('culls farther neighbors then picks lowest wait+delay', () => {
     peerIds: ['A', 'B', 'C'],
     unhealthy: new Set(),
     now: 0,
+    meRole: 'orbiter',
   });
 
   assert.equal(decision.nextHop, 'B');
@@ -56,9 +57,37 @@ test('culls farther neighbors then picks lowest wait+delay', () => {
   const a = decision.candidates.find((c) => c.neighbor === 'A');
   const b = decision.candidates.find((c) => c.neighbor === 'B');
   assert.equal(a?.waitMs, 5000);
+  assert.equal(a?.rolePenaltyMs, 0);
   assert.equal(a?.costMs, 5100);
   assert.equal(b?.waitMs, 0);
   assert.equal(b?.costMs, 200);
+});
+
+test('lander prefers orbiter over ground when wait+delay equal', () => {
+  const graph = emptyGraph();
+  upsertNode(graph, { id: 'me', eid: 'ipn:1.1', x: 0, y: 0, role: 'lander' });
+  upsertNode(graph, { id: 'dst', eid: 'ipn:3.1', x: 10, y: 0 });
+  upsertNode(graph, { id: 'GroundPad', eid: 'ipn:2.1', x: 4, y: 0, role: 'ground' });
+  upsertNode(graph, { id: 'Orbiter', eid: 'ipn:2.2', x: 5, y: 0, role: 'orbiter' });
+  const base = { delayMs: 100, schedule: openNow, originatedAt: 1, hopCount: 0, direct: true };
+  upsertEdge(graph, { a: 'me', b: 'GroundPad', ...base });
+  upsertEdge(graph, { a: 'me', b: 'Orbiter', ...base });
+
+  const decision = decideNextHop({
+    me: 'me',
+    dst: 'dst',
+    graph,
+    peerIds: ['GroundPad', 'Orbiter'],
+    unhealthy: new Set(),
+    now: 0,
+    meRole: 'lander',
+  });
+
+  assert.equal(decision.nextHop, 'Orbiter');
+  const ground = decision.candidates.find((c) => c.neighbor === 'GroundPad');
+  const orb = decision.candidates.find((c) => c.neighbor === 'Orbiter');
+  assert.ok((ground?.costMs ?? 0) > (orb?.costMs ?? 0));
+  assert.match(decision.reason, /Orbiter/);
 });
 
 test('destination not in local graph', () => {

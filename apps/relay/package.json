@@ -9,6 +9,12 @@
     "start:earth": "NODE_ID=Earth PORT=3101 tsx src/main.ts",
     "start:relay": "NODE_ID=Relay PORT=3103 tsx src/main.ts",
     "start:mars": "NODE_ID=Mars PORT=3102 tsx src/main.ts",
+    "start:earth:long": "CONTACT_PLAN=contact-plan.tri-long.json NODE_ID=Earth PORT=3101 tsx src/main.ts",
+    "start:relay:long": "CONTACT_PLAN=contact-plan.tri-long.json NODE_ID=Relay PORT=3103 tsx src/main.ts",
+    "start:mars:long": "CONTACT_PLAN=contact-plan.tri-long.json NODE_ID=Mars PORT=3102 tsx src/main.ts",
+    "start:earth:abs": "CONTACT_PLAN=contact-plan.tri-absolute.json NODE_ID=Earth PORT=3101 tsx src/main.ts",
+    "start:relay:abs": "CONTACT_PLAN=contact-plan.tri-absolute.json NODE_ID=Relay PORT=3103 tsx src/main.ts",
+    "start:mars:abs": "CONTACT_PLAN=contact-plan.tri-absolute.json NODE_ID=Mars PORT=3102 tsx src/main.ts",
     "test": "node --import tsx --test src/**/*.test.ts",
     "test:live": "DTN_LIVE_SMOKE=1 node --import tsx --test src/live-tri-smoke.test.ts",
     "native:build": "cd ../../native/bp-codec && (test -f build/libdtn_bp_codec.dylib || test -f build/libdtn_bp_codec.so || (./scripts/fetch-deps.sh && cmake -S . -B build && cmake --build build))"

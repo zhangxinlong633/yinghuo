@@ -51,6 +51,7 @@ function runtime(graphMode: boolean): RelayRuntimeConfig {
     nodeId: 'Earth',
     eid: 'ipn:1.1',
     eidByNode: { Earth: 'ipn:1.1', Mars: 'ipn:3.1', Pluto: 'ipn:9.1' },
+    roleByNode: {},
     port: 3101,
     peerUrl: 'http://127.0.0.1:9',
     peers: { Near: 'http://127.0.0.1:9' },
@@ -74,6 +75,16 @@ function runtime(graphMode: boolean): RelayRuntimeConfig {
           ],
     },
     planPath: '',
+    planStatus: {
+      path: '',
+      version: 't',
+      loadedAt: 0,
+      source: 'boot',
+      ok: true,
+      lastError: null,
+      lastFailedAt: null,
+      watchEnabled: false,
+    },
     startedAt: 0,
   };
 }
