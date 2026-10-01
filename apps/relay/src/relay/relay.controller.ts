@@ -13,7 +13,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { decodeBundle, type BpDecoded } from '../bp/bp-codec';
-import { bundleFromDecoded } from '../bp/wire';
+import { bundleFromDecoded, WireEncodeError } from '../bp/wire';
 import { BundleService } from '../bundle/bundle.service';
 import type { BundleEvent } from '../bundle/bundle-machine';
 import { toBusinessInboxMessage, toBusinessSendFields } from '../bp/business-view';
@@ -82,7 +82,7 @@ export class RelayController {
       return { ok: true, ...toBusinessSendFields(bundle) };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      if (message.includes('role=relay')) {
+      if (message.includes('role=relay') || err instanceof WireEncodeError) {
         return { ok: false, error: message };
       }
       throw err;

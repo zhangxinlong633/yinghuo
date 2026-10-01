@@ -3,19 +3,33 @@ import type { RelayRuntimeConfig } from '../config';
 import { encodeBundle, type BpDecoded } from './bp-codec';
 import { eidForNode, nodeForEid } from './eid';
 
+/** Permanent wire-encode failure (unknown node, bad EID scheme, codec reject). */
+export class WireEncodeError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'WireEncodeError';
+  }
+}
+
 export function toWireBundle(bundle: RelayBundle, cfg: RelayRuntimeConfig): Buffer {
   const srcEid = eidForNode(cfg, bundle.src);
   const dstEid = eidForNode(cfg, bundle.dst);
   if (!srcEid || !dstEid) {
-    throw new Error(`unknown node for wire encode src=${bundle.src} dst=${bundle.dst}`);
+    throw new WireEncodeError(`unknown node for wire encode src=${bundle.src} dst=${bundle.dst}`);
   }
-  return encodeBundle({
-    srcEid,
-    dstEid,
-    payload: bundle.payload,
-    createdAtMs: bundle.createdAt,
-    ttlMs: bundle.ttlMs,
-  });
+  try {
+    return encodeBundle({
+      srcEid,
+      dstEid,
+      payload: bundle.payload,
+      createdAtMs: bundle.createdAt,
+      ttlMs: bundle.ttlMs,
+    });
+  } catch (err: unknown) {
+    if (err instanceof WireEncodeError) throw err;
+    const msg = err instanceof Error ? err.message : String(err);
+    throw new WireEncodeError(msg);
+  }
 }
 
 export type BundleFromDecoded =

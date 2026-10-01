@@ -6,6 +6,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { inspectBundle } from '../bp/bp-codec';
+import { toWireBundle, WireEncodeError } from '../bp/wire';
 import type {
   DeliveredMessage,
   RelayBundle,
@@ -168,6 +169,18 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     const id = newBundleId(this.cfg.nodeId);
     const next = this.cfg.nextHop[dst] ?? dst;
     const contactOpen = this.contacts.isOpenTo(next, now);
+    const draft: RelayBundle = {
+      id,
+      src: this.cfg.nodeId,
+      dst,
+      payload,
+      createdAt: now,
+      ttlMs,
+      hops: [],
+      delivered: false,
+    };
+    // Encode before any FORWARDING write. Failure throws and stores nothing.
+    const wire = this.encodeWire(draft);
     const tracked = createBundle({
       id,
       src: this.cfg.nodeId,
@@ -177,7 +190,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       ttlMs,
       contactOpen,
     });
-    const bundle = fromTracked(tracked, false);
+    const bundle = fromTracked(tracked, false, wire);
     await this.store.putBundle(bundle);
     await this.store.putCustody({
       bundleId: bundle.id,
@@ -361,6 +374,8 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       return null;
     }
 
+    if (this.encodeRejected(bundle)) return null;
+
     const next = this.cfg.nextHop[bundle.dst] ?? bundle.dst;
     const contactOpen = this.contacts.isOpenTo(next, now);
 
@@ -368,9 +383,12 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       if (!contactOpen) return null;
       if (!shouldRetry(this.lastForwardAttempt.get(bundleId) ?? null, now)) return null;
       if (this.forwardsInFlight.has(bundleId)) return null;
+      const wired = await this.wireBeforeForward(bundle);
+      if (!wired) return null;
       this.forwardsInFlight.add(bundleId);
       this.lastForwardAttempt.set(bundleId, now);
-      return { bundleId, next, bundle };
+      if (wired.wire !== bundle.wire) await this.store.putBundle(wired);
+      return { bundleId, next, bundle: wired };
     }
 
     if (!shouldRetry(lastRetryAt(bundle.events), now)) return null;
@@ -390,12 +408,15 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       return null;
     }
 
+    const wired = await this.wireBeforeForward(bundle);
+    if (!wired) return null;
+
     const forwarding: RelayBundle = {
-      ...bundle,
+      ...wired,
       state: 'FORWARDING',
-      hops: [...bundle.hops, { from: this.cfg.nodeId, to: next, at: now }],
+      hops: [...wired.hops, { from: this.cfg.nodeId, to: next, at: now }],
       events: [
-        ...(bundle.events ?? []),
+        ...(wired.events ?? []),
         { t: now, node: this.cfg.nodeId, kind: 'FORWARD', msg: 'FORWARDING' },
       ],
     };
@@ -410,7 +431,12 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
   /** Peer HTTP. Must run while the bundle mutex is not held. */
   private async finishForward(job: ForwardJob): Promise<void> {
-    let result: { ok: boolean; error?: string; wireBase64?: string };
+    let result: {
+      ok: boolean;
+      error?: string;
+      wireBase64?: string;
+      permanentEncode?: boolean;
+    };
     try {
       result = await this.peer.forwardTo(peerUrlFor(this.cfg, job.next), job.bundle);
     } finally {
@@ -424,8 +450,64 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       });
     }
     if (!result.ok) {
-      await this.enqueue(() => this.applyForwardFailure(job.bundleId, result.error));
+      if (result.permanentEncode) {
+        await this.enqueue(() => this.abandonEncode(job.bundleId, result.error ?? 'encode failed'));
+      } else {
+        await this.enqueue(() => this.applyForwardFailure(job.bundleId, result.error));
+      }
     }
+  }
+
+  /** Cached BPv7 bytes, or a fresh encode. Throws WireEncodeError; does not touch state. */
+  private encodeWire(bundle: RelayBundle): string {
+    if (bundle.wire) return bundle.wire;
+    return toWireBundle(bundle, this.cfg).toString('base64');
+  }
+
+  /**
+   * Encode before the FORWARDING write. Permanent failure stays out of FORWARDING
+   * and is not retried on later contact windows.
+   */
+  private async wireBeforeForward(bundle: RelayBundle): Promise<RelayBundle | null> {
+    if (this.encodeRejected(bundle)) return null;
+    try {
+      const wire = this.encodeWire(bundle);
+      return wire === bundle.wire ? bundle : { ...bundle, wire };
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      await this.abandonEncode(bundle.id, msg);
+      return null;
+    }
+  }
+
+  private encodeRejected(bundle: RelayBundle): boolean {
+    return (bundle.events ?? []).some((event) => event.kind === 'ENCODE_FAIL');
+  }
+
+  /** Record a permanent encode failure. State stays off FORWARDING; custody is not a retry loop. */
+  private async abandonEncode(bundleId: string, reason: string): Promise<void> {
+    const stored = await this.store.getBundle(bundleId);
+    if (!stored) return;
+    if (stored.state === 'ACKED' || stored.state === 'EXPIRED' || stored.state === 'ARRIVED') return;
+    const now = Date.now();
+    const already = this.encodeRejected(stored);
+    await this.store.putBundle({
+      ...stored,
+      state: 'WAITING',
+      events: already
+        ? stored.events
+        : [
+            ...(stored.events ?? []),
+            { t: now, node: this.cfg.nodeId, kind: 'ENCODE_FAIL', msg: reason },
+          ],
+    });
+    const custody = await this.store.getCustody(bundleId);
+    if (custody?.waitingAck) {
+      custody.waitingAck = false;
+      await this.store.putCustody(custody);
+    }
+    this.lastForwardAttempt.delete(bundleId);
+    if (!already) this.pushEvent('ENCODE_FAIL', `${bundleId} ${reason}`);
   }
 
   /** Re-read after HTTP. Only WAITING + clear waitingAck while still FORWARDING with custody. */
@@ -479,8 +561,13 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     const ids = await this.store.listPendingBundleIds();
     const forwards: ForwardJob[] = [];
     for (const id of ids) {
-      const job = await this.prepareForward(id);
-      if (job) forwards.push(job);
+      try {
+        const job = await this.prepareForward(id);
+        if (job) forwards.push(job);
+      } catch (err: unknown) {
+        if (err instanceof WireEncodeError) continue;
+        throw err;
+      }
     }
     await this.expireDeliveredInbox(now);
     return { acks, forwards };

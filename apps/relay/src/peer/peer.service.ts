@@ -29,14 +29,21 @@ export class PeerService {
   async forwardTo(
     url: string,
     bundle: RelayBundle
-  ): Promise<{ ok: boolean; body?: PeerIngestResult; error?: string; wireBase64?: string }> {
+  ): Promise<{
+    ok: boolean;
+    body?: PeerIngestResult;
+    error?: string;
+    wireBase64?: string;
+    /** Encode failed. Caller must not treat this as a window retry. */
+    permanentEncode?: boolean;
+  }> {
     let wire: Buffer;
     try {
-      wire = toWireBundle(bundle, this.cfg);
+      wire = bundle.wire ? Buffer.from(bundle.wire, 'base64') : toWireBundle(bundle, this.cfg);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       this.log.warn(`encode failed: ${msg}`);
-      return { ok: false, error: msg };
+      return { ok: false, error: msg, permanentEncode: true };
     }
     const wireBase64 = wire.toString('base64');
     try {
