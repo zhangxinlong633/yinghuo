@@ -45,15 +45,18 @@ export class PeerService {
     }
   }
 
-  async sendAck(toUrl: string, bundleId: string, events: PeerAckEvent[] = []): Promise<void> {
+  /** True only when the ack HTTP response is ok. Never throws. */
+  async sendAck(toUrl: string, bundleId: string, events: PeerAckEvent[] = []): Promise<boolean> {
     try {
-      await fetch(`${toUrl}/api/peer/ack`, {
+      const res = await fetch(`${toUrl}/api/peer/ack`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ bundleId, from: this.cfg.nodeId, events }),
       });
+      return res.ok;
     } catch (err: unknown) {
       this.log.warn(`ack failed: ${err instanceof Error ? err.message : err}`);
+      return false;
     }
   }
 }
