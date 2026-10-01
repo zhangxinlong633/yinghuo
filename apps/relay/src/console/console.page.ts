@@ -22,59 +22,59 @@ export function buildConsoleHtml(opts: {
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Noto+Sans+SC:wght@400;500;600;700&family=Syne:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      /* Light green — OpenRouter-like airy surface */
-      --bg: #f3faf5;
-      --bg-soft: #e8f5ee;
-      --surface: #ffffff;
-      --panel: #ffffff;
-      --border: #d7ebe0;
-      --border-soft: #e4f2ea;
-      --text: #0f1f16;
-      --muted: #4f6a5b;
-      --faint: #7d9788;
-      --accent: #16a34a;
-      --accent-2: #15803d;
-      --accent-soft: #dcfce7;
-      --accent-hover: #15803d;
-      --ok: #15803d;
-      --ok-soft: #dcfce7;
-      --warn: #a16207;
-      --danger: #b91c1c;
-      --danger-soft: #fee2e2;
-      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Noto Sans SC", sans-serif;
-      --nav-h: 64px;
-      --radius: 16px;
-      --radius-sm: 12px;
-      --shadow: 0 1px 2px rgba(15,31,22,0.04), 0 8px 24px rgba(15,31,22,0.03);
-      --nav-bg: rgba(255,255,255,0.82);
+      --bg: #f6f3ec;
+      --bg-soft: #eee8dc;
+      --surface: rgba(255,252,247,0.72);
+      --panel: rgba(255,252,247,0.88);
+      --border: rgba(42, 58, 46, 0.12);
+      --border-soft: rgba(42, 58, 46, 0.07);
+      --text: #1c2a22;
+      --muted: #5a6d61;
+      --faint: #8a9a90;
+      --accent: #0f7a4e;
+      --accent-2: #0b5c3b;
+      --accent-soft: rgba(15, 122, 78, 0.12);
+      --accent-hover: #0b5c3b;
+      --ok: #0f7a4e;
+      --ok-soft: rgba(15, 122, 78, 0.12);
+      --warn: #9a6700;
+      --danger: #b42318;
+      --danger-soft: rgba(180, 35, 24, 0.1);
+      --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: "Noto Sans SC", "Syne", ui-sans-serif, system-ui, sans-serif;
+      --display: "Syne", "Noto Sans SC", sans-serif;
+      --serif: "Instrument Serif", "Noto Serif SC", Georgia, serif;
+      --nav-h: 72px;
+      --radius: 18px;
+      --radius-sm: 10px;
+      --shadow: none;
+      --nav-bg: rgba(246, 243, 236, 0.7);
       color-scheme: light;
     }
     html[data-theme="dark"] {
-      /* Deep green */
-      --bg: #07140e;
-      --bg-soft: #0d1f16;
-      --surface: #10261b;
-      --panel: #122c1f;
-      --border: #1f4633;
-      --border-soft: #183628;
-      --text: #e8f7ee;
-      --muted: #9fc4ae;
-      --faint: #6f9a80;
-      --accent: #22c55e;
-      --accent-2: #4ade80;
-      --accent-soft: rgba(34,197,94,0.16);
-      --accent-hover: #16a34a;
-      --ok: #4ade80;
-      --ok-soft: rgba(34,197,94,0.18);
-      --warn: #fbbf24;
-      --danger: #f87171;
-      --danger-soft: rgba(248,113,113,0.16);
-      --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.28);
-      --nav-bg: rgba(7,20,14,0.88);
+      --bg: #0c1410;
+      --bg-soft: #14201a;
+      --surface: rgba(18, 32, 26, 0.75);
+      --panel: rgba(20, 36, 28, 0.9);
+      --border: rgba(200, 230, 210, 0.12);
+      --border-soft: rgba(200, 230, 210, 0.07);
+      --text: #e7f2eb;
+      --muted: #9bb5a6;
+      --faint: #6f8a7b;
+      --accent: #3dcf8e;
+      --accent-2: #7aefb4;
+      --accent-soft: rgba(61, 207, 142, 0.14);
+      --accent-hover: #2fb87a;
+      --ok: #3dcf8e;
+      --ok-soft: rgba(61, 207, 142, 0.14);
+      --warn: #e6b84d;
+      --danger: #f07167;
+      --danger-soft: rgba(240, 113, 103, 0.14);
+      --shadow: none;
+      --nav-bg: rgba(12, 20, 16, 0.72);
       color-scheme: dark;
     }
     * { box-sizing: border-box; }
@@ -83,20 +83,22 @@ export function buildConsoleHtml(opts: {
       background: var(--bg); color: var(--text);
       font-family: var(--sans);
       -webkit-font-smoothing: antialiased;
-      letter-spacing: -0.01em;
-      font-size: 17px;
+      letter-spacing: 0.01em;
+      font-size: 16.5px;
+      font-weight: 400;
     }
     body {
       background:
-        radial-gradient(900px 420px at 8% -10%, rgba(22,163,74,0.10), transparent 55%),
-        radial-gradient(720px 360px at 95% 0%, rgba(74,222,128,0.08), transparent 50%),
-        var(--bg);
+        radial-gradient(1200px 560px at 12% -20%, rgba(15, 122, 78, 0.16), transparent 58%),
+        radial-gradient(900px 480px at 88% 8%, rgba(180, 140, 60, 0.10), transparent 52%),
+        radial-gradient(700px 400px at 50% 100%, rgba(15, 122, 78, 0.06), transparent 55%),
+        linear-gradient(180deg, #f8f5ee 0%, #f1efe6 100%);
     }
     html[data-theme="dark"] body {
       background:
-        radial-gradient(900px 420px at 8% -10%, rgba(34,197,94,0.12), transparent 55%),
-        radial-gradient(720px 360px at 95% 0%, rgba(22,163,74,0.10), transparent 50%),
-        var(--bg);
+        radial-gradient(1100px 520px at 10% -18%, rgba(61, 207, 142, 0.14), transparent 55%),
+        radial-gradient(800px 420px at 92% 0%, rgba(90, 120, 80, 0.12), transparent 50%),
+        linear-gradient(180deg, #0c1410 0%, #101a15 100%);
     }
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
@@ -110,101 +112,155 @@ export function buildConsoleHtml(opts: {
     .mast {
       flex-shrink: 0;
       background: var(--nav-bg);
-      border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-soft);
+      backdrop-filter: blur(18px) saturate(1.2);
       position: sticky; top: 0; z-index: 20;
     }
     .mast-row {
-      display: flex; align-items: center; gap: 1rem;
-      min-height: 64px;
-      padding: 0.45rem 1.25rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: 1rem;
+      min-height: var(--nav-h);
+      padding: 0.65rem clamp(1rem, 3vw, 2rem);
+    }
+    .mast-left {
+      display: flex; align-items: baseline; gap: 0.65rem 0.85rem;
+      flex-wrap: wrap;
+      justify-self: start;
+      min-width: 0;
     }
     .brand {
-      display: flex; align-items: center; gap: 0.55rem;
-      font-weight: 700; font-size: 1.02rem; letter-spacing: -0.02em;
-      white-space: nowrap; color: var(--text);
-      flex-shrink: 0;
+      font-family: var(--display);
+      font-weight: 700;
+      font-size: clamp(1.25rem, 2vw, 1.55rem);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: var(--text);
+      white-space: nowrap;
     }
-    .brand .mark {
-      width: 30px; height: 30px; border-radius: 9px;
-      background: linear-gradient(145deg, var(--accent) 0%, var(--accent-2) 100%);
-      flex-shrink: 0;
-      box-shadow: 0 0 0 3px var(--accent-soft);
+    .brand .port {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-style: italic;
+      font-size: 0.92em;
+      color: var(--muted);
+      letter-spacing: 0;
+      margin-left: 0.15rem;
+    }
+    .mast-status {
+      display: inline-flex; align-items: center; gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+    .status-chip {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0.2rem 0;
+      border-bottom: 1px solid transparent;
+    }
+    .status-chip.ok { color: var(--ok); border-bottom-color: var(--ok); }
+    .status-chip.bad { color: var(--danger); border-bottom-color: var(--danger); }
+    .status-chip.muted { color: var(--faint); }
+    .mast-uptime {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--faint);
+      letter-spacing: 0.02em;
     }
     .nav {
       display: flex;
       align-items: center;
-      gap: 0.15rem;
-      flex: 1;
-      min-width: 0;
-      overflow-x: auto;
+      justify-content: center;
+      gap: 0.15rem 1.15rem;
+      justify-self: center;
+      flex-wrap: wrap;
     }
     .nav-btn {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      width: auto;
-      background: transparent; border: 1px solid transparent; color: var(--muted);
-      padding: 0.45rem 0.8rem; border-radius: 999px; cursor: pointer;
-      font-size: 0.98rem; font-weight: 600; font-family: var(--sans);
+      display: inline-flex; align-items: center;
+      background: transparent; border: none; color: var(--muted);
+      padding: 0.35rem 0.1rem 0.45rem;
+      border-radius: 0;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: var(--display);
+      letter-spacing: 0.06em;
       white-space: nowrap;
-      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      position: relative;
+      transition: color 0.18s ease;
     }
-    .nav-btn:hover { background: var(--bg-soft); color: var(--text); }
-    .nav-btn.active {
-      background: var(--accent-soft); color: var(--accent-2);
-      border-color: transparent;
+    .nav-btn::after {
+      content: "";
+      position: absolute; left: 0; right: 0; bottom: 0;
+      height: 1px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: center;
+      transition: transform 0.2s ease;
     }
-    html[data-theme="dark"] .nav-btn.active {
-      background: var(--accent); color: #062012;
-      border-color: var(--accent);
-    }
-    .nav-btn .ico { opacity: 0.9; }
+    .nav-btn:hover { color: var(--text); }
+    .nav-btn:hover::after { transform: scaleX(0.35); }
+    .nav-btn.active { color: var(--text); }
+    .nav-btn.active::after { transform: scaleX(1); }
+    html[data-theme="dark"] .nav-btn.active { color: var(--accent-2); }
     .mast-tools {
-      display: flex; align-items: center; gap: 0.45rem;
+      display: flex; align-items: center; gap: 0.55rem;
+      justify-self: end;
       flex-shrink: 0;
     }
     .peer-link {
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 0.4rem 0.75rem; border-radius: 999px;
-      border: 1px solid var(--border); background: var(--surface);
-      color: var(--text); font-weight: 600; font-size: 0.92rem;
+      display: inline-flex; align-items: center;
+      padding: 0.25rem 0;
+      border: none; background: transparent;
+      color: var(--text);
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 1rem;
       white-space: nowrap;
+      border-bottom: 1px solid var(--border);
     }
-    .peer-link:hover { background: var(--accent-soft); text-decoration: none; }
+    .peer-link:hover { border-bottom-color: var(--accent); text-decoration: none; color: var(--accent-2); }
     .lang-switch {
-      display: inline-flex; border: 1px solid var(--border); border-radius: 999px;
-      overflow: hidden; background: var(--surface); width: auto;
+      display: inline-flex;
+      gap: 0.35rem;
+      border: none;
+      background: transparent;
+      width: auto;
     }
     .lang-btn, .theme-btn {
-      background: transparent; color: var(--muted); border: none; border-radius: 0;
-      padding: 0.35rem 0.65rem; font-size: 0.88rem; font-weight: 650;
+      background: transparent; color: var(--faint); border: none; border-radius: 0;
+      padding: 0.2rem 0.35rem; font-size: 0.8rem; font-weight: 600;
+      font-family: var(--display);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
-    .lang-btn:hover, .theme-btn:hover { background: var(--bg-soft); color: var(--text); }
-    .lang-btn.active, .theme-btn.active { background: var(--accent); color: #fff; }
-    .lang-btn.active:hover, .theme-btn.active:hover { background: var(--accent-hover); }
-    .status-row {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 0.75rem; flex-wrap: wrap;
-      padding: 0.35rem 1.25rem 0.55rem;
-      border-top: 1px solid var(--border-soft);
+    .lang-btn:hover, .theme-btn:hover { color: var(--text); }
+    .lang-btn.active, .theme-btn.active {
+      color: var(--accent-2);
+      background: transparent;
+      box-shadow: inset 0 -1px 0 var(--accent);
     }
-    .status-left, .status-right {
-      display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+    .lang-btn.active:hover, .theme-btn.active:hover { color: var(--accent-2); background: transparent; }
+    .ghost.refresh-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.35rem;
     }
-    .status-row h1 { font-size: 1.05rem; margin: 0; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
-    .status-right { color: var(--muted); font-size: 0.95rem; }
-    .pill {
-      display: inline-flex; align-items: center; gap: 0.25rem;
-      padding: 0.22rem 0.65rem; border-radius: 999px; font-size: 0.86rem; font-weight: 600;
-      border: 1px solid var(--border); background: var(--surface);
-    }
-    .pill.ok { color: var(--ok); border-color: transparent; background: var(--ok-soft); }
-    .pill.bad { color: var(--danger); border-color: transparent; background: var(--danger-soft); }
-    .pill.muted { color: var(--muted); }
-    .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .ghost.refresh-btn:hover { color: var(--text); background: transparent; }
     .main {
       flex: 1;
       min-height: 0;
-      padding: 1.15rem 1.4rem 1.6rem;
+      padding: 1.6rem clamp(1.2rem, 3vw, 2.4rem) 2rem;
       overflow: auto;
       min-width: 0;
       display: flex;
@@ -219,10 +275,16 @@ export function buildConsoleHtml(opts: {
       min-height: 0;
     }
     .view-title {
-      margin: 0; font-size: 1.35rem; font-weight: 700;
-      letter-spacing: -0.03em;
+      margin: 0 0 0.15rem;
+      font-family: var(--serif);
+      font-size: clamp(1.85rem, 3vw, 2.35rem);
+      font-weight: 400;
+      font-style: italic;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--text);
     }
-    .grid { display: grid; gap: 0.85rem; }
+    .grid { display: grid; gap: 1rem; }
     .grid.stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .grid.ops-grid { flex: 1; min-height: 0; align-items: stretch; }
@@ -240,45 +302,85 @@ export function buildConsoleHtml(opts: {
     }
     .card {
       background: var(--panel);
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-soft);
       border-radius: var(--radius);
-      padding: 1rem 1.1rem;
+      padding: 1.15rem 1.25rem;
       box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
     }
-    .card.stat-card { transition: border-color 0.15s; }
-    .card.stat-card:hover { border-color: var(--accent-2); }
+    .card.stat-card {
+      transition: transform 0.2s ease, border-color 0.2s ease;
+      border-color: transparent;
+      background: linear-gradient(160deg, rgba(255,252,247,0.9), rgba(238,232,220,0.55));
+    }
+    html[data-theme="dark"] .card.stat-card {
+      background: linear-gradient(160deg, rgba(24,40,32,0.9), rgba(18,30,24,0.55));
+    }
+    .card.stat-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
     .card h3 {
-      margin: 0 0 0.55rem; font-size: 1.02rem; font-weight: 650;
-      color: var(--text); letter-spacing: -0.01em;
+      margin: 0 0 0.65rem;
+      font-family: var(--display);
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
     }
     .stat-val {
-      font-size: 1.7rem; font-weight: 700; font-family: var(--mono);
-      line-height: 1.15; letter-spacing: -0.04em; color: var(--text);
+      font-size: clamp(1.85rem, 2.4vw, 2.35rem);
+      font-weight: 700;
+      font-family: var(--display);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      color: var(--text);
     }
-    .stat-label { color: var(--muted); font-size: 0.92rem; margin-top: 0.35rem; font-weight: 500; }
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-top: 0.4rem;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
     .kv { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 0.45rem 0.85rem; font-size: 0.98rem; }
     .kv .k { color: var(--faint); font-weight: 500; }
     .kv .v { font-family: var(--mono); word-break: break-all; font-size: 0.94rem; color: var(--text); }
     .badge-open { color: var(--ok); font-weight: 700; }
     .badge-closed { color: var(--danger); font-weight: 700; }
     button, .btn {
-      background: var(--accent); color: #fff; border: 1px solid transparent; border-radius: 999px;
-      padding: 0.48rem 1rem; font-weight: 600; cursor: pointer; font-size: 1rem;
-      font-family: var(--sans);
-      transition: background 0.12s, transform 0.08s;
+      background: var(--accent); color: #fff; border: 1px solid transparent; border-radius: 6px;
+      padding: 0.55rem 1.15rem; font-weight: 650; cursor: pointer; font-size: 0.95rem;
+      font-family: var(--display);
+      letter-spacing: 0.02em;
+      transition: background 0.15s, transform 0.08s, box-shadow 0.15s;
     }
     button:hover { background: var(--accent-hover); }
     button:active { transform: scale(0.98); }
     button.secondary {
-      background: var(--surface); color: var(--text);
+      background: transparent; color: var(--text);
       border: 1px solid var(--border);
     }
-    button.secondary:hover { background: var(--bg-soft); }
+    button.secondary:hover { background: var(--bg-soft); border-color: var(--accent); }
     button.ghost {
       background: transparent; border: 1px solid var(--border); color: var(--muted);
-      padding: 0.35rem 0.65rem; border-radius: 999px; font-size: 1rem;
+      padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.92rem;
     }
     button.ghost:hover { color: var(--text); border-color: var(--accent); }
+    button.ghost.refresh-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.35rem;
+      border-radius: 0;
+    }
+    button.ghost.refresh-btn:hover { color: var(--text); background: transparent; border: none; }
     input, select, textarea {
       background: var(--surface); color: var(--text);
       border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -340,20 +442,59 @@ export function buildConsoleHtml(opts: {
     }
     table.simple th { color: var(--faint); font-weight: 600; font-size: 0.88rem; }
     table.simple td.mono { font-family: var(--mono); }
+    tr[data-id] { cursor: pointer; }
+    tr[data-id]:hover { background: var(--bg-soft); }
+    #bundle-rows tr { cursor: pointer; }
+    #bundle-rows tr:hover td { background: var(--bg-soft); }
+    .graph-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(220px, 0.7fr);
+      gap: 0.85rem;
+      min-height: 420px;
+    }
+    .cn-map-card { min-height: 420px; display: flex; flex-direction: column; }
+    #cn-svg {
+      width: 100%;
+      flex: 1;
+      min-height: 360px;
+      background: var(--bg-soft);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-soft);
+    }
+    #cn-svg .edge.direct { stroke: var(--accent); stroke-width: 2.5; }
+    #cn-svg .edge.heard { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 7 5; }
+    #cn-svg .edge-hit { stroke: transparent; stroke-width: 16; cursor: pointer; }
+    #cn-svg .node circle { fill: var(--surface); stroke: var(--accent-2); stroke-width: 2; }
+    #cn-svg .node.self circle { fill: var(--accent); stroke: var(--accent-2); }
+    #cn-svg .node text { fill: var(--text); font-size: 13px; font-family: var(--sans); font-weight: 650; }
+    #cn-svg .edge.selected { stroke: var(--warn); }
+    .cn-detail { margin-top: 0.85rem; }
+    .cn-detail > summary { cursor: pointer; font-weight: 650; color: var(--muted); }
+    .route-cols pre { min-height: 4.5rem; }
     @media (max-width: 1100px) {
       .grid.stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .grid.three { grid-template-columns: 1fr 1fr; }
     }
-    @media (max-width: 900px) {
-      .mast-row { flex-wrap: wrap; }
-      .nav { order: 3; flex-basis: 100%; }
-      .grid.two { grid-template-columns: 1fr; }
+    @media (max-width: 980px) {
+      .mast-row {
+        grid-template-columns: 1fr;
+        justify-items: stretch;
+        gap: 0.55rem;
+        padding: 0.85rem 1.1rem;
+      }
+      .mast-left, .nav, .mast-tools { justify-self: stretch; }
+      .mast-left { justify-content: space-between; }
+      .nav { justify-content: center; gap: 0.85rem; padding: 0.15rem 0; }
+      .mast-tools { justify-content: flex-end; flex-wrap: wrap; }
+      .grid.two, .graph-layout { grid-template-columns: 1fr; }
       .card.stretch pre, .card.stretch .logbox { max-height: min(52vh, 480px); }
     }
     @media (max-width: 560px) {
-      .grid.stats, .grid.three { grid-template-columns: 1fr; }
+      .grid.stats, .grid.three, .graph-layout { grid-template-columns: 1fr; }
       .main { padding: 1rem; }
-      .brand span.brand-text { display: none; }
+      .brand .port { display: none; }
+      .nav { gap: 0.65rem; }
+      .nav-btn { font-size: 0.88rem; letter-spacing: 0.04em; }
     }
   </style>
 </head>
@@ -361,35 +502,33 @@ export function buildConsoleHtml(opts: {
   <div class="app">
     <header class="mast">
       <div class="mast-row">
-        <div class="brand"><span class="mark"></span><span class="brand-text">${nodeId} · :${port}</span></div>
-        <nav class="nav">
-          <button type="button" class="nav-btn active" data-view="overview"><span class="ico">◉</span><span data-i18n="navOverview">概览</span></button>
-          <button type="button" class="nav-btn" data-view="storage"><span class="ico">▣</span><span data-i18n="navStorage">存储</span></button>
-          <button type="button" class="nav-btn" data-view="connections"><span class="ico">⇄</span><span data-i18n="navConnections">连接</span></button>
-          <button type="button" class="nav-btn" data-view="ops"><span class="ico">➤</span><span data-i18n="navOps">操作</span></button>
-          <button type="button" class="nav-btn" data-view="logs"><span class="ico">≡</span><span data-i18n="navLogs">日志</span></button>
+        <div class="mast-left">
+          <div class="brand">${nodeId}<span class="port"> · :${port}</span></div>
+          <div class="mast-status">
+            <span class="status-chip muted" id="tb-role">—</span>
+            <span class="status-chip bad" id="tb-contact"><span id="tb-contact-text">—</span></span>
+            <span class="mast-uptime" id="tb-uptime">—</span>
+          </div>
+        </div>
+        <nav class="nav" aria-label="primary">
+          <button type="button" class="nav-btn active" data-view="overview" data-i18n="navOverview">概览</button>
+          <button type="button" class="nav-btn" data-view="storage" data-i18n="navStorage">存储</button>
+          <button type="button" class="nav-btn" data-view="connections" data-i18n="navConnections">连接</button>
+          <button type="button" class="nav-btn" data-view="ops" data-i18n="navOps">操作</button>
+          <button type="button" class="nav-btn" data-view="bundles" data-i18n="navBundles">束</button>
+          <button type="button" class="nav-btn" data-view="logs" data-i18n="navLogs">日志</button>
         </nav>
         <div class="mast-tools">
+          <button type="button" class="ghost refresh-btn" id="btn-refresh" data-i18n="refresh" data-i18n-title="refresh" title="立即刷新">刷新</button>
           <div class="lang-switch" role="group" aria-label="language">
-            <button type="button" class="lang-btn active" data-lang="zh">中文</button>
+            <button type="button" class="lang-btn active" data-lang="zh">中</button>
             <button type="button" class="lang-btn" data-lang="en">EN</button>
           </div>
           <div class="lang-switch" role="group" aria-label="theme">
-            <button type="button" class="theme-btn" data-theme="light" data-i18n="themeLight">浅色</button>
-            <button type="button" class="theme-btn" data-theme="dark" data-i18n="themeDark">深色</button>
+            <button type="button" class="theme-btn" data-theme="light" data-i18n="themeLight">浅</button>
+            <button type="button" class="theme-btn" data-theme="dark" data-i18n="themeDark">深</button>
           </div>
-          <a class="peer-link" href="${peerUrl}/"><span data-i18n="peer">对端</span> ${defaultDst}</a>
-        </div>
-      </div>
-      <div class="status-row">
-        <div class="status-left">
-          <h1><span data-i18n="nodeLabel">节点</span> <code id="tb-node">${nodeId}</code></h1>
-          <span class="pill muted" id="tb-role">role=—</span>
-          <span class="pill bad" id="tb-contact"><span class="dot"></span><span id="tb-contact-text">—</span></span>
-        </div>
-        <div class="status-right">
-          <span id="tb-uptime">uptime —</span>
-          <button type="button" class="ghost" id="btn-refresh" data-i18n-title="refresh" title="立即刷新">↻</button>
+          <a class="peer-link" href="${peerUrl}/"><span data-i18n="peer">对端 </span>${defaultDst}</a>
         </div>
       </div>
     </header>
@@ -402,7 +541,13 @@ export function buildConsoleHtml(opts: {
           <div class="card stat-card"><div class="stat-val" id="st-custody">—</div><div class="stat-label" data-i18n="statCustody">托管 · 持有</div></div>
           <div class="card stat-card"><div class="stat-val" id="st-index">—</div><div class="stat-label" data-i18n="statIndex">索引 · 键</div></div>
           <div class="card stat-card"><div class="stat-val" id="st-inbox">—</div><div class="stat-label" data-i18n="statInbox">收件箱 · 本地</div></div>
+          <div class="card stat-card"><div class="stat-val" id="st-nodes">—</div><div class="stat-label" data-i18n="statNodes">已知节点</div></div>
+          <div class="card stat-card"><div class="stat-val" id="st-seeds">—</div><div class="stat-label" data-i18n="statSeeds">种子邻居</div></div>
+          <div class="card stat-card"><div class="stat-val" id="st-age">—</div><div class="stat-label" data-i18n="statAge">摘要最大年龄</div></div>
+          <div class="card stat-card"><div class="stat-val" id="st-dests">—</div><div class="stat-label" data-i18n="statDests">可试算目的</div></div>
         </div>
+        <div id="ov-bundle-counts" class="hint"></div>
+        <table class="simple"><tbody id="ov-bundle-recent"></tbody></table>
         <div class="grid two">
           <div class="card">
             <h3 data-i18n="nodeInfo">节点信息</h3>
@@ -473,12 +618,38 @@ export function buildConsoleHtml(opts: {
 
       <section class="view" id="view-connections">
         <h2 class="view-title" data-i18n="connectionsTitle">连接</h2>
-        <div class="grid two">
+        <div class="graph-layout">
+          <div class="card cn-map-card">
+            <h3 data-i18n="netMap">网络图</h3>
+            <svg id="cn-svg" viewBox="0 0 640 420" role="img" aria-label="contact graph"></svg>
+          </div>
+          <div class="card" id="cn-edge">
+            <h3 data-i18n="edgeSide">选中边</h3>
+            <p class="hint" data-i18n="edgeHint">点击实线（直连）或虚线（听说）查看窗口、时延、新鲜度和跳数。</p>
+            <div class="kv">
+              <div class="k" data-i18n="edgeEnds">端点</div><div class="v" id="eg-ends">—</div>
+              <div class="k" data-i18n="edgeKind">类型</div><div class="v" id="eg-kind">—</div>
+              <div class="k">delayMs</div><div class="v" id="eg-delay">—</div>
+              <div class="k">hopCount</div><div class="v" id="eg-hops">—</div>
+              <div class="k" data-i18n="edgeAge">新鲜度</div><div class="v" id="eg-age">—</div>
+              <div class="k">schedule</div><div class="v" id="eg-sched">—</div>
+              <div class="k">periodMs</div><div class="v" id="eg-period">—</div>
+              <div class="k">openOffset</div><div class="v" id="eg-offset">—</div>
+              <div class="k">openDuration</div><div class="v" id="eg-duration">—</div>
+            </div>
+          </div>
+        </div>
+        <details class="card cn-detail">
+          <summary data-i18n="linkDetail">链路明细</summary>
+        <div class="grid two" style="margin-top:0.85rem">
           <div class="card">
             <h3 data-i18n="peerLink">对等链路</h3>
             <div class="kv">
               <div class="k">peer</div><div class="v" id="cn-peer">—</div>
               <div class="k">peerUrl</div><div class="v" id="cn-url">${peerUrl}</div>
+              <div class="k" data-i18n="localEid">本端 EID</div><div class="v" id="cn-local-eid">—</div>
+              <div class="k" data-i18n="peerEid">对端 EID</div><div class="v" id="cn-peer-eid">—</div>
+              <div class="k" data-i18n="wireFormat">线上格式</div><div class="v" id="cn-wire">—</div>
               <div class="k">status</div><div class="v" id="cn-status">—</div>
               <div class="k">phase</div><div class="v" id="cn-phase">—</div>
               <div class="k">delayMs</div><div class="v" id="cn-delay">—</div>
@@ -498,6 +669,7 @@ export function buildConsoleHtml(opts: {
             <div class="progress-ring" id="cn-bar"><span></span></div>
           </div>
         </div>
+        <div class="card" id="cn-links" style="margin-top:0.85rem"></div>
         <div class="card" style="margin-top:0.85rem">
           <h3 data-i18n="summary">摘要</h3>
           <table class="simple">
@@ -506,10 +678,11 @@ export function buildConsoleHtml(opts: {
               <tr><td data-i18n="self">本节点</td><td class="mono" id="cn-self">${nodeId}</td></tr>
               <tr><td data-i18n="peerRow">对端</td><td class="mono" id="cn-peer2">—</td></tr>
               <tr><td data-i18n="linkRow">链路</td><td id="cn-link-cell">—</td></tr>
-              <tr><td>API</td><td class="mono">/api/contacts · /api/status</td></tr>
+              <tr><td>API</td><td class="mono">/api/contacts · /api/graph</td></tr>
             </tbody>
           </table>
         </div>
+        </details>
       </section>
 
       <section class="view" id="view-ops">
@@ -522,7 +695,7 @@ export function buildConsoleHtml(opts: {
             <div class="form-row">
               <div class="field">
                 <label for="dst" data-i18n="dst">目的地</label>
-                <input id="dst" value="${defaultDst}"/>
+                <select id="dst"><option value="${defaultDst}">${defaultDst}</option></select>
               </div>
               <div class="field">
                 <label for="ttl" data-i18n="ttl">存活时间（毫秒，可选）</label>
@@ -536,6 +709,7 @@ export function buildConsoleHtml(opts: {
             <button type="button" id="btn-send" data-i18n="send">发送</button>
             <h3 style="margin-top:0.85rem" data-i18n="response">响应</h3>
             <pre id="send-out">—</pre>
+            <button type="button" class="secondary" id="btn-open-bundle" hidden style="margin-top:0.6rem"></button>
           </div>
           <div class="card stretch">
             <h3 data-i18n="inboxTitle">本地投递收件箱</h3>
@@ -546,6 +720,61 @@ export function buildConsoleHtml(opts: {
               <span class="hint" style="margin:0"><span data-i18n="depthNow">当前深度</span> <code id="st2-inbox">0</code></span>
             </div>
             <pre id="inbox-out">[]</pre>
+          </div>
+        </div>
+        <div class="card" id="route-strip">
+          <h3 data-i18n="routeTitle">选路</h3>
+          <p class="hint" data-i18n="routeHint">对试算目的或当前打开的束调用 /api/graph/route，对照被裁掉、时延候选和下一跳。</p>
+          <div class="form-row">
+            <div class="field">
+              <label for="route-dst" data-i18n="trialDst">试算目的</label>
+              <select id="route-dst"><option value="${defaultDst}">${defaultDst}</option></select>
+            </div>
+            <label class="hint" style="display:flex;align-items:center;gap:0.4rem;margin:0">
+              <input type="checkbox" id="route-follow" checked/>
+              <span data-i18n="followBundle">跟随当前束</span>
+            </label>
+          </div>
+          <div class="grid three route-cols">
+            <div>
+              <div class="k" data-i18n="routeCulled">被裁掉</div>
+              <pre id="route-culled">—</pre>
+            </div>
+            <div>
+              <div class="k" data-i18n="routeCandidates">时延排序</div>
+              <pre id="route-candidates">—</pre>
+            </div>
+            <div>
+              <div class="k" data-i18n="routeNext">下一跳</div>
+              <pre id="route-next">—</pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-bundles">
+        <h2 class="view-title" data-i18n="bundlesTitle">束</h2>
+        <table class="simple" id="bundle-table">
+          <thead>
+            <tr>
+              <th data-i18n="colId">id</th>
+              <th data-i18n="colSrc">源</th>
+              <th data-i18n="colDst">目的</th>
+              <th data-i18n="colState">状态</th>
+              <th data-i18n="colWhere">当前节点</th>
+              <th data-i18n="colUpdated">更新时间</th>
+            </tr>
+          </thead>
+          <tbody id="bundle-rows"></tbody>
+        </table>
+        <div class="grid two" id="bundle-detail" hidden>
+          <div class="card">
+            <h3 id="bd-title">—</h3>
+            <pre id="bd-meta">—</pre>
+          </div>
+          <div class="card stretch">
+            <h3 data-i18n="timeline">时间线</h3>
+            <pre id="bd-events">—</pre>
           </div>
         </div>
       </section>
@@ -569,14 +798,23 @@ export function buildConsoleHtml(opts: {
 (function () {
   const $ = (id) => document.getElementById(id);
   let lastStatus = null;
+  let lastBundles = [];
+  let lastLinks = null;
+  let lastGraph = null;
+  let selectedEdge = null;
+  let eidByNode = {};
+  let openBundleId = null;
+  const DEFAULT_DST = '${defaultDst}';
   let logClearedAt = 0;
   let lang = localStorage.getItem('dtn-console-lang') === 'en' ? 'en' : 'zh';
   let theme = localStorage.getItem('dtn-console-theme') === 'dark' ? 'dark' : 'light';
   const I18N = {
     zh: {
-      navOverview: '概览', navStorage: '存储', navConnections: '连接', navOps: '操作', navLogs: '日志',
-      peer: '对端 ', nodeLabel: '节点', role: '角色', uptime: '运行时间',
+      navOverview: '概览', navStorage: '存储', navConnections: '连接', navOps: '操作', navBundles: '束', navLogs: '日志',
+      peer: '对端 ', nodeLabel: '节点', role: '角色', uptime: '',
+      themeLight: '浅', themeDark: '深', refresh: '刷新',
       overviewTitle: '概览', statBundles: '报文 · LevelDB', statCustody: '托管 · 持有', statIndex: '索引 · 键', statInbox: '收件箱 · 本地',
+      statNodes: '已知节点', statSeeds: '种子邻居', statAge: '摘要最大年龄', statDests: '可试算目的',
       nodeInfo: '节点信息', contactWin: '接触窗口', contactHint: '周期开窗时链路可转发；关闭时先存储再转发。',
       recent: '最近事件', storageTitle: '存储',
       storageHint: '三层存储深度来自 /api/status 的 store（bundles / custody / index）。收发在「操作」页。',
@@ -585,22 +823,38 @@ export function buildConsoleHtml(opts: {
       index: '索引', indexKeys: '索引键', indexHint: '查找索引深度',
       inboxTitle: '本地投递收件箱', peek: '查看收件箱', recv: '接收并清空', depthNow: '当前深度', paths: '路径',
       connectionsTitle: '连接', peerLink: '对等链路', contactPlan: '接触计划', summary: '摘要',
+      netMap: '网络图', edgeSide: '选中边', edgeHint: '点击实线（直连）或虚线（听说）查看窗口、时延、新鲜度和跳数。',
+      edgeEnds: '端点', edgeKind: '类型', edgeAge: '新鲜度', linkDetail: '链路明细',
+      kindDirect: '直连', kindHeard: '听说',
       field: '字段', value: '值', self: '本节点', peerRow: '对端', linkRow: '链路',
+      localEid: '本端 EID', peerEid: '对端 EID', wireFormat: '线上格式',
       opsTitle: '操作', opsHint: '在本节点发送报文，并查看或取走本地收件箱。',
       sendTitle: '发送', sendHint: '经本节点 /api/send 注入；接触关闭时先存储，开窗后转发到对端。',
       recvHint: '查看不取出；接收会清空本地收件箱。',
       dst: '目的地', payload: '载荷', ttl: '存活时间（毫秒，可选）', send: '发送', response: '响应',
+      routeTitle: '选路', routeHint: '对试算目的或当前打开的束调用 /api/graph/route，对照被裁掉、时延候选和下一跳。',
+      trialDst: '试算目的', followBundle: '跟随当前束', routeCulled: '被裁掉', routeCandidates: '时延排序', routeNext: '下一跳',
       logsTitle: '日志', logsHint: '来自 /api/status 的 recentEvents，大约每秒刷新。',
       clear: '清空视图', loading: '加载中…', noEvents: '（无事件）', cleared: '（已清空，新事件会显示在这里）',
-      eventsWord: '条事件', open: '开启', closed: '关闭', refresh: '立即刷新',
-      themeLight: '浅色', themeDark: '深色',
+      eventsWord: '条事件', open: '开启', closed: '关闭',
+      bundlesTitle: '束', colId: 'id', colSrc: '源', colDst: '目的', colState: '状态', colWhere: '当前节点', colUpdated: '更新时间',
+      timeline: '时间线', notFound: '未找到', openBundle: '查看束', notDirect: '本机不直连',
+      upstream: '上游', downstream: '下游',
+      primaryVersion: '版本', primarySrcEid: '源 EID', primaryDstEid: '目的 EID',
+      primaryLifetime: '生存时间（毫秒）', primaryBytes: '字节长度', primaryHex: '前 32 字节',
+      wireLength: '线上长度', deliveredAt: '到达时间',
+      kindStored: '已存储', kindWaiting: '等待窗口', kindForward: '转发', kindRetry: '重试',
+      kindArrived: '已到达', kindAcked: '已确认', kindExpired: '已过期', kindRoute: '选路',
+      stateWaiting: '等待窗口', stateForwarding: '转发中', stateArrived: '已到达', stateAcked: '已确认', stateExpired: '已过期',
       toastStatus: '状态轮询失败：', toastSent: '已发送 ', toastSendFail: '发送失败',
       toastPeek: '已查看收件箱', toastRecv: '已接收并清空', toastRecvOk: '接收成功'
     },
     en: {
-      navOverview: 'Overview', navStorage: 'Storage', navConnections: 'Connections', navOps: 'Ops', navLogs: 'Logs',
-      peer: 'Peer ', nodeLabel: 'Node', role: 'role', uptime: 'uptime',
+      navOverview: 'Overview', navStorage: 'Storage', navConnections: 'Connections', navOps: 'Ops', navBundles: 'Bundles', navLogs: 'Logs',
+      peer: 'Peer ', nodeLabel: 'Node', role: 'role', uptime: '',
+      themeLight: 'Light', themeDark: 'Dark', refresh: 'Refresh',
       overviewTitle: 'Overview', statBundles: 'Bundles · LevelDB', statCustody: 'Custody · held', statIndex: 'Index · keys', statInbox: 'Inbox · local',
+      statNodes: 'Known nodes', statSeeds: 'Seed peers', statAge: 'Summary age', statDests: 'Trial dests',
       nodeInfo: 'Node', contactWin: 'Contact', contactHint: 'Forward while the window is open; store-and-forward while it is closed.',
       recent: 'Recent events', storageTitle: 'Storage',
       storageHint: 'Depths come from /api/status store (bundles / custody / index). Send and receive live on Ops.',
@@ -609,15 +863,29 @@ export function buildConsoleHtml(opts: {
       index: 'Index', indexKeys: 'index keys', indexHint: 'Lookup index depth',
       inboxTitle: 'Local inbox', peek: 'Peek inbox', recv: 'Recv and clear', depthNow: 'Depth', paths: 'Paths',
       connectionsTitle: 'Connections', peerLink: 'Peer link', contactPlan: 'Contact plan', summary: 'Summary',
+      netMap: 'Network map', edgeSide: 'Selected edge', edgeHint: 'Click a solid (direct) or dashed (heard) edge for window, delay, freshness, and hops.',
+      edgeEnds: 'Ends', edgeKind: 'Kind', edgeAge: 'Freshness', linkDetail: 'Link detail',
+      kindDirect: 'direct', kindHeard: 'heard',
       field: 'Field', value: 'Value', self: 'This node', peerRow: 'Peer', linkRow: 'Link',
+      localEid: 'Local EID', peerEid: 'Peer EID', wireFormat: 'Wire format',
       opsTitle: 'Ops', opsHint: 'Send from this node, and peek or take the local inbox.',
       sendTitle: 'Send', sendHint: 'Inject via /api/send. Closed contacts store the bundle and forward it when the window opens.',
       recvHint: 'Peek leaves the inbox in place. Recv clears it.',
       dst: 'Destination', payload: 'Payload', ttl: 'TTL ms (optional)', send: 'Send', response: 'Response',
+      routeTitle: 'Route', routeHint: 'Trial a destination, or follow the open bundle, via /api/graph/route.',
+      trialDst: 'Trial dest', followBundle: 'Follow open bundle', routeCulled: 'Culled', routeCandidates: 'By delay', routeNext: 'Next hop',
       logsTitle: 'Logs', logsHint: 'recentEvents from /api/status, refreshed about once a second.',
       clear: 'Clear view', loading: 'Loading…', noEvents: '(no events)', cleared: '(cleared — new events will appear)',
-      eventsWord: 'events', open: 'OPEN', closed: 'CLOSED', refresh: 'Refresh now',
-      themeLight: 'Light', themeDark: 'Dark',
+      eventsWord: 'events', open: 'OPEN', closed: 'CLOSED',
+      bundlesTitle: 'Bundles', colId: 'id', colSrc: 'Source', colDst: 'Dest', colState: 'State', colWhere: 'Current node', colUpdated: 'Updated',
+      timeline: 'Timeline', notFound: 'Not found', openBundle: 'Open bundle', notDirect: 'not a direct link',
+      upstream: 'upstream', downstream: 'downstream',
+      primaryVersion: 'Version', primarySrcEid: 'Source EID', primaryDstEid: 'Dest EID',
+      primaryLifetime: 'Lifetime (ms)', primaryBytes: 'Byte length', primaryHex: 'First 32 bytes',
+      wireLength: 'Wire length', deliveredAt: 'Delivered at',
+      kindStored: 'Stored', kindWaiting: 'Waiting', kindForward: 'Forward', kindRetry: 'Retry',
+      kindArrived: 'Arrived', kindAcked: 'Acked', kindExpired: 'Expired', kindRoute: 'Route',
+      stateWaiting: 'Waiting for window', stateForwarding: 'Forwarding', stateArrived: 'Arrived', stateAcked: 'Acknowledged', stateExpired: 'Expired',
       toastStatus: 'status poll failed: ', toastSent: 'sent ', toastSendFail: 'send failed',
       toastPeek: 'inbox peeked', toastRecv: 'recv cleared', toastRecvOk: 'recv ok'
     }
@@ -645,6 +913,11 @@ export function buildConsoleHtml(opts: {
       b.classList.toggle('active', b.getAttribute('data-lang') === lang);
     });
     if (lastStatus) applyStatus(lastStatus);
+    renderBundles(lastBundles);
+    if (lastLinks) renderLinks(lastLinks);
+    if (openBundleId && $('bundle-detail') && !$('bundle-detail').hidden) void openBundle(openBundleId);
+    const openBtn = $('btn-open-bundle');
+    if (openBtn && openBtn.dataset.id) openBtn.textContent = t('openBundle') + ' ' + openBtn.dataset.id;
   }
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', theme);
@@ -679,7 +952,7 @@ export function buildConsoleHtml(opts: {
   function setContactPill(open, phase) {
     const pill = $('tb-contact');
     const text = $('tb-contact-text');
-    pill.className = 'pill ' + (open ? 'ok' : 'bad');
+    pill.className = 'status-chip ' + (open ? 'ok' : 'bad');
     text.textContent = open ? t('open') : t('closed');
     pill.title = phase || '';
   }
@@ -742,10 +1015,10 @@ export function buildConsoleHtml(opts: {
     const store = readStore(s);
     const contact = s.contact || {};
     const open = !!contact.open;
-    $('tb-node').textContent = s.nodeId;
-    $('tb-role').textContent = t('role') + '=' + (s.role || '—');
+    $('tb-role').textContent = s.role || '—';
+    $('tb-role').className = 'status-chip muted';
     setContactPill(open, contact.phase);
-    $('tb-uptime').textContent = t('uptime') + ' ' + fmtUptime(s.uptimeMs);
+    $('tb-uptime').textContent = fmtUptime(s.uptimeMs);
 
     $('st-bundles').textContent = String(store.bundles);
     $('st-custody').textContent = String(store.custody);
@@ -793,10 +1066,179 @@ export function buildConsoleHtml(opts: {
     $('log-count').textContent = n + ' ' + t('eventsWord');
   }
 
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (ch) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+  }
+
+  function stateLabel(state) {
+    const map = {
+      WAITING: 'stateWaiting',
+      FORWARDING: 'stateForwarding',
+      ARRIVED: 'stateArrived',
+      ACKED: 'stateAcked',
+      EXPIRED: 'stateExpired',
+    };
+    return map[state] ? t(map[state]) : (state || '—');
+  }
+
+  const NODE_ID = '${nodeId}';
+  const HOP_ORDER = ['Earth', 'Relay', 'Mars'];
+  let openSeq = 0;
+
+  function kindLabel(kind) {
+    const map = {
+      STORED: 'kindStored', WAITING: 'kindWaiting', FORWARD: 'kindForward', RETRY: 'kindRetry',
+      ARRIVED: 'kindArrived', ACKED: 'kindAcked', EXPIRED: 'kindExpired', ROUTE: 'kindRoute',
+    };
+    return map[kind] ? t(map[kind]) : (kind || '');
+  }
+
+  function hopSide(link) {
+    if (link.local) return '';
+    const me = HOP_ORDER.indexOf(NODE_ID);
+    const ia = HOP_ORDER.indexOf(link.a);
+    const ib = HOP_ORDER.indexOf(link.b);
+    if (me < 0 || ia < 0 || ib < 0) return t('notDirect');
+    if (ia > me && ib > me) return t('downstream') + ' · ' + t('notDirect');
+    if (ia < me && ib < me) return t('upstream') + ' · ' + t('notDirect');
+    return t('notDirect');
+  }
+
+  function bundleRowsHtml(bundles) {
+    return (bundles || []).map((b) => {
+      const updated = b.updatedAt ? new Date(b.updatedAt).toLocaleString() : '—';
+      return '<tr data-id="' + esc(b.id) + '">' +
+        '<td class="mono">' + esc(b.id) + '</td>' +
+        '<td class="mono">' + esc(b.src) + '</td>' +
+        '<td class="mono">' + esc(b.dst) + '</td>' +
+        '<td>' + esc(stateLabel(b.state)) + '</td>' +
+        '<td class="mono">' + esc(b.custodian) + '</td>' +
+        '<td>' + esc(updated) + '</td></tr>';
+    }).join('');
+  }
+
+  function renderBundles(bundles) {
+    const list = bundles || [];
+    const counts = { WAITING: 0, FORWARDING: 0, ARRIVED: 0, EXPIRED: 0 };
+    list.forEach((b) => { if (counts[b.state] != null) counts[b.state] += 1; });
+    $('ov-bundle-counts').textContent = ['WAITING', 'FORWARDING', 'ARRIVED', 'EXPIRED']
+      .map((s) => stateLabel(s) + ' ' + counts[s]).join(' · ');
+    $('bundle-rows').innerHTML = bundleRowsHtml(list);
+    const held = list.filter((b) => b.state === 'WAITING' || b.state === 'FORWARDING' || b.state === 'ARRIVED');
+    $('ov-bundle-recent').innerHTML = bundleRowsHtml(held.slice(0, 5));
+  }
+
+  function bundleMetaText(bundle) {
+    const events = bundle.events || [];
+    const updatedAt = bundle.updatedAt
+      || (events.length ? events[events.length - 1].t : bundle.createdAt);
+    const updated = updatedAt ? new Date(updatedAt).toLocaleString() : '—';
+    const lines = [
+      t('colState') + ': ' + stateLabel(bundle.state),
+      t('colWhere') + ': ' + (bundle.custodian || '—'),
+      t('colUpdated') + ': ' + updated,
+    ];
+    const primary = bundle.primary;
+    if (primary) {
+      lines.push(
+        t('primaryVersion') + ': ' + primary.version,
+        t('primarySrcEid') + ': ' + primary.srcEid,
+        t('primaryDstEid') + ': ' + primary.dstEid,
+        t('primaryLifetime') + ': ' + primary.lifetimeMs,
+        t('primaryBytes') + ': ' + primary.byteLength,
+        t('primaryHex') + ': ' + primary.hex32
+      );
+    }
+    if (bundle.wireLength != null) lines.push(t('wireLength') + ': ' + bundle.wireLength);
+    return lines.join('\\n');
+  }
+
+  function inboxText(messages) {
+    const list = messages || [];
+    if (!list.length) return '[]';
+    return list.map((m) => [
+      t('colSrc') + ': ' + (m.src || ''),
+      t('colDst') + ': ' + (m.dst || ''),
+      t('payload') + ': ' + (m.payload || ''),
+      t('deliveredAt') + ': ' + (m.deliveredAt != null ? new Date(m.deliveredAt).toLocaleString() : '—'),
+    ].join('\\n')).join('\\n\\n');
+  }
+
+  function renderLinks(links) {
+    const el = $('cn-links');
+    if (!el) return;
+    const rows = (links || []).map((l) => {
+      const label = (l.a || '') + ' ↔ ' + (l.b || '');
+      const extra = l.local
+        ? linkHtml(!!l.open) + ' <span class="mono">' + esc(l.phase || '—') + '</span>'
+        : esc(hopSide(l));
+      return '<tr><td class="mono">' + esc(label) + '</td><td>' + extra + '</td></tr>';
+    }).join('');
+    el.hidden = !rows;
+    el.innerHTML = rows
+      ? '<table class="simple"><tbody>' + rows + '</tbody></table>'
+      : '';
+  }
+
+  async function refreshBundles() {
+    try {
+      const body = await fetch('/api/bundles').then((r) => r.json());
+      lastBundles = (body && body.bundles) || [];
+      renderBundles(lastBundles);
+    } catch (_) { /* ignore */ }
+  }
+
+  async function openBundle(id) {
+    const seq = ++openSeq;
+    openBundleId = id;
+    $('bundle-detail').hidden = false;
+    $('bd-title').textContent = id;
+    try {
+      const res = await fetch('/api/bundles/' + encodeURIComponent(id));
+      const body = await res.json();
+      if (seq !== openSeq) return;
+      if (!body.ok) {
+        $('bd-meta').textContent = '—';
+        $('bd-events').textContent = t('notFound');
+        return;
+      }
+      $('bd-title').textContent = body.bundle.id;
+      $('bd-meta').textContent = bundleMetaText(body.bundle);
+      const events = body.bundle.events || [];
+      const shown = events.filter((e, i) => {
+        const prev = events[i - 1];
+        return !prev || prev.node !== e.node || prev.kind !== e.kind || prev.msg !== e.msg;
+      });
+      $('bd-events').textContent = shown
+        .map((e) => {
+          const line = new Date(e.t).toLocaleTimeString() + '  ' + e.node + '  ' + kindLabel(e.kind);
+          return e.msg ? line + '  ' + e.msg : line;
+        })
+        .join('\\n') || t('noEvents');
+    } catch (e) {
+      if (seq !== openSeq) return;
+      $('bd-meta').textContent = '—';
+      $('bd-events').textContent = String(e);
+    }
+  }
+
+  function showView(view) {
+    document.querySelectorAll('.nav-btn').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-view') === view);
+    });
+    document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+    const el = document.getElementById('view-' + view);
+    if (el) el.classList.add('active');
+  }
+
   async function refreshContacts(s) {
     try {
       const c = await fetch('/api/contacts').then((r) => r.json());
       if (!c) return;
+      lastLinks = c.links || [];
+      renderLinks(lastLinks);
       const sch = c.schedule || (c.contact && c.contact.schedule) || {};
       $('cn-sched').textContent = sch.type || '—';
       $('cn-period').textContent = sch.periodMs != null ? String(sch.periodMs) : '—';
@@ -804,6 +1246,12 @@ export function buildConsoleHtml(opts: {
       $('cn-duration').textContent = sch.openDurationMs != null ? String(sch.openDurationMs) : '—';
       const bw = c.contact && c.contact.bandwidthBps;
       $('cn-bw').textContent = bw != null ? bw + ' bps' : '—';
+      eidByNode = c.eidByNode || {};
+      $('cn-local-eid').textContent = c.localEid || '—';
+      const peerName = c.peer || (c.contact && c.contact.peer) || '';
+      const eidMap = c.eidByNode || {};
+      $('cn-peer-eid').textContent = eidMap[peerName] || '—';
+      $('cn-wire').textContent = c.wireFormat || '—';
       if (c.contact) {
         $('cn-ends').textContent = (c.contact.a || '') + ' ↔ ' + (c.contact.b || '');
       }
@@ -815,6 +1263,130 @@ export function buildConsoleHtml(opts: {
     } catch (_) { /* ignore */ }
   }
 
+  function fmtAge(ms) {
+    if (ms == null || !isFinite(ms)) return '—';
+    if (ms < 1000) return Math.round(ms) + ' ms';
+    const s = Math.round(ms / 1000);
+    if (s < 60) return s + ' s';
+    return Math.floor(s / 60) + ' m ' + (s % 60) + ' s';
+  }
+
+  function edgeKeyOf(e) {
+    return (e.a || '') + '|' + (e.b || '');
+  }
+
+  function fillSelect(el, ids, prefer) {
+    if (!el) return;
+    const current = el.value || prefer || '';
+    const list = ids.length ? ids : [DEFAULT_DST];
+    el.innerHTML = list.map((id) => '<option value="' + esc(id) + '">' + esc(id) + '</option>').join('');
+    if (list.indexOf(current) >= 0) el.value = current;
+    else if (prefer && list.indexOf(prefer) >= 0) el.value = prefer;
+    else el.value = list[0];
+  }
+
+  function showEdge(edge) {
+    selectedEdge = edge || null;
+    if (!edge) return;
+    const sch = edge.schedule || {};
+    const direct = edge.kind === 'direct' || edge.direct;
+    $('eg-ends').textContent = edge.a + ' ↔ ' + edge.b;
+    $('eg-kind').textContent = direct ? t('kindDirect') : t('kindHeard');
+    $('eg-delay').textContent = edge.delayMs != null ? String(edge.delayMs) : '—';
+    $('eg-hops').textContent = edge.hopCount != null ? String(edge.hopCount) : '—';
+    $('eg-age').textContent = edge.originatedAt != null ? fmtAge(Math.max(0, Date.now() - edge.originatedAt)) : '—';
+    $('eg-sched').textContent = sch.type || '—';
+    $('eg-period').textContent = sch.periodMs != null ? String(sch.periodMs) : '—';
+    $('eg-offset').textContent = sch.openOffsetMs != null ? String(sch.openOffsetMs) : '—';
+    $('eg-duration').textContent = sch.openDurationMs != null ? String(sch.openDurationMs) : '—';
+  }
+
+  function renderMap(g) {
+    const svg = $('cn-svg');
+    if (!svg || !g) return;
+    const nodes = g.nodes || [];
+    const edges = g.edges || [];
+    let minX = 0, maxX = 1, minY = 0, maxY = 1;
+    if (nodes.length) {
+      minX = Math.min.apply(null, nodes.map((n) => Number(n.x) || 0));
+      maxX = Math.max.apply(null, nodes.map((n) => Number(n.x) || 0));
+      minY = Math.min.apply(null, nodes.map((n) => Number(n.y) || 0));
+      maxY = Math.max.apply(null, nodes.map((n) => Number(n.y) || 0));
+    }
+    const w = 640, h = 420, pad = 46;
+    const spanX = Math.max(maxX - minX, 1);
+    const spanY = Math.max(maxY - minY, 1);
+    const scale = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY);
+    const byId = {};
+    nodes.forEach((n) => { byId[n.id] = n; });
+    function px(n) { return pad + ((Number(n.x) || 0) - minX) * scale; }
+    function py(n) { return h - pad - ((Number(n.y) || 0) - minY) * scale; }
+    const lines = edges.map((e) => {
+      const a = byId[e.a], b = byId[e.b];
+      if (!a || !b) return '';
+      const key = edgeKeyOf(e);
+      const cls = (e.kind === 'direct' || e.direct) ? 'direct' : 'heard';
+      const sel = selectedEdge && edgeKeyOf(selectedEdge) === key ? ' selected' : '';
+      return '<line class="edge ' + cls + sel + '" x1="' + px(a) + '" y1="' + py(a) + '" x2="' + px(b) + '" y2="' + py(b) + '"/>' +
+        '<line class="edge-hit" data-edge="' + esc(key) + '" x1="' + px(a) + '" y1="' + py(a) + '" x2="' + px(b) + '" y2="' + py(b) + '"/>';
+    }).join('');
+    const dots = nodes.map((n) => {
+      const self = n.id === NODE_ID ? ' self' : '';
+      const r = n.id === NODE_ID ? 12 : 8;
+      return '<g class="node' + self + '" transform="translate(' + px(n) + ',' + py(n) + ')">' +
+        '<circle r="' + r + '"/><text y="-16" text-anchor="middle">' + esc(n.id) + '</text></g>';
+    }).join('');
+    svg.innerHTML = lines + dots;
+  }
+
+  function renderOverviewGraph(g) {
+    const stats = (g && g.stats) || {};
+    const nodes = (g && g.nodes) || [];
+    $('st-nodes').textContent = String(stats.nodeCount != null ? stats.nodeCount : nodes.length);
+    $('st-seeds').textContent = String(stats.peerCount != null ? stats.peerCount : ((g && g.peers) || []).length);
+    $('st-age').textContent = fmtAge(stats.maxEdgeAgeMs || 0);
+    $('st-dests').textContent = String(nodes.filter((n) => n.id !== NODE_ID).length);
+    const ids = nodes.map((n) => n.id).concat(Object.keys(eidByNode || {}));
+    const choices = ids.filter((id, i) => id && id !== NODE_ID && ids.indexOf(id) === i);
+    fillSelect($('dst'), choices, DEFAULT_DST);
+    fillSelect($('route-dst'), choices, DEFAULT_DST);
+  }
+
+  async function refreshGraph() {
+    try {
+      const g = await fetch('/api/graph').then((r) => r.json());
+      if (!g || !Array.isArray(g.nodes)) return;
+      lastGraph = g;
+      renderMap(g);
+      renderOverviewGraph(g);
+    } catch (_) { /* static installs still have GraphService */ }
+  }
+
+  async function refreshRoute() {
+    const follow = $('route-follow') && $('route-follow').checked;
+    let dst = $('route-dst') ? $('route-dst').value : '';
+    if (follow && openBundleId) {
+      const open = (lastBundles || []).find((b) => b.id === openBundleId);
+      if (open && open.dst) dst = open.dst;
+    }
+    if (!dst) return;
+    try {
+      const res = await fetch('/api/graph/route?dst=' + encodeURIComponent(dst));
+      const d = await res.json();
+      const culled = d.culled || [];
+      const cands = (d.candidates || []).slice().sort((a, b) => (a.costMs || 0) - (b.costMs || 0));
+      $('route-culled').textContent = culled.length
+        ? culled.map((c) => c.neighbor + '  cost=' + c.costMs + '  closer=' + c.closer).join('\\n')
+        : '—';
+      $('route-candidates').textContent = cands.length
+        ? cands.map((c) => c.neighbor + '  cost=' + c.costMs + '  wait=' + c.waitMs).join('\\n')
+        : '—';
+      $('route-next').textContent = d.nextHop ? String(d.nextHop) : (d.reason || '—');
+    } catch (e) {
+      $('route-next').textContent = String(e);
+    }
+  }
+
   async function refresh() {
     try {
       const res = await fetch('/api/status');
@@ -822,19 +1394,17 @@ export function buildConsoleHtml(opts: {
       const s = await res.json();
       applyStatus(s);
       await refreshContacts(s);
+      await refreshGraph();
     } catch (e) {
       toast(t('toastStatus') + (e && e.message ? e.message : e), true);
     }
+    await refreshBundles();
+    await refreshRoute();
   }
 
   document.querySelectorAll('.nav-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
-      document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
-      btn.classList.add('active');
-      const view = btn.getAttribute('data-view');
-      const el = document.getElementById('view-' + view);
-      if (el) el.classList.add('active');
+      showView(btn.getAttribute('data-view'));
     });
   });
 
@@ -856,6 +1426,31 @@ export function buildConsoleHtml(opts: {
   applyTheme();
 
   $('btn-refresh').addEventListener('click', () => { void refresh(); });
+  $('cn-svg').addEventListener('click', (ev) => {
+    const hit = ev.target.closest ? ev.target.closest('[data-edge]') : null;
+    if (!hit || !lastGraph) return;
+    const key = hit.getAttribute('data-edge');
+    const edge = (lastGraph.edges || []).find((e) => edgeKeyOf(e) === key);
+    if (!edge) return;
+    showEdge(edge);
+    renderMap(lastGraph);
+  });
+  $('route-dst').addEventListener('change', () => {
+    if ($('route-follow')) $('route-follow').checked = false;
+    void refreshRoute();
+  });
+  $('route-follow').addEventListener('change', () => { void refreshRoute(); });
+  $('bundle-rows').addEventListener('click', (ev) => {
+    const tr = ev.target.closest('tr');
+    if (!tr || !tr.dataset.id) return;
+    void openBundle(tr.dataset.id);
+  });
+  $('btn-open-bundle').addEventListener('click', () => {
+    const id = $('btn-open-bundle').dataset.id;
+    if (!id) return;
+    showView('bundles');
+    void openBundle(id);
+  });
 
   $('btn-send').addEventListener('click', async () => {
     const dst = $('dst').value;
@@ -870,8 +1465,21 @@ export function buildConsoleHtml(opts: {
         body: JSON.stringify(body),
       });
       const j = await r.json();
-      $('send-out').textContent = JSON.stringify(j, null, 2);
-      toast(j.ok ? t('toastSent') + (j.bundle && j.bundle.id ? j.bundle.id : 'ok') : (j.error || t('toastSendFail')), !j.ok);
+      const openBtn = $('btn-open-bundle');
+      if (j.ok && j.id) {
+        $('send-out').textContent = [
+          'id: ' + j.id,
+          'dst: ' + (j.dst || ''),
+          'payload: ' + (j.payload || ''),
+        ].join('\\n');
+        openBtn.hidden = false;
+        openBtn.dataset.id = j.id;
+        openBtn.textContent = t('openBundle') + ' ' + j.id;
+      } else {
+        $('send-out').textContent = j.error || t('toastSendFail');
+        openBtn.hidden = true;
+      }
+      toast(j.ok ? t('toastSent') + (j.id || 'ok') : (j.error || t('toastSendFail')), !j.ok);
       void refresh();
     } catch (e) {
       $('send-out').textContent = String(e);
@@ -883,7 +1491,7 @@ export function buildConsoleHtml(opts: {
     const url = clear ? '/api/recv' : '/api/inbox';
     const r = await fetch(url).then((x) => x.json());
     const messages = r.messages || [];
-    $('inbox-out').textContent = JSON.stringify(messages, null, 2);
+    $('inbox-out').textContent = inboxText(messages);
     return r;
   }
 

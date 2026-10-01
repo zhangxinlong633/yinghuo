@@ -1,8 +1,8 @@
 # DTN Demo — 延迟/中断容忍网络教学演示
 
-TypeScript monorepo：**常驻双中继 daemon（NestJS）** 为主路径；本地 **CLI / SDK** 只连 `localhost`；**Next.js** 提供 Relay Console 与旧仿真可视化；**Kubernetes YAML** 示意日程感知调度（Future 3-node）。灵感来自 Bundle Protocol，**不是**完整 BP / ION。
+TypeScript monorepo：**常驻三节点 relay daemon（NestJS）** 为主路径（Earth → Relay → Mars）；本地 **CLI / SDK** 只连 `localhost`；**Next.js** 提供接触计划页与旧仿真可视化；**Kubernetes YAML** 示意日程感知调度（Future）。灵感来自 Bundle Protocol，**不是**完整 BP / ION。
 
-约束见 [`AGENTS.md`](./AGENTS.md)。设计见 [`docs/relay-daemon-design.md`](./docs/relay-daemon-design.md)。
+约束见 [`AGENTS.md`](./AGENTS.md)。设计见 [`docs/relay-daemon-design.md`](./docs/relay-daemon-design.md) 与 [`docs/superpowers/specs/2026-10-01-dtn-three-node-design.md`](./docs/superpowers/specs/2026-10-01-dtn-three-node-design.md)。
 
 ## 仓库结构
 
@@ -10,10 +10,10 @@ TypeScript monorepo：**常驻双中继 daemon（NestJS）** 为主路径；本�
 dtn-demo/
 ├── AGENTS.md
 ├── README.md
-├── docs/relay-daemon-design.md  # 双中继 daemon 架构（主路径）
+├── docs/relay-daemon-design.md  # relay daemon 架构（含旧双节点对照）
 ├── docs/k8s-dtn-scheduling.md   # 3-node + K8s Future 草图
 ├── k8s/                         # CRD、节点、CronJob/控制器、接触计划
-├── data/Earth|Mars/             # LevelDB×3（gitignore）
+├── data/Earth|Relay|Mars/       # LevelDB×3（gitignore）
 ├── packages/dtn-core/           # 旧离散仿真核心（仍可用）
 ├── packages/dtn-sdk/            # TypeScript 客户端 send/recv/subscribe
 ├── packages/dtn-cli/            # CLI：status / send / recv / wait
@@ -22,39 +22,95 @@ dtn-demo/
 └── apps/web/                    # Next.js：/relay 控制台 + 旧仿真 UI
 ```
 
-## 快速开始（双中继 — 推荐）
+## 快速开始（三节点 — 推荐）
 
 ```bash
 cd /Users/bruce/git/space/dtn-demo
 npm install
 
-# 终端 1 — Earth relay :3101，数据 data/Earth/{bundles,custody,index}/
+# 首次或升级后：编译 bplib BPv7 共享库（macOS .dylib / Linux .so）
+npm run native:build -w @dtn-demo/relay
+
+# 终端 1 — Earth relay :3101
 npm run relay:earth
 
-# 终端 2 — Mars relay :3102，数据 data/Mars/{bundles,custody,index}/
+# 终端 2 — 中间 Relay :3103
+npm run relay:relay
+
+# 终端 3 — Mars relay :3102
 npm run relay:mars
 
-# 终端 3 — 状态 / 发送 / 等待投递
+# 终端 4（可选）— CLI / 等待投递
 npm run cli -- status
 DTN_NODE=Earth npm run cli -- send Mars "Hello Mars"
 DTN_NODE=Mars  npm run cli -- wait 60
 
-# 可选：Next.js 接触计划页 :3000（需 web；relay 已启动）
+# 可选：Next.js 接触计划页 :3000（需 web；三个 relay 已启动）
 npm run web
 # http://localhost:3000/
-# 中继首页：http://localhost:3101/ 与 http://localhost:3102/
+# 中继控制台：http://127.0.0.1:3101/ 、http://127.0.0.1:3103/ 、http://127.0.0.1:3102/
 ```
+
+默认接触计划为 `apps/relay/contact-plan.tri.json`（30s 周期，**两段窗口错开**：Earth–Relay 在 `[0s,10s)` 打开，Relay–Mars 在 `[15s,25s)` 打开，任意时刻无 Earth↔Mars 直连）。
 
 ### 端口与路径
 
-| 节点 | 端口 | Peer | LevelDB |
-|------|------|------|---------|
-| Earth | 3101 | `http://127.0.0.1:3102` | `data/Earth/{bundles,custody,index}/` |
-| Mars | 3102 | `http://127.0.0.1:3101` | `data/Mars/{bundles,custody,index}/` |
+| 节点 | 端口 | 下一跳 / Peer | LevelDB |
+|------|------|---------------|---------|
+| Earth | 3101 | Relay `http://127.0.0.1:3103` | `data/Earth/{bundles,custody,index}/` |
+| Relay | 3103 | Earth / Mars | `data/Relay/{bundles,custody,index}/` |
+| Mars | 3102 | Relay `http://127.0.0.1:3103` | `data/Mars/{bundles,custody,index}/` |
 
-接触计划：`apps/relay/contact-plan.dual.json` — 周期 **20s**，其中 **[5s,15s) OPEN**。关窗时 `send` 会 **STORE**；开窗后 **FORWARD → DELIVER**，Mars 侧 `recv` / `wait` 取走。
+关窗时发往下一跳的 bundle 会 **WAITING**（保管）；开窗后 **FORWARD → … → DELIVER**，Mars 侧 `recv` / `wait` 取走；Earth 可在控制台报文时间线看到 **ARRIVED** 确认。
 
-环境变量：`NODE_ID`、`PORT`、`PEER_URL`、`DATA_DIR`、`CONTACT_PLAN`；CLI 用 `DTN_RELAY_URL` 或 `DTN_NODE=Earth|Mars`。
+环境变量：`NODE_ID`、`PORT`、`PEER_URL`、`DATA_DIR`、`CONTACT_PLAN`；CLI 用 `DTN_RELAY_URL` 或 `DTN_NODE=Earth|Relay|Mars`。
+
+### 接触图模式（动态加入）
+
+`DTN_GRAPH_MODE=1` 时不使用计划里的静态 `nextHop`。第一台不设 `BOOTSTRAP_URL`（引导岛）；其余节点设置 `BOOTSTRAP_URL`、本机 `PEER_URL`、`EID`、`NODE_X` / `NODE_Y`、独立 `PORT`。加入后双方是直连邻居，接触在 30s 周期内全程打开；摘要约每 2s 在打开的直连边上 gossip。选路只把包交给**几何上更近**的直连邻居。
+
+10 节点冒烟（引导 `node0`，`node1`–`node9` 都加入它；`node1`–`node8` 在 x 负半轴，避免被选成下一跳，因为它们除了引导没有别的 peer URL）：
+
+```bash
+bash apps/relay/scripts/join-cluster.sh
+# 默认端口 3320–3329，收件箱等待 JOIN_TIMEOUT_SEC=120
+# JOIN_KEEP=1 时脚本结束后进程仍在，便于 live 测试：
+JOIN_KEEP=1 bash apps/relay/scripts/join-cluster.sh
+DTN_LIVE_GRAPH=1 npm test -w @dtn-demo/relay -- src/live-graph-join.test.ts
+```
+
+未设置 `DTN_LIVE_GRAPH=1` 时该测试跳过，`npm run test:relay` 不依赖这 10 个进程。
+
+杀掉 `node1`–`node8` 里某一台**不会**改变 `node0 → node9` 的直连。要观察“中间节点挂了改走另一方向”，拓扑上需要至少两个更近、且自己还能往前送的邻居（网状或短链），不能只靠这棵星。
+
+**BPv7 编解码（bplib FFI）**
+
+| 变量 | 说明 |
+|------|------|
+| （默认） | 共享库：`native/bp-codec/build/libdtn_bp_codec.dylib`（Darwin）或 `libdtn_bp_codec.so`（Linux） |
+| `DTN_BP_CODEC_LIB` | 覆盖上述路径；库缺失时进程**启动失败**（不静默退回 JSON） |
+| `DTN_ALLOW_JSON_INGEST=1` | 对端 `POST /api/peer/ingest` 可额外接受旧 `application/json`（双节点回归）；**默认关闭**。编码出口仍为 BPv7 CBOR |
+
+节点间线上格式：`Content-Type: application/cbor`。`GET /api/contacts` 的 `wireFormat` 为 `application/cbor`。
+
+**内置控制台（三层）** — 各 relay 根路径 `/`（如 `http://127.0.0.1:3101/`）：
+
+| 页 | 层 | 内容 |
+|----|----|------|
+| 操作 | 业务 | 发送 / 收件箱；仅节点名与载荷，无 EID、hex |
+| 连接 | 网络 | 接触窗口、下一跳、本端与对端 EID |
+| 报文 | 运维 | 状态、时间线、主块摘要（`primary`）、束长度 |
+
+业务 API：`POST /api/send` 成功体仅 `ok,id,src,dst,payload,ttlMs`；`GET /api/inbox|recv` 无 EID。运维详情：`GET /api/bundles/:id` 含 `primary` 与时间线。
+
+### 可选：旧双节点（Earth↔Mars 直连）
+
+仍保留 `apps/relay/contact-plan.dual.json`（20s 周期，**[5s,15s) OPEN**）。只需 **两个** 进程时，显式指定计划并省略中间 Relay：
+
+```bash
+CONTACT_PLAN=apps/relay/contact-plan.dual.json npm run relay:earth
+CONTACT_PLAN=apps/relay/contact-plan.dual.json npm run relay:mars
+```
 
 ### CLI 一览
 
@@ -101,13 +157,14 @@ kubectl apply --dry-run=client -k k8s/
 
 3-node（Earth↔Relay↔Mars）+ 真实编排见设计文档 §Future，**本阶段不强制**。
 
-## 场景（dual wall-clock）
+## 场景（三节点 wall-clock）
 
 | 阶段 | 事件 |
 |------|------|
-| 窗口 CLOSED | Earth CLI `send` → Bundle 写入 `bundles`+`custody` |
-| 窗口 OPEN | Earth → Mars `peer/ingest` → Mars **DELIVER** + ACK |
-| 本地 | Mars `recv` / SDK `subscribeDelivery` 取出 payload |
+| Earth–Relay CLOSED | Earth `send` → 本机 **WAITING** / STORED |
+| Earth–Relay OPEN | Earth → Relay ingest；Relay 保管，等待 Relay–Mars 窗口 |
+| Relay–Mars OPEN | Relay → Mars **DELIVER** + ACK 回传 |
+| 本地 | Mars `recv` / SDK `subscribeDelivery`；Earth 控制台见 **ARRIVED** |
 
 ## 许可
 

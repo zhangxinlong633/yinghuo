@@ -1,6 +1,8 @@
 import { Module } from '@nestjs/common';
 import { BundleService } from '../bundle/bundle.service';
 import { ContactService } from '../contact/contact.service';
+import { GraphLifecycleService } from '../graph/graph-lifecycle.service';
+import { GraphService } from '../graph/graph.service';
 import { PeerService } from '../peer/peer.service';
 import { LevelStore } from '../store/level-store';
 import { RelayController } from './relay.controller';
@@ -17,6 +19,8 @@ import { RELAY_CONFIG } from '../relay.tokens';
     },
     LevelStore,
     ContactService,
+    GraphService,
+    GraphLifecycleService,
     PeerService,
     BundleService,
   ],

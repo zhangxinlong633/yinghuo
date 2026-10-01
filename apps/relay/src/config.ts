@@ -13,6 +13,10 @@ function resolvePlanPath(): string {
   }
   const root = monorepoRoot();
   const candidates = [
+    path.join(__dirname, '..', 'contact-plan.tri.json'),
+    path.join(root, 'apps', 'relay', 'contact-plan.tri.json'),
+    path.join(process.cwd(), 'apps', 'relay', 'contact-plan.tri.json'),
+    path.join(process.cwd(), 'contact-plan.tri.json'),
     path.join(__dirname, '..', 'contact-plan.dual.json'),
     path.join(root, 'apps', 'relay', 'contact-plan.dual.json'),
     path.join(process.cwd(), 'apps', 'relay', 'contact-plan.dual.json'),
@@ -44,37 +48,103 @@ function resolveDataDir(nodeId: string): string {
   return fallback;
 }
 
+const DEFAULT_EID_BY_NODE: Record<string, string> = {
+  Earth: 'ipn:1.1',
+  Relay: 'ipn:2.1',
+  Mars: 'ipn:3.1',
+};
+
+function buildEidByNode(plan: DualContactPlan): Record<string, string> {
+  const eidByNode: Record<string, string> = {};
+  for (const n of plan.nodes) {
+    const eid = n.eid ?? DEFAULT_EID_BY_NODE[n.name];
+    if (eid) eidByNode[n.name] = eid;
+  }
+  return eidByNode;
+}
+
 export interface RelayRuntimeConfig {
   nodeId: string;
+  eid: string;
+  eidByNode: Record<string, string>;
   port: number;
   peerUrl: string;
+  peers: Record<string, string>;
   role: DualNodeConfig['role'];
   nextHop: Record<string, string>;
   dataDir: string;
   plan: DualContactPlan;
   planPath: string;
   startedAt: number;
+  /** DTN_GRAPH_MODE=1 or plan.mode === 'graph'. */
+  graphMode: boolean;
+  x: number;
+  y: number;
+  bootstrapUrl?: string;
+}
+
+/** Graph-mode join peers win over the static plan map and the single peerUrl fallback. */
+export function peerUrlFor(
+  cfg: RelayRuntimeConfig,
+  nextHopName: string,
+  graph?: { peerUrl(id: string): string | undefined } | null,
+): string {
+  if (cfg.graphMode && graph) {
+    const fromGraph = graph.peerUrl(nextHopName);
+    if (fromGraph) return fromGraph;
+  }
+  const fromMap = cfg.peers[nextHopName];
+  if (fromMap) return fromMap;
+  return cfg.peerUrl;
+}
+
+function envFlag(name: string): boolean {
+  const v = process.env[name];
+  return v === '1' || v === 'true' || v === 'yes';
+}
+
+function numEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : fallback;
 }
 
 export function loadRelayConfig(): RelayRuntimeConfig {
   const planPath = resolvePlanPath();
   const plan = JSON.parse(fs.readFileSync(planPath, 'utf8')) as DualContactPlan;
   const nodeId = process.env.NODE_ID ?? 'Earth';
+  const graphMode = envFlag('DTN_GRAPH_MODE') || plan.mode === 'graph';
   const node = plan.nodes.find((n) => n.name === nodeId);
-  if (!node) {
+  if (!node && !graphMode) {
     throw new Error(`NODE_ID=${nodeId} not found in contact plan ${planPath}`);
   }
-  const port = Number(process.env.PORT ?? node.port);
-  const peerUrl = process.env.PEER_URL ?? node.peerUrl;
+  const port = Number(process.env.PORT ?? node?.port ?? 0);
+  const peerUrl = process.env.PEER_URL ?? node?.peerUrl ?? '';
+  const eidByNode = buildEidByNode(plan);
+  const eid = process.env.EID ?? eidByNode[nodeId];
+  if (!eid) {
+    throw new Error(`No EID configured for NODE_ID=${nodeId} in contact plan ${planPath}`);
+  }
+  eidByNode[nodeId] = eid;
+  const bootstrapRaw = process.env.BOOTSTRAP_URL;
+  const bootstrapUrl = bootstrapRaw && bootstrapRaw.length > 0 ? bootstrapRaw : undefined;
   return {
     nodeId,
+    eid,
+    eidByNode,
     port,
     peerUrl,
-    role: node.role,
-    nextHop: node.nextHop,
+    peers: node?.peers ?? {},
+    role: node?.role ?? 'endpoint',
+    nextHop: node?.nextHop ?? {},
     dataDir: resolveDataDir(nodeId),
     plan,
     planPath,
     startedAt: Date.now(),
+    graphMode,
+    x: numEnv('NODE_X', node?.x ?? 0),
+    y: numEnv('NODE_Y', node?.y ?? 0),
+    bootstrapUrl,
   };
 }

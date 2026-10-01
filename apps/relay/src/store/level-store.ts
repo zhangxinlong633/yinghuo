@@ -122,6 +122,15 @@ export class LevelStore implements OnModuleInit, OnModuleDestroy {
     return ids;
   }
 
+  /** Every stored bundle id, including ones touched before this process started. */
+  async listBundleIds(): Promise<string[]> {
+    const ids: string[] = [];
+    for await (const key of this.bundlesDb.keys()) {
+      ids.push(key);
+    }
+    return ids;
+  }
+
   async deliverLocal(msg: DeliveredMessage): Promise<void> {
     this.inbox.push(msg);
     await this.indexDb.put(`inbox:${msg.id}`, JSON.stringify(msg));
@@ -148,6 +157,14 @@ export class LevelStore implements OnModuleInit, OnModuleDestroy {
 
   peekInbox(): DeliveredMessage[] {
     return [...this.inbox];
+  }
+
+  /** Drop one locally delivered payload. Expired bundles must not stay readable. */
+  dropInbox(id: string): void {
+    this.inbox = this.inbox.filter((m) => m.id !== id);
+    const db = this.indexDb;
+    if (!db || db.status !== 'open') return;
+    void db.del(`inbox:${id}`).catch(() => undefined);
   }
 
   /** Count keys via keys() iterator (values skipped); close iterator explicitly. */

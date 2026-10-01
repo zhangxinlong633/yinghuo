@@ -1,3 +1,5 @@
+import type { BpInspect } from '../bp/bp-codec';
+
 /** Educational Bundle (simplified BP primary block) for relay daemons. */
 export interface RelayBundle {
   id: string;
@@ -8,6 +10,11 @@ export interface RelayBundle {
   ttlMs: number;
   hops: Array<{ from: string; to: string; at: number }>;
   delivered: boolean;
+  state?: 'WAITING' | 'FORWARDING' | 'ARRIVED' | 'ACKED' | 'EXPIRED';
+  custodian?: string;
+  events?: Array<{ t: number; node: string; kind: string; msg: string }>;
+  /** Base64 BPv7 CBOR captured at forward or ingest. Task 6 may refine this. */
+  wire?: string;
 }
 
 export interface CustodyRecord {
@@ -25,6 +32,24 @@ export interface DeliveredMessage {
   deliveredAt: number;
   hops: Array<{ from: string; to: string; at: number }>;
 }
+
+/** Fields returned by POST /api/send on success (no custody/state/wire). */
+export type BusinessSendFields = Pick<
+  RelayBundle,
+  'id' | 'src' | 'dst' | 'payload' | 'ttlMs'
+>;
+
+/** Inbox / recv message shape for application consumers. */
+export type BusinessInboxMessage = Pick<
+  DeliveredMessage,
+  'id' | 'src' | 'dst' | 'payload' | 'deliveredAt'
+>;
+
+/** GET /api/bundles/:id — full ops record plus wire inspect when captured. */
+export type RelayBundleOpsDetail = RelayBundle & {
+  wireLength?: number;
+  primary?: BpInspect;
+};
 
 export interface CyclicSchedule {
   type: 'cyclic';
@@ -46,7 +71,12 @@ export interface DualNodeConfig {
   role: 'endpoint' | 'relay' | 'hybrid';
   port: number;
   peerUrl: string;
-  nextHop: Record<string, string>;
+  peers?: Record<string, string>;
+  /** Omitted in graph mode; static tri/dual plans still set a full table. */
+  nextHop?: Record<string, string>;
+  eid?: string;
+  x?: number;
+  y?: number;
 }
 
 export interface DualContactPlan {

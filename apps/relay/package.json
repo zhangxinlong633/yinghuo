@@ -6,8 +6,12 @@
     "build": "tsc -p tsconfig.json",
     "start": "tsx src/main.ts",
     "start:dev": "tsx watch src/main.ts",
-    "start:earth": "NODE_ID=Earth PORT=3101 PEER_URL=http://127.0.0.1:3102 tsx src/main.ts",
-    "start:mars": "NODE_ID=Mars PORT=3102 PEER_URL=http://127.0.0.1:3101 tsx src/main.ts"
+    "start:earth": "NODE_ID=Earth PORT=3101 tsx src/main.ts",
+    "start:relay": "NODE_ID=Relay PORT=3103 tsx src/main.ts",
+    "start:mars": "NODE_ID=Mars PORT=3102 tsx src/main.ts",
+    "test": "node --import tsx --test src/**/*.test.ts",
+    "test:live": "DTN_LIVE_SMOKE=1 node --import tsx --test src/live-tri-smoke.test.ts",
+    "native:build": "cd ../../native/bp-codec && (test -f build/libdtn_bp_codec.dylib || test -f build/libdtn_bp_codec.so || (./scripts/fetch-deps.sh && cmake -S . -B build && cmake --build build))"
   },
   "dependencies": {
     "@dtn-demo/core": "*",
@@ -15,6 +19,7 @@
     "@nestjs/core": "^10.3.0",
     "@nestjs/platform-express": "^10.3.0",
     "classic-level": "^3.0.0",
+    "koffi": "^3.3.2",
     "reflect-metadata": "^0.2.1",
     "rxjs": "^7.8.1"
   },

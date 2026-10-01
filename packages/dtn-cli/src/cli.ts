@@ -10,7 +10,7 @@
  *
  * Env:
  *   DTN_RELAY_URL  default http://127.0.0.1:3101
- *   DTN_NODE       Earth|Mars  (sets default URL if DTN_RELAY_URL unset)
+ *   DTN_NODE       Earth|Relay|Mars  (sets default URL if DTN_RELAY_URL unset)
  */
 import { DtnClient } from '@dtn-demo/sdk';
 
@@ -18,6 +18,7 @@ function resolveUrl(): string {
   if (process.env.DTN_RELAY_URL) return process.env.DTN_RELAY_URL;
   const node = (process.env.DTN_NODE ?? 'Earth').toLowerCase();
   if (node === 'mars') return 'http://127.0.0.1:3102';
+  if (node === 'relay') return 'http://127.0.0.1:3103';
   return 'http://127.0.0.1:3101';
 }
 
@@ -35,7 +36,7 @@ async function main(): Promise<void> {
   inbox                  Peek inbox without clear
   wait [timeoutSec]      Subscribe until delivery (default 60s)
 
-Env: DTN_RELAY_URL / DTN_NODE=Earth|Mars
+Env: DTN_RELAY_URL / DTN_NODE=Earth|Relay|Mars
 Current relay: ${resolveUrl()}
 `);
     return;

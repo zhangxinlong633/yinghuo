@@ -1,0 +1,52 @@
+{
+  "description": "Earth–Relay–Mars staggered contacts",
+  "mode": "tri",
+  "nodes": [
+    {
+      "name": "Earth",
+      "eid": "ipn:1.1",
+      "role": "endpoint",
+      "port": 3101,
+      "peerUrl": "http://127.0.0.1:3103",
+      "peers": { "Relay": "http://127.0.0.1:3103" },
+      "nextHop": { "Mars": "Relay", "Relay": "Relay" }
+    },
+    {
+      "name": "Relay",
+      "eid": "ipn:2.1",
+      "role": "relay",
+      "port": 3103,
+      "peerUrl": "http://127.0.0.1:3102",
+      "peers": {
+        "Earth": "http://127.0.0.1:3101",
+        "Mars": "http://127.0.0.1:3102"
+      },
+      "nextHop": { "Mars": "Mars", "Earth": "Earth" }
+    },
+    {
+      "name": "Mars",
+      "eid": "ipn:3.1",
+      "role": "endpoint",
+      "port": 3102,
+      "peerUrl": "http://127.0.0.1:3103",
+      "peers": { "Relay": "http://127.0.0.1:3103" },
+      "nextHop": { "Earth": "Relay", "Relay": "Relay" }
+    }
+  ],
+  "contacts": [
+    {
+      "a": "Earth",
+      "b": "Relay",
+      "delayMs": 200,
+      "bandwidthBps": 1000000,
+      "schedule": { "type": "cyclic", "periodMs": 30000, "openOffsetMs": 0, "openDurationMs": 10000 }
+    },
+    {
+      "a": "Relay",
+      "b": "Mars",
+      "delayMs": 200,
+      "bandwidthBps": 1000000,
+      "schedule": { "type": "cyclic", "periodMs": 30000, "openOffsetMs": 15000, "openDurationMs": 10000 }
+    }
+  ]
+}
