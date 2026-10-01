@@ -101,6 +101,12 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
   private opChain: Promise<void> = Promise.resolve();
   /** True while a tick is queued or running; interval ticks do not stack. */
   private tickQueued = false;
+  /**
+   * Bundle ids this process has seen. Capped at 100.
+   * Survives ACK so a released bundle stays listable until restart or eviction.
+   */
+  private readonly recent: string[] = [];
+  private static readonly RECENT_CAP = 100;
 
   private enqueue<T>(work: () => Promise<T>): Promise<T> {
     const result = this.opChain.then(work, work);
@@ -171,6 +177,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       from: null,
       heldAt: now,
     });
+    this.rememberBundle(bundle.id);
     this.pushEvent('CREATE', `${bundle.id} ${bundle.src}→${bundle.dst} "${payload}"`);
     this.pushEvent('STORE', `${bundle.id} custody held (await contact)`);
     const job = await this.prepareForward(bundle.id);
@@ -201,6 +208,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     event: string;
     msg: string;
   }> {
+    this.rememberBundle(bundle.id);
     const existing = await this.store.getBundle(bundle.id);
     if (existing) {
       this.queuePendingAck(existing.id, from, existing.events ?? []);
@@ -276,6 +284,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     from: string,
     downstreamEvents: BundleEvent[]
   ): Promise<void> {
+    this.rememberBundle(bundleId);
     const bundle = await this.store.getBundle(bundleId);
     if (!bundle) return;
     const now = Date.now();
@@ -335,6 +344,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     const now = Date.now();
     if (now - bundle.createdAt >= bundle.ttlMs) {
       const expired = markExpired(toTracked(bundle), now, this.cfg.nodeId);
+      this.rememberBundle(bundleId);
       await this.store.putBundle(fromTracked(expired, bundle.delivered));
       await this.store.releaseCustody(bundleId);
       this.store.dropInbox(bundleId);
@@ -457,6 +467,85 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       if (job) forwards.push(job);
     }
     return { acks, forwards };
+  }
+
+  /** Most recently touched first. Custody-only ids (after restart) follow. */
+  async listBundles(): Promise<
+    Array<{
+      id: string;
+      src: string;
+      dst: string;
+      state: string;
+      custodian: string;
+      updatedAt: number;
+    }>
+  > {
+    return this.enqueue(() => this.listBundlesExclusive());
+  }
+
+  async getBundle(id: string): Promise<RelayBundle | undefined> {
+    return this.enqueue(async () => {
+      const bundle = await this.store.getBundle(id);
+      return bundle ?? undefined;
+    });
+  }
+
+  private rememberBundle(id: string): void {
+    const idx = this.recent.indexOf(id);
+    if (idx >= 0) this.recent.splice(idx, 1);
+    this.recent.push(id);
+    if (this.recent.length > BundleService.RECENT_CAP) {
+      this.recent.splice(0, this.recent.length - BundleService.RECENT_CAP);
+    }
+  }
+
+  private async listBundlesExclusive(): Promise<
+    Array<{
+      id: string;
+      src: string;
+      dst: string;
+      state: string;
+      custodian: string;
+      updatedAt: number;
+    }>
+  > {
+    const custodyIds = await this.store.listPendingBundleIds();
+    const seen = new Set<string>();
+    const ids: string[] = [];
+    for (let i = this.recent.length - 1; i >= 0; i--) {
+      const id = this.recent[i];
+      if (seen.has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+    }
+    for (const id of custodyIds) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+    }
+    const rows: Array<{
+      id: string;
+      src: string;
+      dst: string;
+      state: string;
+      custodian: string;
+      updatedAt: number;
+    }> = [];
+    for (const id of ids) {
+      const bundle = await this.store.getBundle(id);
+      if (!bundle) continue;
+      const events = bundle.events ?? [];
+      const updatedAt = events.length > 0 ? events[events.length - 1].t : bundle.createdAt;
+      rows.push({
+        id: bundle.id,
+        src: bundle.src,
+        dst: bundle.dst,
+        state: bundle.state ?? '',
+        custodian: bundle.custodian ?? '',
+        updatedAt,
+      });
+    }
+    return rows;
   }
 
   recv(clear = true): DeliveredMessage[] {

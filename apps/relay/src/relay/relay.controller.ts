@@ -4,6 +4,7 @@ import {
   Get,
   Headers,
   Inject,
+  Param,
   Post,
   Query,
   ServiceUnavailableException,
@@ -35,7 +36,19 @@ export class RelayController {
 
   @Get('contacts')
   contactsState() {
-    return this.contacts.getState();
+    return { ...this.contacts.getState(), links: this.contacts.listLinks() };
+  }
+
+  @Get('bundles')
+  async bundles() {
+    return { ok: true, bundles: await this.bundles.listBundles() };
+  }
+
+  @Get('bundles/:id')
+  async bundle(@Param('id') id: string) {
+    const bundle = await this.bundles.getBundle(id);
+    if (!bundle) return { ok: false, error: 'not found' };
+    return { ok: true, bundle };
   }
 
   @Post('send')
