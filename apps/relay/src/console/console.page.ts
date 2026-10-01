@@ -22,59 +22,59 @@ export function buildConsoleHtml(opts: {
   </script>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Noto+Sans+SC:wght@400;500;600;700&family=Syne:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      /* Light green — OpenRouter-like airy surface */
-      --bg: #f3faf5;
-      --bg-soft: #e8f5ee;
-      --surface: #ffffff;
-      --panel: #ffffff;
-      --border: #d7ebe0;
-      --border-soft: #e4f2ea;
-      --text: #0f1f16;
-      --muted: #4f6a5b;
-      --faint: #7d9788;
-      --accent: #16a34a;
-      --accent-2: #15803d;
-      --accent-soft: #dcfce7;
-      --accent-hover: #15803d;
-      --ok: #15803d;
-      --ok-soft: #dcfce7;
-      --warn: #a16207;
-      --danger: #b91c1c;
-      --danger-soft: #fee2e2;
-      --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      --sans: Inter, ui-sans-serif, system-ui, -apple-system, "PingFang SC", "Noto Sans SC", sans-serif;
-      --nav-h: 64px;
-      --radius: 16px;
-      --radius-sm: 12px;
-      --shadow: 0 1px 2px rgba(15,31,22,0.04), 0 8px 24px rgba(15,31,22,0.03);
-      --nav-bg: rgba(255,255,255,0.82);
+      --bg: #f6f3ec;
+      --bg-soft: #eee8dc;
+      --surface: rgba(255,252,247,0.72);
+      --panel: rgba(255,252,247,0.88);
+      --border: rgba(42, 58, 46, 0.12);
+      --border-soft: rgba(42, 58, 46, 0.07);
+      --text: #1c2a22;
+      --muted: #5a6d61;
+      --faint: #8a9a90;
+      --accent: #0f7a4e;
+      --accent-2: #0b5c3b;
+      --accent-soft: rgba(15, 122, 78, 0.12);
+      --accent-hover: #0b5c3b;
+      --ok: #0f7a4e;
+      --ok-soft: rgba(15, 122, 78, 0.12);
+      --warn: #9a6700;
+      --danger: #b42318;
+      --danger-soft: rgba(180, 35, 24, 0.1);
+      --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: "Noto Sans SC", "Syne", ui-sans-serif, system-ui, sans-serif;
+      --display: "Syne", "Noto Sans SC", sans-serif;
+      --serif: "Instrument Serif", "Noto Serif SC", Georgia, serif;
+      --nav-h: 72px;
+      --radius: 18px;
+      --radius-sm: 10px;
+      --shadow: none;
+      --nav-bg: rgba(246, 243, 236, 0.7);
       color-scheme: light;
     }
     html[data-theme="dark"] {
-      /* Deep green */
-      --bg: #07140e;
-      --bg-soft: #0d1f16;
-      --surface: #10261b;
-      --panel: #122c1f;
-      --border: #1f4633;
-      --border-soft: #183628;
-      --text: #e8f7ee;
-      --muted: #9fc4ae;
-      --faint: #6f9a80;
-      --accent: #22c55e;
-      --accent-2: #4ade80;
-      --accent-soft: rgba(34,197,94,0.16);
-      --accent-hover: #16a34a;
-      --ok: #4ade80;
-      --ok-soft: rgba(34,197,94,0.18);
-      --warn: #fbbf24;
-      --danger: #f87171;
-      --danger-soft: rgba(248,113,113,0.16);
-      --shadow: 0 1px 2px rgba(0,0,0,0.4), 0 12px 32px rgba(0,0,0,0.28);
-      --nav-bg: rgba(7,20,14,0.88);
+      --bg: #0c1410;
+      --bg-soft: #14201a;
+      --surface: rgba(18, 32, 26, 0.75);
+      --panel: rgba(20, 36, 28, 0.9);
+      --border: rgba(200, 230, 210, 0.12);
+      --border-soft: rgba(200, 230, 210, 0.07);
+      --text: #e7f2eb;
+      --muted: #9bb5a6;
+      --faint: #6f8a7b;
+      --accent: #3dcf8e;
+      --accent-2: #7aefb4;
+      --accent-soft: rgba(61, 207, 142, 0.14);
+      --accent-hover: #2fb87a;
+      --ok: #3dcf8e;
+      --ok-soft: rgba(61, 207, 142, 0.14);
+      --warn: #e6b84d;
+      --danger: #f07167;
+      --danger-soft: rgba(240, 113, 103, 0.14);
+      --shadow: none;
+      --nav-bg: rgba(12, 20, 16, 0.72);
       color-scheme: dark;
     }
     * { box-sizing: border-box; }
@@ -83,20 +83,22 @@ export function buildConsoleHtml(opts: {
       background: var(--bg); color: var(--text);
       font-family: var(--sans);
       -webkit-font-smoothing: antialiased;
-      letter-spacing: -0.01em;
-      font-size: 17px;
+      letter-spacing: 0.01em;
+      font-size: 16.5px;
+      font-weight: 400;
     }
     body {
       background:
-        radial-gradient(900px 420px at 8% -10%, rgba(22,163,74,0.10), transparent 55%),
-        radial-gradient(720px 360px at 95% 0%, rgba(74,222,128,0.08), transparent 50%),
-        var(--bg);
+        radial-gradient(1200px 560px at 12% -20%, rgba(15, 122, 78, 0.16), transparent 58%),
+        radial-gradient(900px 480px at 88% 8%, rgba(180, 140, 60, 0.10), transparent 52%),
+        radial-gradient(700px 400px at 50% 100%, rgba(15, 122, 78, 0.06), transparent 55%),
+        linear-gradient(180deg, #f8f5ee 0%, #f1efe6 100%);
     }
     html[data-theme="dark"] body {
       background:
-        radial-gradient(900px 420px at 8% -10%, rgba(34,197,94,0.12), transparent 55%),
-        radial-gradient(720px 360px at 95% 0%, rgba(22,163,74,0.10), transparent 50%),
-        var(--bg);
+        radial-gradient(1100px 520px at 10% -18%, rgba(61, 207, 142, 0.14), transparent 55%),
+        radial-gradient(800px 420px at 92% 0%, rgba(90, 120, 80, 0.12), transparent 50%),
+        linear-gradient(180deg, #0c1410 0%, #101a15 100%);
     }
     a { color: var(--accent); text-decoration: none; }
     a:hover { text-decoration: underline; }
@@ -110,101 +112,155 @@ export function buildConsoleHtml(opts: {
     .mast {
       flex-shrink: 0;
       background: var(--nav-bg);
-      border-bottom: 1px solid var(--border);
-      backdrop-filter: blur(14px);
+      border-bottom: 1px solid var(--border-soft);
+      backdrop-filter: blur(18px) saturate(1.2);
       position: sticky; top: 0; z-index: 20;
     }
     .mast-row {
-      display: flex; align-items: center; gap: 1rem;
-      min-height: 64px;
-      padding: 0.45rem 1.25rem;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+      align-items: center;
+      gap: 1rem;
+      min-height: var(--nav-h);
+      padding: 0.65rem clamp(1rem, 3vw, 2rem);
+    }
+    .mast-left {
+      display: flex; align-items: baseline; gap: 0.65rem 0.85rem;
+      flex-wrap: wrap;
+      justify-self: start;
+      min-width: 0;
     }
     .brand {
-      display: flex; align-items: center; gap: 0.55rem;
-      font-weight: 700; font-size: 1.02rem; letter-spacing: -0.02em;
-      white-space: nowrap; color: var(--text);
-      flex-shrink: 0;
+      font-family: var(--display);
+      font-weight: 700;
+      font-size: clamp(1.25rem, 2vw, 1.55rem);
+      letter-spacing: -0.03em;
+      line-height: 1;
+      color: var(--text);
+      white-space: nowrap;
     }
-    .brand .mark {
-      width: 30px; height: 30px; border-radius: 9px;
-      background: linear-gradient(145deg, var(--accent) 0%, var(--accent-2) 100%);
-      flex-shrink: 0;
-      box-shadow: 0 0 0 3px var(--accent-soft);
+    .brand .port {
+      font-family: var(--serif);
+      font-weight: 400;
+      font-style: italic;
+      font-size: 0.92em;
+      color: var(--muted);
+      letter-spacing: 0;
+      margin-left: 0.15rem;
+    }
+    .mast-status {
+      display: inline-flex; align-items: center; gap: 0.45rem;
+      flex-wrap: wrap;
+    }
+    .status-chip {
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 0.2rem 0;
+      border-bottom: 1px solid transparent;
+    }
+    .status-chip.ok { color: var(--ok); border-bottom-color: var(--ok); }
+    .status-chip.bad { color: var(--danger); border-bottom-color: var(--danger); }
+    .status-chip.muted { color: var(--faint); }
+    .mast-uptime {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--faint);
+      letter-spacing: 0.02em;
     }
     .nav {
       display: flex;
       align-items: center;
-      gap: 0.15rem;
-      flex: 1;
-      min-width: 0;
-      overflow-x: auto;
+      justify-content: center;
+      gap: 0.15rem 1.15rem;
+      justify-self: center;
+      flex-wrap: wrap;
     }
     .nav-btn {
-      display: inline-flex; align-items: center; gap: 0.4rem;
-      width: auto;
-      background: transparent; border: 1px solid transparent; color: var(--muted);
-      padding: 0.45rem 0.8rem; border-radius: 999px; cursor: pointer;
-      font-size: 0.98rem; font-weight: 600; font-family: var(--sans);
+      display: inline-flex; align-items: center;
+      background: transparent; border: none; color: var(--muted);
+      padding: 0.35rem 0.1rem 0.45rem;
+      border-radius: 0;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 600;
+      font-family: var(--display);
+      letter-spacing: 0.06em;
       white-space: nowrap;
-      transition: background 0.12s, color 0.12s, border-color 0.12s;
+      position: relative;
+      transition: color 0.18s ease;
     }
-    .nav-btn:hover { background: var(--bg-soft); color: var(--text); }
-    .nav-btn.active {
-      background: var(--accent-soft); color: var(--accent-2);
-      border-color: transparent;
+    .nav-btn::after {
+      content: "";
+      position: absolute; left: 0; right: 0; bottom: 0;
+      height: 1px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: center;
+      transition: transform 0.2s ease;
     }
-    html[data-theme="dark"] .nav-btn.active {
-      background: var(--accent); color: #062012;
-      border-color: var(--accent);
-    }
-    .nav-btn .ico { opacity: 0.9; }
+    .nav-btn:hover { color: var(--text); }
+    .nav-btn:hover::after { transform: scaleX(0.35); }
+    .nav-btn.active { color: var(--text); }
+    .nav-btn.active::after { transform: scaleX(1); }
+    html[data-theme="dark"] .nav-btn.active { color: var(--accent-2); }
     .mast-tools {
-      display: flex; align-items: center; gap: 0.45rem;
+      display: flex; align-items: center; gap: 0.55rem;
+      justify-self: end;
       flex-shrink: 0;
     }
     .peer-link {
-      display: inline-flex; align-items: center; justify-content: center;
-      padding: 0.4rem 0.75rem; border-radius: 999px;
-      border: 1px solid var(--border); background: var(--surface);
-      color: var(--text); font-weight: 600; font-size: 0.92rem;
+      display: inline-flex; align-items: center;
+      padding: 0.25rem 0;
+      border: none; background: transparent;
+      color: var(--text);
+      font-family: var(--serif);
+      font-style: italic;
+      font-weight: 400;
+      font-size: 1rem;
       white-space: nowrap;
+      border-bottom: 1px solid var(--border);
     }
-    .peer-link:hover { background: var(--accent-soft); text-decoration: none; }
+    .peer-link:hover { border-bottom-color: var(--accent); text-decoration: none; color: var(--accent-2); }
     .lang-switch {
-      display: inline-flex; border: 1px solid var(--border); border-radius: 999px;
-      overflow: hidden; background: var(--surface); width: auto;
+      display: inline-flex;
+      gap: 0.35rem;
+      border: none;
+      background: transparent;
+      width: auto;
     }
     .lang-btn, .theme-btn {
-      background: transparent; color: var(--muted); border: none; border-radius: 0;
-      padding: 0.35rem 0.65rem; font-size: 0.88rem; font-weight: 650;
+      background: transparent; color: var(--faint); border: none; border-radius: 0;
+      padding: 0.2rem 0.35rem; font-size: 0.8rem; font-weight: 600;
+      font-family: var(--display);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
     }
-    .lang-btn:hover, .theme-btn:hover { background: var(--bg-soft); color: var(--text); }
-    .lang-btn.active, .theme-btn.active { background: var(--accent); color: #fff; }
-    .lang-btn.active:hover, .theme-btn.active:hover { background: var(--accent-hover); }
-    .status-row {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: 0.75rem; flex-wrap: wrap;
-      padding: 0.35rem 1.25rem 0.55rem;
-      border-top: 1px solid var(--border-soft);
+    .lang-btn:hover, .theme-btn:hover { color: var(--text); }
+    .lang-btn.active, .theme-btn.active {
+      color: var(--accent-2);
+      background: transparent;
+      box-shadow: inset 0 -1px 0 var(--accent);
     }
-    .status-left, .status-right {
-      display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
+    .lang-btn.active:hover, .theme-btn.active:hover { color: var(--accent-2); background: transparent; }
+    .ghost.refresh-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.35rem;
     }
-    .status-row h1 { font-size: 1.05rem; margin: 0; font-weight: 700; color: var(--text); letter-spacing: -0.02em; }
-    .status-right { color: var(--muted); font-size: 0.95rem; }
-    .pill {
-      display: inline-flex; align-items: center; gap: 0.25rem;
-      padding: 0.22rem 0.65rem; border-radius: 999px; font-size: 0.86rem; font-weight: 600;
-      border: 1px solid var(--border); background: var(--surface);
-    }
-    .pill.ok { color: var(--ok); border-color: transparent; background: var(--ok-soft); }
-    .pill.bad { color: var(--danger); border-color: transparent; background: var(--danger-soft); }
-    .pill.muted { color: var(--muted); }
-    .dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+    .ghost.refresh-btn:hover { color: var(--text); background: transparent; }
     .main {
       flex: 1;
       min-height: 0;
-      padding: 1.15rem 1.4rem 1.6rem;
+      padding: 1.6rem clamp(1.2rem, 3vw, 2.4rem) 2rem;
       overflow: auto;
       min-width: 0;
       display: flex;
@@ -219,10 +275,16 @@ export function buildConsoleHtml(opts: {
       min-height: 0;
     }
     .view-title {
-      margin: 0; font-size: 1.35rem; font-weight: 700;
-      letter-spacing: -0.03em;
+      margin: 0 0 0.15rem;
+      font-family: var(--serif);
+      font-size: clamp(1.85rem, 3vw, 2.35rem);
+      font-weight: 400;
+      font-style: italic;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+      color: var(--text);
     }
-    .grid { display: grid; gap: 0.85rem; }
+    .grid { display: grid; gap: 1rem; }
     .grid.stats { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     .grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .grid.ops-grid { flex: 1; min-height: 0; align-items: stretch; }
@@ -240,45 +302,85 @@ export function buildConsoleHtml(opts: {
     }
     .card {
       background: var(--panel);
-      border: 1px solid var(--border);
+      border: 1px solid var(--border-soft);
       border-radius: var(--radius);
-      padding: 1rem 1.1rem;
+      padding: 1.15rem 1.25rem;
       box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
     }
-    .card.stat-card { transition: border-color 0.15s; }
-    .card.stat-card:hover { border-color: var(--accent-2); }
+    .card.stat-card {
+      transition: transform 0.2s ease, border-color 0.2s ease;
+      border-color: transparent;
+      background: linear-gradient(160deg, rgba(255,252,247,0.9), rgba(238,232,220,0.55));
+    }
+    html[data-theme="dark"] .card.stat-card {
+      background: linear-gradient(160deg, rgba(24,40,32,0.9), rgba(18,30,24,0.55));
+    }
+    .card.stat-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+    }
     .card h3 {
-      margin: 0 0 0.55rem; font-size: 1.02rem; font-weight: 650;
-      color: var(--text); letter-spacing: -0.01em;
+      margin: 0 0 0.65rem;
+      font-family: var(--display);
+      font-size: 0.95rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
     }
     .stat-val {
-      font-size: 1.7rem; font-weight: 700; font-family: var(--mono);
-      line-height: 1.15; letter-spacing: -0.04em; color: var(--text);
+      font-size: clamp(1.85rem, 2.4vw, 2.35rem);
+      font-weight: 700;
+      font-family: var(--display);
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+      color: var(--text);
     }
-    .stat-label { color: var(--muted); font-size: 0.92rem; margin-top: 0.35rem; font-weight: 500; }
+    .stat-label {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-top: 0.4rem;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+    }
     .kv { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 0.45rem 0.85rem; font-size: 0.98rem; }
     .kv .k { color: var(--faint); font-weight: 500; }
     .kv .v { font-family: var(--mono); word-break: break-all; font-size: 0.94rem; color: var(--text); }
     .badge-open { color: var(--ok); font-weight: 700; }
     .badge-closed { color: var(--danger); font-weight: 700; }
     button, .btn {
-      background: var(--accent); color: #fff; border: 1px solid transparent; border-radius: 999px;
-      padding: 0.48rem 1rem; font-weight: 600; cursor: pointer; font-size: 1rem;
-      font-family: var(--sans);
-      transition: background 0.12s, transform 0.08s;
+      background: var(--accent); color: #fff; border: 1px solid transparent; border-radius: 6px;
+      padding: 0.55rem 1.15rem; font-weight: 650; cursor: pointer; font-size: 0.95rem;
+      font-family: var(--display);
+      letter-spacing: 0.02em;
+      transition: background 0.15s, transform 0.08s, box-shadow 0.15s;
     }
     button:hover { background: var(--accent-hover); }
     button:active { transform: scale(0.98); }
     button.secondary {
-      background: var(--surface); color: var(--text);
+      background: transparent; color: var(--text);
       border: 1px solid var(--border);
     }
-    button.secondary:hover { background: var(--bg-soft); }
+    button.secondary:hover { background: var(--bg-soft); border-color: var(--accent); }
     button.ghost {
       background: transparent; border: 1px solid var(--border); color: var(--muted);
-      padding: 0.35rem 0.65rem; border-radius: 999px; font-size: 1rem;
+      padding: 0.4rem 0.85rem; border-radius: 6px; font-size: 0.92rem;
     }
     button.ghost:hover { color: var(--text); border-color: var(--accent); }
+    button.ghost.refresh-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      font-family: var(--display);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      padding: 0.2rem 0.35rem;
+      border-radius: 0;
+    }
+    button.ghost.refresh-btn:hover { color: var(--text); background: transparent; border: none; }
     input, select, textarea {
       background: var(--surface); color: var(--text);
       border: 1px solid var(--border); border-radius: var(--radius-sm);
@@ -373,16 +475,26 @@ export function buildConsoleHtml(opts: {
       .grid.stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .grid.three { grid-template-columns: 1fr 1fr; }
     }
-    @media (max-width: 900px) {
-      .mast-row { flex-wrap: wrap; }
-      .nav { order: 3; flex-basis: 100%; }
+    @media (max-width: 980px) {
+      .mast-row {
+        grid-template-columns: 1fr;
+        justify-items: stretch;
+        gap: 0.55rem;
+        padding: 0.85rem 1.1rem;
+      }
+      .mast-left, .nav, .mast-tools { justify-self: stretch; }
+      .mast-left { justify-content: space-between; }
+      .nav { justify-content: center; gap: 0.85rem; padding: 0.15rem 0; }
+      .mast-tools { justify-content: flex-end; flex-wrap: wrap; }
       .grid.two, .graph-layout { grid-template-columns: 1fr; }
       .card.stretch pre, .card.stretch .logbox { max-height: min(52vh, 480px); }
     }
     @media (max-width: 560px) {
       .grid.stats, .grid.three, .graph-layout { grid-template-columns: 1fr; }
       .main { padding: 1rem; }
-      .brand span.brand-text { display: none; }
+      .brand .port { display: none; }
+      .nav { gap: 0.65rem; }
+      .nav-btn { font-size: 0.88rem; letter-spacing: 0.04em; }
     }
   </style>
 </head>
@@ -390,36 +502,33 @@ export function buildConsoleHtml(opts: {
   <div class="app">
     <header class="mast">
       <div class="mast-row">
-        <div class="brand"><span class="mark"></span><span class="brand-text">${nodeId} · :${port}</span></div>
-        <nav class="nav">
-          <button type="button" class="nav-btn active" data-view="overview"><span class="ico">◉</span><span data-i18n="navOverview">概览</span></button>
-          <button type="button" class="nav-btn" data-view="storage"><span class="ico">▣</span><span data-i18n="navStorage">存储</span></button>
-          <button type="button" class="nav-btn" data-view="connections"><span class="ico">⇄</span><span data-i18n="navConnections">连接</span></button>
-          <button type="button" class="nav-btn" data-view="ops"><span class="ico">➤</span><span data-i18n="navOps">操作</span></button>
-          <button type="button" class="nav-btn" data-view="bundles"><span class="ico">☰</span><span data-i18n="navBundles">束</span></button>
-          <button type="button" class="nav-btn" data-view="logs"><span class="ico">≡</span><span data-i18n="navLogs">日志</span></button>
+        <div class="mast-left">
+          <div class="brand">${nodeId}<span class="port"> · :${port}</span></div>
+          <div class="mast-status">
+            <span class="status-chip muted" id="tb-role">—</span>
+            <span class="status-chip bad" id="tb-contact"><span id="tb-contact-text">—</span></span>
+            <span class="mast-uptime" id="tb-uptime">—</span>
+          </div>
+        </div>
+        <nav class="nav" aria-label="primary">
+          <button type="button" class="nav-btn active" data-view="overview" data-i18n="navOverview">概览</button>
+          <button type="button" class="nav-btn" data-view="storage" data-i18n="navStorage">存储</button>
+          <button type="button" class="nav-btn" data-view="connections" data-i18n="navConnections">连接</button>
+          <button type="button" class="nav-btn" data-view="ops" data-i18n="navOps">操作</button>
+          <button type="button" class="nav-btn" data-view="bundles" data-i18n="navBundles">束</button>
+          <button type="button" class="nav-btn" data-view="logs" data-i18n="navLogs">日志</button>
         </nav>
         <div class="mast-tools">
+          <button type="button" class="ghost refresh-btn" id="btn-refresh" data-i18n="refresh" data-i18n-title="refresh" title="立即刷新">刷新</button>
           <div class="lang-switch" role="group" aria-label="language">
-            <button type="button" class="lang-btn active" data-lang="zh">中文</button>
+            <button type="button" class="lang-btn active" data-lang="zh">中</button>
             <button type="button" class="lang-btn" data-lang="en">EN</button>
           </div>
           <div class="lang-switch" role="group" aria-label="theme">
-            <button type="button" class="theme-btn" data-theme="light" data-i18n="themeLight">浅色</button>
-            <button type="button" class="theme-btn" data-theme="dark" data-i18n="themeDark">深色</button>
+            <button type="button" class="theme-btn" data-theme="light" data-i18n="themeLight">浅</button>
+            <button type="button" class="theme-btn" data-theme="dark" data-i18n="themeDark">深</button>
           </div>
-          <a class="peer-link" href="${peerUrl}/"><span data-i18n="peer">对端</span> ${defaultDst}</a>
-        </div>
-      </div>
-      <div class="status-row">
-        <div class="status-left">
-          <h1><span data-i18n="nodeLabel">节点</span> <code id="tb-node">${nodeId}</code></h1>
-          <span class="pill muted" id="tb-role">role=—</span>
-          <span class="pill bad" id="tb-contact"><span class="dot"></span><span id="tb-contact-text">—</span></span>
-        </div>
-        <div class="status-right">
-          <span id="tb-uptime">uptime —</span>
-          <button type="button" class="ghost" id="btn-refresh" data-i18n-title="refresh" title="立即刷新">↻</button>
+          <a class="peer-link" href="${peerUrl}/"><span data-i18n="peer">对端 </span>${defaultDst}</a>
         </div>
       </div>
     </header>
@@ -702,7 +811,8 @@ export function buildConsoleHtml(opts: {
   const I18N = {
     zh: {
       navOverview: '概览', navStorage: '存储', navConnections: '连接', navOps: '操作', navBundles: '束', navLogs: '日志',
-      peer: '对端 ', nodeLabel: '节点', role: '角色', uptime: '运行时间',
+      peer: '对端 ', nodeLabel: '节点', role: '角色', uptime: '',
+      themeLight: '浅', themeDark: '深', refresh: '刷新',
       overviewTitle: '概览', statBundles: '报文 · LevelDB', statCustody: '托管 · 持有', statIndex: '索引 · 键', statInbox: '收件箱 · 本地',
       statNodes: '已知节点', statSeeds: '种子邻居', statAge: '摘要最大年龄', statDests: '可试算目的',
       nodeInfo: '节点信息', contactWin: '接触窗口', contactHint: '周期开窗时链路可转发；关闭时先存储再转发。',
@@ -726,8 +836,7 @@ export function buildConsoleHtml(opts: {
       trialDst: '试算目的', followBundle: '跟随当前束', routeCulled: '被裁掉', routeCandidates: '时延排序', routeNext: '下一跳',
       logsTitle: '日志', logsHint: '来自 /api/status 的 recentEvents，大约每秒刷新。',
       clear: '清空视图', loading: '加载中…', noEvents: '（无事件）', cleared: '（已清空，新事件会显示在这里）',
-      eventsWord: '条事件', open: '开启', closed: '关闭', refresh: '立即刷新',
-      themeLight: '浅色', themeDark: '深色',
+      eventsWord: '条事件', open: '开启', closed: '关闭',
       bundlesTitle: '束', colId: 'id', colSrc: '源', colDst: '目的', colState: '状态', colWhere: '当前节点', colUpdated: '更新时间',
       timeline: '时间线', notFound: '未找到', openBundle: '查看束', notDirect: '本机不直连',
       upstream: '上游', downstream: '下游',
@@ -742,7 +851,8 @@ export function buildConsoleHtml(opts: {
     },
     en: {
       navOverview: 'Overview', navStorage: 'Storage', navConnections: 'Connections', navOps: 'Ops', navBundles: 'Bundles', navLogs: 'Logs',
-      peer: 'Peer ', nodeLabel: 'Node', role: 'role', uptime: 'uptime',
+      peer: 'Peer ', nodeLabel: 'Node', role: 'role', uptime: '',
+      themeLight: 'Light', themeDark: 'Dark', refresh: 'Refresh',
       overviewTitle: 'Overview', statBundles: 'Bundles · LevelDB', statCustody: 'Custody · held', statIndex: 'Index · keys', statInbox: 'Inbox · local',
       statNodes: 'Known nodes', statSeeds: 'Seed peers', statAge: 'Summary age', statDests: 'Trial dests',
       nodeInfo: 'Node', contactWin: 'Contact', contactHint: 'Forward while the window is open; store-and-forward while it is closed.',
@@ -766,8 +876,7 @@ export function buildConsoleHtml(opts: {
       trialDst: 'Trial dest', followBundle: 'Follow open bundle', routeCulled: 'Culled', routeCandidates: 'By delay', routeNext: 'Next hop',
       logsTitle: 'Logs', logsHint: 'recentEvents from /api/status, refreshed about once a second.',
       clear: 'Clear view', loading: 'Loading…', noEvents: '(no events)', cleared: '(cleared — new events will appear)',
-      eventsWord: 'events', open: 'OPEN', closed: 'CLOSED', refresh: 'Refresh now',
-      themeLight: 'Light', themeDark: 'Dark',
+      eventsWord: 'events', open: 'OPEN', closed: 'CLOSED',
       bundlesTitle: 'Bundles', colId: 'id', colSrc: 'Source', colDst: 'Dest', colState: 'State', colWhere: 'Current node', colUpdated: 'Updated',
       timeline: 'Timeline', notFound: 'Not found', openBundle: 'Open bundle', notDirect: 'not a direct link',
       upstream: 'upstream', downstream: 'downstream',
@@ -843,7 +952,7 @@ export function buildConsoleHtml(opts: {
   function setContactPill(open, phase) {
     const pill = $('tb-contact');
     const text = $('tb-contact-text');
-    pill.className = 'pill ' + (open ? 'ok' : 'bad');
+    pill.className = 'status-chip ' + (open ? 'ok' : 'bad');
     text.textContent = open ? t('open') : t('closed');
     pill.title = phase || '';
   }
@@ -906,10 +1015,10 @@ export function buildConsoleHtml(opts: {
     const store = readStore(s);
     const contact = s.contact || {};
     const open = !!contact.open;
-    $('tb-node').textContent = s.nodeId;
-    $('tb-role').textContent = t('role') + '=' + (s.role || '—');
+    $('tb-role').textContent = s.role || '—';
+    $('tb-role').className = 'status-chip muted';
     setContactPill(open, contact.phase);
-    $('tb-uptime').textContent = t('uptime') + ' ' + fmtUptime(s.uptimeMs);
+    $('tb-uptime').textContent = fmtUptime(s.uptimeMs);
 
     $('st-bundles').textContent = String(store.bundles);
     $('st-custody').textContent = String(store.custody);
