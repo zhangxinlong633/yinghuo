@@ -13,6 +13,10 @@ function resolvePlanPath(): string {
   }
   const root = monorepoRoot();
   const candidates = [
+    path.join(__dirname, '..', 'contact-plan.tri.json'),
+    path.join(root, 'apps', 'relay', 'contact-plan.tri.json'),
+    path.join(process.cwd(), 'apps', 'relay', 'contact-plan.tri.json'),
+    path.join(process.cwd(), 'contact-plan.tri.json'),
     path.join(__dirname, '..', 'contact-plan.dual.json'),
     path.join(root, 'apps', 'relay', 'contact-plan.dual.json'),
     path.join(process.cwd(), 'apps', 'relay', 'contact-plan.dual.json'),
@@ -48,12 +52,19 @@ export interface RelayRuntimeConfig {
   nodeId: string;
   port: number;
   peerUrl: string;
+  peers: Record<string, string>;
   role: DualNodeConfig['role'];
   nextHop: Record<string, string>;
   dataDir: string;
   plan: DualContactPlan;
   planPath: string;
   startedAt: number;
+}
+
+export function peerUrlFor(cfg: RelayRuntimeConfig, nextHopName: string): string {
+  const fromMap = cfg.peers[nextHopName];
+  if (fromMap) return fromMap;
+  return cfg.peerUrl;
 }
 
 export function loadRelayConfig(): RelayRuntimeConfig {
@@ -70,6 +81,7 @@ export function loadRelayConfig(): RelayRuntimeConfig {
     nodeId,
     port,
     peerUrl,
+    peers: node.peers ?? {},
     role: node.role,
     nextHop: node.nextHop,
     dataDir: resolveDataDir(nodeId),

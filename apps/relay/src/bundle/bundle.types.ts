@@ -49,6 +49,7 @@ export interface DualNodeConfig {
   role: 'endpoint' | 'relay' | 'hybrid';
   port: number;
   peerUrl: string;
+  peers?: Record<string, string>;
   nextHop: Record<string, string>;
 }
 
