@@ -2,9 +2,11 @@ import 'reflect-metadata';
 import { RequestMethod } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { loadBpCodec } from './bp/bp-codec';
 import { loadRelayConfig } from './config';
 
 async function bootstrap(): Promise<void> {
+  loadBpCodec();
   const cfg = loadRelayConfig();
   const app = await NestFactory.create(AppModule);
   app.enableCors({ origin: true });
