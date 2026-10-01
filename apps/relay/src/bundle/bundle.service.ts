@@ -5,9 +5,11 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
+import { inspectBundle } from '../bp/bp-codec';
 import type {
   DeliveredMessage,
   RelayBundle,
+  RelayBundleOpsDetail,
   RelayStatus,
 } from './bundle.types';
 import {
@@ -528,10 +530,17 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     return this.enqueue(() => this.listBundlesExclusive());
   }
 
-  async getBundle(id: string): Promise<RelayBundle | undefined> {
+  async getBundle(id: string): Promise<RelayBundleOpsDetail | undefined> {
     return this.enqueue(async () => {
       const bundle = await this.store.getBundle(id);
-      return bundle ?? undefined;
+      if (!bundle) return undefined;
+      if (!bundle.wire) return bundle;
+      const wireBuf = Buffer.from(bundle.wire, 'base64');
+      return {
+        ...bundle,
+        wireLength: wireBuf.length,
+        primary: inspectBundle(wireBuf),
+      };
     });
   }
 

@@ -1,3 +1,5 @@
+import type { BpInspect } from '../bp/bp-codec';
+
 /** Educational Bundle (simplified BP primary block) for relay daemons. */
 export interface RelayBundle {
   id: string;
@@ -30,6 +32,26 @@ export interface DeliveredMessage {
   deliveredAt: number;
   hops: Array<{ from: string; to: string; at: number }>;
 }
+
+import type { BpInspect } from '../bp/bp-codec';
+
+/** Fields returned by POST /api/send on success (no custody/state/wire). */
+export type BusinessSendFields = Pick<
+  RelayBundle,
+  'id' | 'src' | 'dst' | 'payload' | 'ttlMs'
+>;
+
+/** Inbox / recv message shape for application consumers. */
+export type BusinessInboxMessage = Pick<
+  DeliveredMessage,
+  'id' | 'src' | 'dst' | 'payload' | 'deliveredAt'
+>;
+
+/** GET /api/bundles/:id — full ops record plus wire inspect when captured. */
+export type RelayBundleOpsDetail = RelayBundle & {
+  wireLength?: number;
+  primary?: BpInspect;
+};
 
 export interface CyclicSchedule {
   type: 'cyclic';

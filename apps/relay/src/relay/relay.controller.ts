@@ -16,6 +16,7 @@ import { decodeBundle, type BpDecoded } from '../bp/bp-codec';
 import { bundleFromDecoded } from '../bp/wire';
 import { BundleService } from '../bundle/bundle.service';
 import type { BundleEvent } from '../bundle/bundle-machine';
+import { toBusinessInboxMessage, toBusinessSendFields } from '../bp/business-view';
 import type { RelayBundle } from '../bundle/bundle.types';
 import { ContactService } from '../contact/contact.service';
 import type { RelayRuntimeConfig } from '../config';
@@ -78,7 +79,7 @@ export class RelayController {
     }
     try {
       const bundle = await this.bundles.send(body.dst, String(body.payload), body.ttlMs);
-      return { ok: true, bundle };
+      return { ok: true, ...toBusinessSendFields(bundle) };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (message.includes('role=relay')) {
@@ -91,13 +92,13 @@ export class RelayController {
   @Get('recv')
   recv(@Query('clear') clear?: string) {
     const doClear = clear !== '0' && clear !== 'false';
-    const messages = this.bundles.recv(doClear);
+    const messages = this.bundles.recv(doClear).map(toBusinessInboxMessage);
     return { ok: true, messages };
   }
 
   @Get('inbox')
   inbox() {
-    return { ok: true, messages: this.bundles.peekInbox() };
+    return { ok: true, messages: this.bundles.peekInbox().map(toBusinessInboxMessage) };
   }
 
   /**
