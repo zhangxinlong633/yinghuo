@@ -28,6 +28,9 @@ dtn-demo/
 cd /Users/bruce/git/space/dtn-demo
 npm install
 
+# 首次或升级后：编译 bplib BPv7 共享库（macOS .dylib / Linux .so）
+npm run native:build -w @dtn-demo/relay
+
 # 终端 1 — Earth relay :3101
 npm run relay:earth
 
@@ -61,6 +64,26 @@ npm run web
 关窗时发往下一跳的 bundle 会 **WAITING**（保管）；开窗后 **FORWARD → … → DELIVER**，Mars 侧 `recv` / `wait` 取走；Earth 可在控制台报文时间线看到 **ARRIVED** 确认。
 
 环境变量：`NODE_ID`、`PORT`、`PEER_URL`、`DATA_DIR`、`CONTACT_PLAN`；CLI 用 `DTN_RELAY_URL` 或 `DTN_NODE=Earth|Relay|Mars`。
+
+**BPv7 编解码（bplib FFI）**
+
+| 变量 | 说明 |
+|------|------|
+| （默认） | 共享库：`native/bp-codec/build/libdtn_bp_codec.dylib`（Darwin）或 `libdtn_bp_codec.so`（Linux） |
+| `DTN_BP_CODEC_LIB` | 覆盖上述路径；库缺失时进程**启动失败**（不静默退回 JSON） |
+| `DTN_ALLOW_JSON_INGEST=1` | 对端 `POST /api/peer/ingest` 可额外接受旧 `application/json`（双节点回归）；**默认关闭**。编码出口仍为 BPv7 CBOR |
+
+节点间线上格式：`Content-Type: application/cbor`。`GET /api/contacts` 的 `wireFormat` 为 `application/cbor`。
+
+**内置控制台（三层）** — 各 relay 根路径 `/`（如 `http://127.0.0.1:3101/`）：
+
+| 页 | 层 | 内容 |
+|----|----|------|
+| 操作 | 业务 | 发送 / 收件箱；仅节点名与载荷，无 EID、hex |
+| 连接 | 网络 | 接触窗口、下一跳、本端与对端 EID |
+| 报文 | 运维 | 状态、时间线、主块摘要（`primary`）、束长度 |
+
+业务 API：`POST /api/send` 成功体仅 `ok,id,src,dst,payload,ttlMs`；`GET /api/inbox|recv` 无 EID。运维详情：`GET /api/bundles/:id` 含 `primary` 与时间线。
 
 ### 可选：旧双节点（Earth↔Mars 直连）
 

@@ -29,7 +29,7 @@
 ```
 
 - **Local plane**：应用 / CLI / SDK → `POST /api/send`、`GET /api/recv`
-- **Network plane**：daemon → daemon `POST /api/peer/ingest` + `POST /api/peer/ack`（CLA 简化）
+- **Network plane**：daemon → daemon `POST /api/peer/ingest` + `POST /api/peer/ack`（CLA 简化）；线上 body 为 **BPv7 CBOR**（`Content-Type: application/cbor`，`x-dtn-from` 为上一跳节点名）
 - 接触关闭时 peer ingest 返回 **503 CONTACT_CLOSED**，发送方继续 **custody** 保管
 
 ## 3. 节点与端口
@@ -71,12 +71,13 @@
 | GET | `/api/health` | 健康检查 |
 | GET | `/api/status` | 节点、三库深度、接触状态、近期事件 |
 | GET | `/api/contacts` | 当前接触窗口状态 |
-| POST | `/api/send` | 本地注入 `{ dst, payload, ttlMs? }` |
-| GET | `/api/recv?clear=` | 轮询本地投递 inbox |
+| POST | `/api/send` | 本地注入 `{ dst, payload, ttlMs? }`；成功 JSON **仅** `ok,id,src,dst,payload,ttlMs` |
+| GET | `/api/recv?clear=` | 轮询本地投递 inbox（业务字段，无 EID） |
 | GET | `/api/inbox` | 窥视 inbox（不清空） |
-| POST | `/api/peer/ingest` | 对端 CLA；窗口关闭 → 503 |
+| GET | `/api/bundles/:id` | 运维详情：状态、时间线、`primary`（主块摘要）、`wireLength` |
+| POST | `/api/peer/ingest` | 对端 CLA；默认 **application/cbor**；窗口关闭 → 503；解码失败 → 400 |
 | POST | `/api/peer/ack` | 保管释放 |
-| GET | `/` | 内置 HTML 控制台（浅绿 / 深绿主题） |
+| GET | `/` | 内置 HTML 控制台（操作 / 连接 / 报文 三层） |
 
 ## 7. Future：3-node + Kubernetes
 
@@ -89,7 +90,39 @@
 
 **当前 dual 模式刻意压成 Earth↔Mars 直连**，以便在一台 Mac 上最快验证「关窗存储 → 开窗投递」。
 
-## 8. 包与脚本
+## 8. BPv7 编解码（bplib）与构建
+
+节点间字节由 **bplib** 经薄 C 包装（`native/bp-codec/`）编成 BPv7 CBOR。Nest 仍负责保管、接触窗口、下一跳与 ack；编解码通过 `koffi` 加载共享库。
+
+```bash
+npm run native:build -w @dtn-demo/relay
+# 产物：native/bp-codec/build/libdtn_bp_codec.dylib（Darwin）或 libdtn_bp_codec.so（Linux）
+npm run relay:earth   # 另开终端 relay:mars、relay:relay
+```
+
+| 环境变量 | 行为 |
+|----------|------|
+| （默认） | 使用 monorepo 内 `native/bp-codec/build/` 下上述库名 |
+| `DTN_BP_CODEC_LIB` | 绝对或相对路径覆盖；**找不到则进程启动失败**（不静默退回 JSON） |
+| `DTN_ALLOW_JSON_INGEST=1` | ingest 额外接受 legacy `application/json`（如 `contact-plan.dual.json` 回归）；默认关闭。**编码出口仍为 CBOR** |
+
+接触计划 `contact-plan.tri.json` 为每个节点配置 `eid`（Earth `ipn:1.1`、Relay `ipn:2.1`、Mars `ipn:3.1`）。转发前把节点名映射为 EID；ingest 解码后再映射回节点名。未知 EID 拒收。
+
+`GET /api/contacts` 返回 `wireFormat: application/cbor`，表示 peer 链路上使用的媒体类型。
+
+## 9. 内置控制台（业务 / 网络 / 运维）
+
+每节点 `GET /` 提供三页，字段按层隔离（见 [`specs/2026-10-01-bplib-codec-design.md`](./superpowers/specs/2026-10-01-bplib-codec-design.md)）：
+
+| 页 | 层 | 可见 | 不可见 |
+|----|----|------|--------|
+| 操作 | 业务 | 目的节点、载荷、TTL、已受理；收件箱源/目的/载荷/到达时间 | EID、CBOR、转发状态、时间线、hex |
+| 连接 | 网络 | 接触窗口、下一跳、本节点与对端 EID、线上 BPv7 | 载荷正文、收件箱 |
+| 报文 | 运维 | 状态、时间线、主块摘要（版本、源/目的 EID、lifetime、hex32）、束字节长度 | 整束 hex |
+
+概览与存储深度仍来自 `/api/status` 三库计数。
+
+## 10. 包与脚本
 
 | 包 | 角色 |
 |----|------|
@@ -99,4 +132,4 @@
 | `packages/dtn-core` | 旧离散仿真核心（仍可用 `npm run demo`） |
 | `apps/api` / `apps/web` | 旧仿真 API + UI；`/relay` 为新控制台 |
 
-根脚本：`relay:earth`、`relay:mars`、`cli`。
+根脚本：`relay:earth`、`relay:relay`、`relay:mars`、`cli`；relay 包内 `native:build` 编译共享库。
