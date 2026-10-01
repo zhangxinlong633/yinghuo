@@ -1,37 +1,55 @@
 # DTN 萤火束递网（Yinghuo）
 
-> **暗空萤火，束递相连** · *LightLink in Dark Space*
+**DTN Yinghuo Bundle Delivery Fabric** 面向延迟与中断容忍场景下的报文投递：节点之间链路可能长时间断开、传播时延可达秒级乃至更久，系统在接触窗口关闭时本地保管，窗口打开后再逐跳转发，直到目的端投递完成。
 
-| | |
-|--|--|
-| 中文名 | **萤火** |
-| 英文直译 | Firefly（仅释义；**正式对外不用**，易与 Firefly Aerospace 混淆） |
-| 项目英文代号 | **Yinghuo**（仓库目录 `yinghuo/`、npm `@yinghuo/*`） |
-| 正式中文全称 | **DTN 萤火束递网** |
-| 正式英文全称 | **DTN Yinghuo Bundle Delivery Fabric** |
-| 控制台 | **萤火控制台** / Yinghuo Console |
-| 口号 | **暗空萤火，束递相连** / *LightLink in Dark Space* |
+默认部署 Earth → Relay → Mars 三跳路径，也可切换为接触图模式，由节点动态加入、交换局部拓扑，并按距离与时延选择下一跳。线上报文采用 BPv7 CBOR；业务侧只关心节点名、载荷与投递结果，网络与运维细节分视图呈现。
 
-TypeScript monorepo：**常驻 NestJS relay daemon** 为主路径；本地 **CLI / SDK** 只连 `localhost`；**Next.js** 提供接触计划页与旧仿真可视化；**Kubernetes YAML** 示意日程感知调度（Future）。灵感来自 Bundle Protocol，**不是**完整 BP / ION。
+## 控制台截图
 
-萤火是名字，束递网是本体——节点像暗空里的萤火：微弱、间歇、偶尔相遇，却能把信息存下来、带出去、递下去。
+萤火控制台（Yinghuo Console）内置中英文切换。以下为 Earth 节点（`:3101`）界面。
 
-约束见 [`AGENTS.md`](./AGENTS.md)。设计见 [`docs/relay-daemon-design.md`](./docs/relay-daemon-design.md)、[`docs/superpowers/specs/2026-10-01-dtn-three-node-design.md`](./docs/superpowers/specs/2026-10-01-dtn-three-node-design.md)、[`docs/superpowers/specs/2026-10-01-bplib-codec-design.md`](./docs/superpowers/specs/2026-10-01-bplib-codec-design.md)、[`docs/superpowers/specs/2026-10-01-contact-graph-join-design.md`](./docs/superpowers/specs/2026-10-01-contact-graph-join-design.md)。
+### 中文
 
-## 特性一览
+**概览**
+
+![萤火控制台概览（中文）](docs/screenshots/console-overview-zh.png)
+
+**连接**
+
+![萤火控制台连接（中文）](docs/screenshots/console-connections-zh.png)
+
+**操作**
+
+![萤火控制台操作（中文）](docs/screenshots/console-ops-zh.png)
+
+### English
+
+**Overview**
+
+![Yinghuo Console Overview (EN)](docs/screenshots/console-overview-en.png)
+
+**Connections**
+
+![Yinghuo Console Connections (EN)](docs/screenshots/console-connections-en.png)
+
+**Ops**
+
+![Yinghuo Console Ops (EN)](docs/screenshots/console-ops-en.png)
+
+## 能力概览
 
 | 能力 | 说明 |
 |------|------|
-| **三节点 store-and-forward** | 默认 Earth → Relay → Mars；接触窗口错开，无 Earth↔Mars 直连；关窗保管、开窗转发 |
-| **Bundle 状态机** | `WAITING` → `FORWARDING` → `ARRIVED` / `ACKED` / `EXPIRED`；逐跳 custody ACK；TTL 过期；同 id 去重；锁内不跨 peer HTTP |
-| **BPv7 线上编解码** | NASA **bplib** + QCBOR，经 `koffi` FFI；节点间 `Content-Type: application/cbor`；库缺失则启动失败（不静默退回 JSON） |
-| **业务 / 网络 / 运维分层** | 发送与收件箱只露节点名与载荷；连接页看 EID / 窗口；束详情看主块摘要与时间线 |
-| **可配置 EID** | 计划或环境变量映射节点名 ↔ `ipn:…`；编解码前后做名字与 EID 互转 |
-| **接触图模式** | `DTN_GRAPH_MODE=1`：引导加入、摘要 gossip、局部图选路（先裁更远邻居，再选等待+时延最小） |
-| **动态加入集群** | `POST /api/peer/join` + `POST /api/peer/graph`；`join-cluster.sh` 可起 N 节点冒烟 |
-| **萤火控制台** | 各节点 `/`：概览、存储、连接（坐标网络图 + 选路对照）、操作、束、日志；顶栏节点名 / 状态 / 居中文字菜单 |
-| **CLI / SDK** | `status` / `send` / `recv` / `wait`；`@yinghuo/sdk` 订阅投递 |
-| **测试** | `npm run test:relay`（单元）；`DTN_LIVE_SMOKE=1` 三节点 live；`DTN_LIVE_GRAPH=1` 接触图 live |
+| 三节点 store-and-forward | 默认 Earth → Relay → Mars；接触窗口错开，无 Earth↔Mars 直连；关窗保管、开窗转发 |
+| Bundle 状态机 | `WAITING` → `FORWARDING` → `ARRIVED`／`ACKED`／`EXPIRED`；逐跳 custody ACK；TTL 过期；同 id 去重 |
+| BPv7 线上编解码 | NASA bplib + QCBOR（`koffi` FFI）；节点间 `Content-Type: application/cbor`；共享库缺失时启动失败 |
+| 业务／网络／运维分层 | 发送与收件箱仅暴露节点名与载荷；连接页展示 EID／窗口；束详情含主块摘要与时间线 |
+| 可配置 EID | 接触计划或环境变量映射节点名 ↔ `ipn:…` |
+| 接触图模式 | `DTN_GRAPH_MODE=1`：引导加入、摘要 gossip；选路先裁更远邻居，再选等待开窗 + 时延最小者 |
+| 动态加入 | `POST /api/peer/join`、`POST /api/peer/graph`；`join-cluster.sh` 支持多节点冒烟 |
+| 萤火控制台 | 各节点 `/`：概览、存储、连接、操作、束、日志 |
+| CLI／SDK | `status`／`send`／`recv`／`wait`；`@yinghuo/sdk` 订阅投递 |
+| 测试 | `npm run test:relay`；`DTN_LIVE_SMOKE=1` 三节点 live；`DTN_LIVE_GRAPH=1` 接触图 live |
 
 ## 仓库结构
 
@@ -39,6 +57,7 @@ TypeScript monorepo：**常驻 NestJS relay daemon** 为主路径；本地 **CLI
 yinghuo/
 ├── AGENTS.md
 ├── README.md
+├── docs/screenshots/            # 控制台截图（中／英）
 ├── docs/relay-daemon-design.md
 ├── docs/superpowers/specs/      # 三节点 / bplib / 接触图设计
 ├── docs/superpowers/plans/      # 对应实现计划
@@ -55,36 +74,36 @@ yinghuo/
 └── apps/web/                    # Next.js 接触计划 + 旧仿真 UI
 ```
 
-## 快速开始（三节点 — 推荐）
+## 快速开始
 
 ```bash
-cd /Users/bruce/git/space/yinghuo
+cd yinghuo
 npm install
 
 # 首次或升级后：编译 bplib BPv7 共享库（macOS .dylib / Linux .so）
 npm run native:build -w @yinghuo/relay
 
-# 终端 1 — Earth relay :3101
+# 终端 1 — Earth :3101
 npm run relay:earth
 
-# 终端 2 — 中间 Relay :3103
+# 终端 2 — Relay :3103
 npm run relay:relay
 
-# 终端 3 — Mars relay :3102
+# 终端 3 — Mars :3102
 npm run relay:mars
 
-# 终端 4（可选）— CLI / 等待投递
+# 终端 4（可选）— CLI
 npm run cli -- status
 DTN_NODE=Earth npm run cli -- send Mars "Hello Mars"
 DTN_NODE=Mars  npm run cli -- wait 60
 
-# 可选：Next.js 接触计划页 :3000（需 web；三个 relay 已启动）
+# 可选：Next.js 接触计划页 :3000（需三个 relay 已启动）
 npm run web
 # http://localhost:3000/
-# 中继控制台：http://127.0.0.1:3101/ 、http://127.0.0.1:3103/ 、http://127.0.0.1:3102/
+# 控制台：http://127.0.0.1:3101/ 、http://127.0.0.1:3103/ 、http://127.0.0.1:3102/
 ```
 
-默认接触计划为 `apps/relay/contact-plan.tri.json`（30s 周期，**两段窗口错开**：Earth–Relay 在 `[0s,10s)` 打开，Relay–Mars 在 `[15s,25s)` 打开，任意时刻无 Earth↔Mars 直连）。
+默认接触计划为 `apps/relay/contact-plan.tri.json`（周期 30s，两段窗口错开：Earth–Relay 在 `[0s,10s)` 打开，Relay–Mars 在 `[15s,25s)` 打开；任意时刻无 Earth↔Mars 直连）。
 
 ### 端口与路径
 
@@ -94,9 +113,9 @@ npm run web
 | Relay | 3103 | Earth / Mars | `data/Relay/{bundles,custody,index}/` |
 | Mars | 3102 | Relay `http://127.0.0.1:3103` | `data/Mars/{bundles,custody,index}/` |
 
-关窗时发往下一跳的 bundle 会 **WAITING**（保管）；开窗后 **FORWARD → … → DELIVER**，Mars 侧 `recv` / `wait` 取走；Earth 可在控制台报文时间线看到 **ARRIVED** 确认。转发前先用 bplib **编码成 CBOR**，再进入 `FORWARDING`（编码失败不进入转发）。
+关窗时发往下一跳的 bundle 进入 `WAITING`（保管）；开窗后经 `FORWARD` 等状态完成投递，目的端可通过 `recv`／`wait` 取走；源端可在控制台时间线观察到 `ARRIVED`。转发前由 bplib 编码为 CBOR，成功后方进入 `FORWARDING`（编码失败不进入转发）。
 
-环境变量：`NODE_ID`、`PORT`、`PEER_URL`、`DATA_DIR`、`CONTACT_PLAN`、`EID`；CLI 用 `DTN_RELAY_URL` 或 `DTN_NODE=Earth|Relay|Mars`。
+相关环境变量：`NODE_ID`、`PORT`、`PEER_URL`、`DATA_DIR`、`CONTACT_PLAN`、`EID`。CLI 可通过 `DTN_RELAY_URL` 或 `DTN_NODE=Earth|Relay|Mars` 指定节点。
 
 ### Bundle 生命周期
 
@@ -112,52 +131,52 @@ npm run web
 
 ### 接触图模式（动态加入）
 
-`DTN_GRAPH_MODE=1` 时不使用计划里的静态 `nextHop`：
+启用 `DTN_GRAPH_MODE=1` 后，转发不再依赖计划中的静态 `nextHop`：
 
-1. **引导岛**：第一台不设 `BOOTSTRAP_URL`。
-2. **加入**：其余节点设 `BOOTSTRAP_URL`、本机 `PEER_URL`、`EID`、`NODE_X` / `NODE_Y`、独立 `PORT`；启动时 `POST /api/peer/join`。
-3. **Gossip**：约每 2s 在打开的直连边上 `POST /api/peer/graph` 交换接触摘要（节点坐标、边、窗口、时延、hopCount）。
-4. **选路**：只考虑直连且健康的邻居 → **裁掉离目的更远的** → 在剩余里取 **等待开窗 + delayMs** 最小者；失败标记 unhealthy 后重试。
+1. 引导节点：不设置 `BOOTSTRAP_URL`。
+2. 加入节点：设置 `BOOTSTRAP_URL`、本机 `PEER_URL`、`EID`、`NODE_X`／`NODE_Y` 与独立 `PORT`；启动时调用 `POST /api/peer/join`。
+3. 摘要交换：约每 2s 在已打开的直连边上通过 `POST /api/peer/graph` 交换接触摘要（节点坐标、边、窗口、时延、hopCount）。
+4. 选路：仅考虑直连且健康的邻居；先剔除距目的更远者，再在剩余候选中选择「等待开窗 + delayMs」最小者；转发失败将邻居标记为 unhealthy 后重试。
 
-运维对照：`GET /api/graph` 看局部图；`GET /api/graph/route?dst=` 看 culled / 时延候选 / 下一跳（控制台「连接」「操作」页也会展示）。
+运维接口：`GET /api/graph` 返回局部图；`GET /api/graph/route?dst=` 返回裁剪结果、时延候选与下一跳（控制台「连接」「操作」页同步展示）。
 
-10 节点冒烟（引导 `node0`，`node1`–`node9` 加入；`node1`–`node8` 在 x 负半轴，避免被选成下一跳）：
+十节点冒烟示例（引导 `node0`，`node1`–`node9` 加入；`node1`–`node8` 置于 x 负半轴，避免被选为下一跳）：
 
 ```bash
 bash apps/relay/scripts/join-cluster.sh
-# 默认端口 3320–3329，收件箱等待 JOIN_TIMEOUT_SEC=120
+# 默认端口 3320–3329；收件箱等待 JOIN_TIMEOUT_SEC=120
 JOIN_KEEP=1 bash apps/relay/scripts/join-cluster.sh
 DTN_LIVE_GRAPH=1 npm test -w @yinghuo/relay -- src/live-graph-join.test.ts
 ```
 
-未设置 `DTN_LIVE_GRAPH=1` 时该测试跳过。杀掉星型拓扑里的 `node1`–`node8` **不会**改写 `node0 → node9` 直连；要演示绕路，需要网状或短链（至少两个更近且能继续前送的邻居）。
+未设置 `DTN_LIVE_GRAPH=1` 时该测试跳过。在当前星型拓扑下终止 `node1`–`node8` 中的进程，不会改变 `node0 → node9` 的直连路径；若需观察绕路，拓扑须为网状或短链（至少存在两个更近且可继续前传的邻居）。
 
-### BPv7 编解码（bplib FFI）
+### BPv7 编解码（bplib）
 
 | 变量 | 说明 |
 |------|------|
-| （默认） | `native/bp-codec/build/libdtn_bp_codec.dylib`（Darwin）或 `.so`（Linux） |
-| `DTN_BP_CODEC_LIB` | 覆盖库路径；缺失则**启动失败** |
-| `DTN_ALLOW_JSON_INGEST=1` | `POST /api/peer/ingest` 额外接受旧 JSON（回归用）；默认关闭；出口仍为 CBOR |
+| （默认） | `native/bp-codec/build/libdtn_bp_codec.dylib`（Darwin）或对应 `.so`（Linux） |
+| `DTN_BP_CODEC_LIB` | 覆盖共享库路径；缺失时进程启动失败 |
+| `DTN_ALLOW_JSON_INGEST=1` | 允许 `POST /api/peer/ingest` 额外接受旧版 JSON（回归用）；默认关闭，出口仍为 CBOR |
 
-包装导出：`dtn_bp_encode` / `dtn_bp_decode` / `dtn_bp_inspect`。构建与依赖见 [`native/bp-codec/README.md`](./native/bp-codec/README.md)。
+导出接口：`dtn_bp_encode`／`dtn_bp_decode`／`dtn_bp_inspect`。构建说明见 [`native/bp-codec/README.md`](./native/bp-codec/README.md)。
 
 ### 萤火控制台（Yinghuo Console）
 
-各 relay 根路径 `/`（如 `http://127.0.0.1:3101/`）。顶栏：**节点名 · 端口** → 角色 / 接触开闭 / uptime → **居中文字菜单** → 刷新 / 语言 / 主题 / 对端。
+各 relay 进程在根路径 `/` 提供内置控制台（例如 `http://127.0.0.1:3101/`）。顶栏依次为节点名与端口、角色／接触状态／uptime、主导航，以及刷新、语言、主题与对端入口。
 
-| 页 | 层 | 内容 |
-|----|----|------|
+| 页 | 视图分层 | 内容 |
+|----|----------|------|
 | 概览 | 总览 | 存储深度、已知节点、近期束、节点信息、接触窗口 |
-| 存储 | 运维 | bundles / custody / index / inbox 深度 |
-| 连接 | 网络 | 坐标网络图、边明细、接触计划、EID、选路边对照 |
-| 操作 | 业务 | 发送 / 收件箱（仅节点名与载荷）；试算选路 |
+| 存储 | 运维 | bundles／custody／index／inbox 深度 |
+| 连接 | 网络 | 坐标网络图、边明细、接触计划、EID、选路对照 |
+| 操作 | 业务 | 发送／收件箱（仅节点名与载荷）；选路试算 |
 | 束 | 运维 | 列表、状态、时间线、主块摘要（`primary`）、束长度 |
-| 日志 | 运维 | `recentEvents` 实时刷新 |
+| 日志 | 运维 | `recentEvents` 刷新 |
 
-业务 API：`POST /api/send` 成功体仅 `ok,id,src,dst,payload,ttlMs`；`GET /api/inbox|recv` 无 EID。运维：`GET /api/bundles`、`GET /api/bundles/:id`。
+业务 API：`POST /api/send` 成功响应仅包含 `ok,id,src,dst,payload,ttlMs`；`GET /api/inbox` 与 `GET /api/recv` 不含 EID。运维接口：`GET /api/bundles`、`GET /api/bundles/:id`。
 
-### HTTP API（daemon 摘要）
+### HTTP API 摘要
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
@@ -175,9 +194,9 @@ DTN_LIVE_GRAPH=1 npm test -w @yinghuo/relay -- src/live-graph-join.test.ts
 | POST | `/api/peer/ack` | 保管释放 |
 | GET | `/` | 萤火控制台 |
 
-### 可选：旧双节点（Earth↔Mars 直连）
+### 可选：双节点对照（Earth↔Mars 直连）
 
-仍保留 `apps/relay/contact-plan.dual.json`（20s 周期，**[5s,15s) OPEN**）。只需 **两个** 进程时，显式指定计划并省略中间 Relay：
+仓库仍保留 `apps/relay/contact-plan.dual.json`（周期 20s，`[5s,15s)` 为 OPEN）。仅运行两个进程时，显式指定该计划并省略中间 Relay：
 
 ```bash
 CONTACT_PLAN=apps/relay/contact-plan.dual.json npm run relay:earth
@@ -205,7 +224,7 @@ await earth.send('Mars', 'Hello');
 const msgs = await marsClient().subscribeDelivery({ timeoutMs: 60000 });
 ```
 
-## 旧仿真路径（可选）
+## 离散仿真路径（可选）
 
 ```bash
 npm run demo                 # CLI 离散仿真
@@ -227,16 +246,16 @@ npm run web                  # Next UI :3000（时间线 + /replay）
 kubectl apply --dry-run=client -k k8s/
 ```
 
-3-node（Earth↔Relay↔Mars）+ 真实编排见设计文档 §Future，**本阶段不强制**。
+三节点（Earth↔Relay↔Mars）及真实编排说明见设计文档 Future 章节；本阶段不强制部署集群。
 
-## 场景（三节点 wall-clock）
+## 三节点时序场景
 
 | 阶段 | 事件 |
 |------|------|
-| Earth–Relay CLOSED | Earth `send` → 本机 **WAITING** / STORED；已编码进 custody |
-| Earth–Relay OPEN | Earth → Relay CBOR ingest；Relay 保管，等待 Relay–Mars 窗口 |
-| Relay–Mars OPEN | Relay → Mars **DELIVER** + ACK 回传 |
-| 本地 | Mars `recv` / SDK `subscribeDelivery`；Earth 控制台见 **ARRIVED** |
+| Earth–Relay CLOSED | Earth `send` → 本机 `WAITING`／STORED；载荷已编码并写入 custody |
+| Earth–Relay OPEN | Earth → Relay CBOR ingest；Relay 保管并等待 Relay–Mars 窗口 |
+| Relay–Mars OPEN | Relay → Mars 投递，并回传 ACK |
+| 本地投递 | Mars `recv` 或 SDK `subscribeDelivery`；Earth 控制台可见 `ARRIVED` |
 
 ## 测试
 
