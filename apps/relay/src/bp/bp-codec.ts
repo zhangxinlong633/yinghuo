@@ -79,6 +79,9 @@ function ensureLoaded(): BpCodecNative {
 }
 
 export function loadBpCodec(libPath?: string): void {
+  if (native && !libPath && !process.env.DTN_BP_CODEC_LIB) {
+    return;
+  }
   const resolved = libPath ?? defaultLibPath();
   if (!fs.existsSync(resolved)) {
     throw new Error(`BP codec library not found: ${resolved}`);
@@ -141,12 +144,11 @@ export function encodeBundle(input: {
 export function decodeBundle(buf: Buffer): BpDecoded {
   const n = ensureLoaded();
   const out = koffi.alloc(DtnBpDecoded, 1);
-  const rc = n.dtn_bp_decode(buf, buf.length, out);
-  if (rc !== 0) {
-    throw new Error(`dtn_bp_decode failed with code ${rc}`);
-  }
-
   try {
+    const rc = n.dtn_bp_decode(buf, buf.length, out);
+    if (rc !== 0) {
+      throw new Error(`dtn_bp_decode failed with code ${rc}`);
+    }
     const raw = koffi.decode(out, DtnBpDecoded) as {
       src_eid: string;
       dst_eid: string;
@@ -172,12 +174,11 @@ export function decodeBundle(buf: Buffer): BpDecoded {
 export function inspectBundle(buf: Buffer): BpInspect {
   const n = ensureLoaded();
   const out = koffi.alloc(DtnBpInspect, 1);
-  const rc = n.dtn_bp_inspect(buf, buf.length, out);
-  if (rc !== 0) {
-    throw new Error(`dtn_bp_inspect failed with code ${rc}`);
-  }
-
   try {
+    const rc = n.dtn_bp_inspect(buf, buf.length, out);
+    if (rc !== 0) {
+      throw new Error(`dtn_bp_inspect failed with code ${rc}`);
+    }
     const raw = koffi.decode(out, DtnBpInspect) as {
       version: number;
       src_eid: string;

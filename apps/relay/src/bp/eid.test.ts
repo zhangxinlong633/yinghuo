@@ -27,4 +27,5 @@ test('maps node names to plan EIDs', () => {
   assert.equal(eidForNode(c, 'Mars'), 'ipn:3.1');
   assert.equal(nodeForEid(c, 'ipn:2.1'), 'Relay');
   assert.equal(nodeForEid(c, 'ipn:9.9'), undefined);
+  assert.throws(() => eidForNode(c, 'Venus'), /no EID configured for node Venus/);
 });

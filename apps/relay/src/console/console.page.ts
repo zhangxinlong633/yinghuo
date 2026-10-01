@@ -638,8 +638,11 @@ export function buildConsoleHtml(opts: {
       eventsWord: '条事件', open: '开启', closed: '关闭', refresh: '立即刷新',
       themeLight: '浅色', themeDark: '深色',
       bundlesTitle: '束', colId: 'id', colSrc: '源', colDst: '目的', colState: '状态', colWhere: '当前节点', colUpdated: '更新时间',
-      timeline: '时间线', notFound: '未找到', openBundle: '查看报文', notDirect: '本机不直连',
+      timeline: '时间线', notFound: '未找到', openBundle: '查看束', notDirect: '本机不直连',
       upstream: '上游', downstream: '下游',
+      primaryVersion: '版本', primarySrcEid: '源 EID', primaryDstEid: '目的 EID',
+      primaryLifetime: '生存时间（毫秒）', primaryBytes: '字节长度', primaryHex: '前 32 字节',
+      wireLength: '线上长度', deliveredAt: '到达时间',
       kindStored: '已存储', kindWaiting: '等待窗口', kindForward: '转发', kindRetry: '重试',
       kindArrived: '已到达', kindAcked: '已确认', kindExpired: '已过期',
       stateWaiting: '等待窗口', stateForwarding: '转发中', stateArrived: '已到达', stateAcked: '已确认', stateExpired: '已过期',
@@ -671,6 +674,9 @@ export function buildConsoleHtml(opts: {
       bundlesTitle: 'Bundles', colId: 'id', colSrc: 'Source', colDst: 'Dest', colState: 'State', colWhere: 'Current node', colUpdated: 'Updated',
       timeline: 'Timeline', notFound: 'Not found', openBundle: 'Open bundle', notDirect: 'not a direct link',
       upstream: 'upstream', downstream: 'downstream',
+      primaryVersion: 'Version', primarySrcEid: 'Source EID', primaryDstEid: 'Dest EID',
+      primaryLifetime: 'Lifetime (ms)', primaryBytes: 'Byte length', primaryHex: 'First 32 bytes',
+      wireLength: 'Wire length', deliveredAt: 'Delivered at',
       kindStored: 'Stored', kindWaiting: 'Waiting', kindForward: 'Forward', kindRetry: 'Retry',
       kindArrived: 'Arrived', kindAcked: 'Acked', kindExpired: 'Expired',
       stateWaiting: 'Waiting for window', stateForwarding: 'Forwarding', stateArrived: 'Arrived', stateAcked: 'Acknowledged', stateExpired: 'Expired',
@@ -931,15 +937,15 @@ export function buildConsoleHtml(opts: {
     const primary = bundle.primary;
     if (primary) {
       lines.push(
-        'version: ' + primary.version,
-        'srcEid: ' + primary.srcEid,
-        'dstEid: ' + primary.dstEid,
-        'lifetimeMs: ' + primary.lifetimeMs,
-        'byteLength: ' + primary.byteLength,
-        'hex32: ' + primary.hex32
+        t('primaryVersion') + ': ' + primary.version,
+        t('primarySrcEid') + ': ' + primary.srcEid,
+        t('primaryDstEid') + ': ' + primary.dstEid,
+        t('primaryLifetime') + ': ' + primary.lifetimeMs,
+        t('primaryBytes') + ': ' + primary.byteLength,
+        t('primaryHex') + ': ' + primary.hex32
       );
     }
-    if (bundle.wireLength != null) lines.push('wireLength: ' + bundle.wireLength);
+    if (bundle.wireLength != null) lines.push(t('wireLength') + ': ' + bundle.wireLength);
     return lines.join('\\n');
   }
 
@@ -950,7 +956,7 @@ export function buildConsoleHtml(opts: {
       t('colSrc') + ': ' + (m.src || ''),
       t('colDst') + ': ' + (m.dst || ''),
       t('payload') + ': ' + (m.payload || ''),
-      'deliveredAt: ' + (m.deliveredAt != null ? new Date(m.deliveredAt).toLocaleString() : '—'),
+      t('deliveredAt') + ': ' + (m.deliveredAt != null ? new Date(m.deliveredAt).toLocaleString() : '—'),
     ].join('\\n')).join('\\n\\n');
   }
 

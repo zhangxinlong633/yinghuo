@@ -136,6 +136,18 @@ export class RelayController {
       });
     }
 
+    if (!fromHeader) {
+      return { accepted: false, delivered: false, event: 'ERROR', msg: 'bundle+from required' };
+    }
+    if (force !== '1' && !this.contacts.isOpenTo(fromHeader)) {
+      throw new ServiceUnavailableException({
+        accepted: false,
+        delivered: false,
+        event: 'CONTACT_CLOSED',
+        msg: 'contact window closed — peer should store-and-forward later',
+      });
+    }
+
     const raw = await readRawBody(req);
     let decoded: BpDecoded;
     try {
@@ -162,7 +174,7 @@ export class RelayController {
     }
 
     const bundle: RelayBundle = { ...mapped.bundle, wire: raw.toString('base64') };
-    return this.acceptPeerBundle(bundle, fromHeader, force);
+    return this.acceptPeerBundle(bundle, fromHeader, '1');
   }
 
   private acceptPeerBundle(

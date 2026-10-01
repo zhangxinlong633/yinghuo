@@ -19,7 +19,8 @@
     "api:dev": "npm run start:dev -w @dtn-demo/api",
     "web": "npm run dev -w @dtn-demo/web",
     "start": "npm run demo",
-    "test:relay": "npm test -w @dtn-demo/relay"
+    "test:relay": "npm test -w @dtn-demo/relay",
+    "test:relay:live": "npm run test:live -w @dtn-demo/relay"
   },
   "engines": {
     "node": ">=18"
