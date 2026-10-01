@@ -3,7 +3,7 @@
  * `apps/relay/scripts/join-cluster.sh` is already up.
  *
  *   JOIN_KEEP=1 bash apps/relay/scripts/join-cluster.sh
- *   DTN_LIVE_GRAPH=1 npm test -w @lightlink/relay -- src/live-graph-join.test.ts
+ *   DTN_LIVE_GRAPH=1 npm test -w @yinghuo/relay -- src/live-graph-join.test.ts
  *
  * BASE_PORT defaults to 3320 (node i on BASE_PORT+i).
  */

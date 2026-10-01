@@ -2,7 +2,7 @@ import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { ClassicLevel } from 'classic-level';
 import * as fs from 'fs';
 import * as path from 'path';
-import { ContactPlanJson, SimEvent } from '@lightlink/core';
+import { ContactPlanJson, SimEvent } from '@yinghuo/core';
 
 export interface SavedRun {
   id: string;
@@ -40,7 +40,7 @@ function resolveDataDir(): string {
       const pkg = JSON.parse(fs.readFileSync(path.join(cwd, 'package.json'), 'utf8')) as {
         name?: string;
       };
-      if (pkg.name === '@lightlink/api') return underApi;
+      if (pkg.name === '@yinghuo/api') return underApi;
       if (pkg.name === 'dtn-demo') return underRoot;
     } catch {
       /* fall through */

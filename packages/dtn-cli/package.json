@@ -1,5 +1,5 @@
 {
-  "name": "@lightlink/cli",
+  "name": "@yinghuo/cli",
   "version": "1.0.0",
   "private": true,
   "bin": {
@@ -10,7 +10,7 @@
     "build": "tsc -p tsconfig.json"
   },
   "dependencies": {
-    "@lightlink/sdk": "*"
+    "@yinghuo/sdk": "*"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

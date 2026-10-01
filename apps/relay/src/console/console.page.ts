@@ -1,4 +1,4 @@
-/** Built-in 萤火控制台 / LightLink Console at GET /. */
+/** Built-in 萤火控制台 / Yinghuo Console at GET /. */
 export function buildConsoleHtml(opts: {
   nodeId: string;
   port: number;

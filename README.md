@@ -1,14 +1,16 @@
-# DTN 萤火束递网（LightLink）
+# DTN 萤火束递网（Yinghuo）
 
 > **暗空萤火，束递相连** · *LightLink in Dark Space*
 
 | | |
 |--|--|
-| 中文代号 | **萤火** |
-| 英文代号 | **LightLink** |
-| 正式全称 | **DTN 萤火束递网** |
-| English | **DTN LightLink Bundle Delivery Fabric** |
-| 控制台 | **萤火控制台** / LightLink Console |
+| 中文名 | **萤火** |
+| 英文直译 | Firefly（仅释义；**正式对外不用**，易与 Firefly Aerospace 混淆） |
+| 项目英文代号 | **Yinghuo**（仓库目录 `yinghuo/`、npm `@yinghuo/*`） |
+| 正式中文全称 | **DTN 萤火束递网** |
+| 正式英文全称 | **DTN Yinghuo Bundle Delivery Fabric** |
+| 控制台 | **萤火控制台** / Yinghuo Console |
+| 口号 | **暗空萤火，束递相连** / *LightLink in Dark Space* |
 
 TypeScript monorepo：**常驻 NestJS relay daemon** 为主路径；本地 **CLI / SDK** 只连 `localhost`；**Next.js** 提供接触计划页与旧仿真可视化；**Kubernetes YAML** 示意日程感知调度（Future）。灵感来自 Bundle Protocol，**不是**完整 BP / ION。
 
@@ -28,13 +30,13 @@ TypeScript monorepo：**常驻 NestJS relay daemon** 为主路径；本地 **CLI
 | **接触图模式** | `DTN_GRAPH_MODE=1`：引导加入、摘要 gossip、局部图选路（先裁更远邻居，再选等待+时延最小） |
 | **动态加入集群** | `POST /api/peer/join` + `POST /api/peer/graph`；`join-cluster.sh` 可起 N 节点冒烟 |
 | **萤火控制台** | 各节点 `/`：概览、存储、连接（坐标网络图 + 选路对照）、操作、束、日志；顶栏节点名 / 状态 / 居中文字菜单 |
-| **CLI / SDK** | `status` / `send` / `recv` / `wait`；`@lightlink/sdk` 订阅投递 |
+| **CLI / SDK** | `status` / `send` / `recv` / `wait`；`@yinghuo/sdk` 订阅投递 |
 | **测试** | `npm run test:relay`（单元）；`DTN_LIVE_SMOKE=1` 三节点 live；`DTN_LIVE_GRAPH=1` 接触图 live |
 
 ## 仓库结构
 
 ```
-lightlink/
+yinghuo/
 ├── AGENTS.md
 ├── README.md
 ├── docs/relay-daemon-design.md
@@ -56,11 +58,11 @@ lightlink/
 ## 快速开始（三节点 — 推荐）
 
 ```bash
-cd /Users/bruce/git/space/lightlink
+cd /Users/bruce/git/space/yinghuo
 npm install
 
 # 首次或升级后：编译 bplib BPv7 共享库（macOS .dylib / Linux .so）
-npm run native:build -w @lightlink/relay
+npm run native:build -w @yinghuo/relay
 
 # 终端 1 — Earth relay :3101
 npm run relay:earth
@@ -125,7 +127,7 @@ npm run web
 bash apps/relay/scripts/join-cluster.sh
 # 默认端口 3320–3329，收件箱等待 JOIN_TIMEOUT_SEC=120
 JOIN_KEEP=1 bash apps/relay/scripts/join-cluster.sh
-DTN_LIVE_GRAPH=1 npm test -w @lightlink/relay -- src/live-graph-join.test.ts
+DTN_LIVE_GRAPH=1 npm test -w @yinghuo/relay -- src/live-graph-join.test.ts
 ```
 
 未设置 `DTN_LIVE_GRAPH=1` 时该测试跳过。杀掉星型拓扑里的 `node1`–`node8` **不会**改写 `node0 → node9` 直连；要演示绕路，需要网状或短链（至少两个更近且能继续前送的邻居）。
@@ -140,7 +142,7 @@ DTN_LIVE_GRAPH=1 npm test -w @lightlink/relay -- src/live-graph-join.test.ts
 
 包装导出：`dtn_bp_encode` / `dtn_bp_decode` / `dtn_bp_inspect`。构建与依赖见 [`native/bp-codec/README.md`](./native/bp-codec/README.md)。
 
-### 萤火控制台（LightLink Console）
+### 萤火控制台（Yinghuo Console）
 
 各 relay 根路径 `/`（如 `http://127.0.0.1:3101/`）。顶栏：**节点名 · 端口** → 角色 / 接触开闭 / uptime → **居中文字菜单** → 刷新 / 语言 / 主题 / 对端。
 
@@ -193,10 +195,10 @@ npm run cli -- inbox
 npm run cli -- wait 60
 ```
 
-### SDK（`@lightlink/sdk`）
+### SDK（`@yinghuo/sdk`）
 
 ```ts
-import { DtnClient, marsClient } from '@lightlink/sdk';
+import { DtnClient, marsClient } from '@yinghuo/sdk';
 
 const earth = new DtnClient({ baseUrl: 'http://127.0.0.1:3101' });
 await earth.send('Mars', 'Hello');
@@ -241,7 +243,7 @@ kubectl apply --dry-run=client -k k8s/
 ```bash
 npm run test:relay                                          # 单元（含 graph / codec / 状态机）
 DTN_LIVE_SMOKE=1 npm run test:relay:live                    # 三节点 live（需 3101/3102/3103）
-DTN_LIVE_GRAPH=1 npm test -w @lightlink/relay -- src/live-graph-join.test.ts
+DTN_LIVE_GRAPH=1 npm test -w @yinghuo/relay -- src/live-graph-join.test.ts
 ```
 
 ## 许可

@@ -7,7 +7,7 @@ import {
   Simulator,
   SimEvent,
   defaultContactPlan,
-} from '@lightlink/core';
+} from '@yinghuo/core';
 import { RunsStore, RunSummary, SavedRun } from './runs.store';
 
 export interface SimulateResult {

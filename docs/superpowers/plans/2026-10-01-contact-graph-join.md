@@ -95,7 +95,7 @@ test('keeps newer originatedAt and drops hopCount above max', () => {
 
 - [ ] **Step 2: Run — expect FAIL**
 
-Run: `npm test -w @lightlink/relay -- src/graph/graph-merge.test.ts`
+Run: `npm test -w @yinghuo/relay -- src/graph/graph-merge.test.ts`
 
 - [ ] **Step 3: Implement merge**
 

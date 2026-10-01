@@ -8,7 +8,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ContactPlanJson } from '@lightlink/core';
+import { ContactPlanJson } from '@yinghuo/core';
 import { DtnService } from './dtn.service';
 
 @Controller()
