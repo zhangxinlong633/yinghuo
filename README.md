@@ -8,7 +8,7 @@
 - **人／脚本**：HTTP API、CLI、SDK
 - **监督**：萤火控制台（审批、看板、审计、例外）
 
-远期愿景见 [`docs/vision.md`](./docs/vision.md)。现状与愿景差距台账见 [`docs/todo.md`](./docs/todo.md)（近程已交付；当前主战场为中期）。硬件档位与性能量级见 [`docs/hardware.md`](./docs/hardware.md)。
+远期愿景见 [`docs/vision.md`](./docs/vision.md)。现状与愿景差距台账见 [`docs/todo.md`](./docs/todo.md)（近程已交付；当前主战场为中期）。硬件与卫星规模见 [`docs/hardware.md`](./docs/hardware.md)、[`docs/satellite.md`](./docs/satellite.md)。
 
 ## 控制台截图
 
@@ -69,7 +69,8 @@ yinghuo/
 ├── docs/screenshots/            # 控制台截图（中／英）
 ├── docs/vision.md               # 愿景：太阳系上的束递网
 ├── docs/todo.md                 # 相对愿景的近／中／远差距台账
-├── docs/hardware.md             # 硬件档位与性能量级参考
+├── docs/hardware.md             # 目标：开发板级三机规格
+├── docs/satellite.md            # 目标：1U + 开发板 + 电源 + 天线
 ├── docs/relay-daemon-design.md
 ├── docs/superpowers/specs/      # 三节点 / bplib / 接触图 / MCP 设计
 ├── docs/superpowers/plans/      # 对应实现计划
