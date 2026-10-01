@@ -14,6 +14,13 @@ export interface ContactState {
   contact: DualContact;
 }
 
+export interface ContactSnapshot extends ContactState {
+  links: ContactLinkState[];
+  localEid: string;
+  eidByNode: Record<string, string>;
+  wireFormat: 'application/cbor';
+}
+
 export interface ContactLinkState {
   a: string;
   b: string;
@@ -101,6 +108,17 @@ export class ContactService {
       nextChangeAt: timing.nextChangeAt,
       phase: timing.phase,
       contact: this.localContact,
+    };
+  }
+
+  /** Network view for GET /api/contacts: windows plus local/peer EIDs and CBOR. */
+  snapshot(now = Date.now()): ContactSnapshot {
+    return {
+      ...this.getState(now),
+      links: this.listLinks(now),
+      localEid: this.cfg.eid,
+      eidByNode: this.cfg.eidByNode,
+      wireFormat: 'application/cbor',
     };
   }
 

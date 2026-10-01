@@ -55,7 +55,7 @@ export class RelayController {
 
   @Get('contacts')
   contactsState() {
-    return { ...this.contacts.getState(), links: this.contacts.listLinks() };
+    return this.contacts.snapshot();
   }
 
   @Get('bundles')

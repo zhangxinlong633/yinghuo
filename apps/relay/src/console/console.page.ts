@@ -371,7 +371,7 @@ export function buildConsoleHtml(opts: {
           <button type="button" class="nav-btn" data-view="storage"><span class="ico">▣</span><span data-i18n="navStorage">存储</span></button>
           <button type="button" class="nav-btn" data-view="connections"><span class="ico">⇄</span><span data-i18n="navConnections">连接</span></button>
           <button type="button" class="nav-btn" data-view="ops"><span class="ico">➤</span><span data-i18n="navOps">操作</span></button>
-          <button type="button" class="nav-btn" data-view="bundles"><span class="ico">☰</span><span data-i18n="navBundles">报文</span></button>
+          <button type="button" class="nav-btn" data-view="bundles"><span class="ico">☰</span><span data-i18n="navBundles">束</span></button>
           <button type="button" class="nav-btn" data-view="logs"><span class="ico">≡</span><span data-i18n="navLogs">日志</span></button>
         </nav>
         <div class="mast-tools">
@@ -486,6 +486,9 @@ export function buildConsoleHtml(opts: {
             <div class="kv">
               <div class="k">peer</div><div class="v" id="cn-peer">—</div>
               <div class="k">peerUrl</div><div class="v" id="cn-url">${peerUrl}</div>
+              <div class="k" data-i18n="localEid">本端 EID</div><div class="v" id="cn-local-eid">—</div>
+              <div class="k" data-i18n="peerEid">对端 EID</div><div class="v" id="cn-peer-eid">—</div>
+              <div class="k" data-i18n="wireFormat">线上格式</div><div class="v" id="cn-wire">—</div>
               <div class="k">status</div><div class="v" id="cn-status">—</div>
               <div class="k">phase</div><div class="v" id="cn-phase">—</div>
               <div class="k">delayMs</div><div class="v" id="cn-delay">—</div>
@@ -560,7 +563,7 @@ export function buildConsoleHtml(opts: {
       </section>
 
       <section class="view" id="view-bundles">
-        <h2 class="view-title" data-i18n="bundlesTitle">报文</h2>
+        <h2 class="view-title" data-i18n="bundlesTitle">束</h2>
         <table class="simple" id="bundle-table">
           <thead>
             <tr>
@@ -613,7 +616,7 @@ export function buildConsoleHtml(opts: {
   let theme = localStorage.getItem('dtn-console-theme') === 'dark' ? 'dark' : 'light';
   const I18N = {
     zh: {
-      navOverview: '概览', navStorage: '存储', navConnections: '连接', navOps: '操作', navBundles: '报文', navLogs: '日志',
+      navOverview: '概览', navStorage: '存储', navConnections: '连接', navOps: '操作', navBundles: '束', navLogs: '日志',
       peer: '对端 ', nodeLabel: '节点', role: '角色', uptime: '运行时间',
       overviewTitle: '概览', statBundles: '报文 · LevelDB', statCustody: '托管 · 持有', statIndex: '索引 · 键', statInbox: '收件箱 · 本地',
       nodeInfo: '节点信息', contactWin: '接触窗口', contactHint: '周期开窗时链路可转发；关闭时先存储再转发。',
@@ -625,6 +628,7 @@ export function buildConsoleHtml(opts: {
       inboxTitle: '本地投递收件箱', peek: '查看收件箱', recv: '接收并清空', depthNow: '当前深度', paths: '路径',
       connectionsTitle: '连接', peerLink: '对等链路', contactPlan: '接触计划', summary: '摘要',
       field: '字段', value: '值', self: '本节点', peerRow: '对端', linkRow: '链路',
+      localEid: '本端 EID', peerEid: '对端 EID', wireFormat: '线上格式',
       opsTitle: '操作', opsHint: '在本节点发送报文，并查看或取走本地收件箱。',
       sendTitle: '发送', sendHint: '经本节点 /api/send 注入；接触关闭时先存储，开窗后转发到对端。',
       recvHint: '查看不取出；接收会清空本地收件箱。',
@@ -633,7 +637,7 @@ export function buildConsoleHtml(opts: {
       clear: '清空视图', loading: '加载中…', noEvents: '（无事件）', cleared: '（已清空，新事件会显示在这里）',
       eventsWord: '条事件', open: '开启', closed: '关闭', refresh: '立即刷新',
       themeLight: '浅色', themeDark: '深色',
-      bundlesTitle: '报文', colId: 'id', colSrc: '源', colDst: '目的', colState: '状态', colWhere: '当前节点', colUpdated: '更新时间',
+      bundlesTitle: '束', colId: 'id', colSrc: '源', colDst: '目的', colState: '状态', colWhere: '当前节点', colUpdated: '更新时间',
       timeline: '时间线', notFound: '未找到', openBundle: '查看报文', notDirect: '本机不直连',
       upstream: '上游', downstream: '下游',
       kindStored: '已存储', kindWaiting: '等待窗口', kindForward: '转发', kindRetry: '重试',
@@ -655,6 +659,7 @@ export function buildConsoleHtml(opts: {
       inboxTitle: 'Local inbox', peek: 'Peek inbox', recv: 'Recv and clear', depthNow: 'Depth', paths: 'Paths',
       connectionsTitle: 'Connections', peerLink: 'Peer link', contactPlan: 'Contact plan', summary: 'Summary',
       field: 'Field', value: 'Value', self: 'This node', peerRow: 'Peer', linkRow: 'Link',
+      localEid: 'Local EID', peerEid: 'Peer EID', wireFormat: 'Wire format',
       opsTitle: 'Ops', opsHint: 'Send from this node, and peek or take the local inbox.',
       sendTitle: 'Send', sendHint: 'Inject via /api/send. Closed contacts store the bundle and forward it when the window opens.',
       recvHint: 'Peek leaves the inbox in place. Recv clears it.',
@@ -913,6 +918,42 @@ export function buildConsoleHtml(opts: {
     $('ov-bundle-recent').innerHTML = bundleRowsHtml(held.slice(0, 5));
   }
 
+  function bundleMetaText(bundle) {
+    const events = bundle.events || [];
+    const updatedAt = bundle.updatedAt
+      || (events.length ? events[events.length - 1].t : bundle.createdAt);
+    const updated = updatedAt ? new Date(updatedAt).toLocaleString() : '—';
+    const lines = [
+      t('colState') + ': ' + stateLabel(bundle.state),
+      t('colWhere') + ': ' + (bundle.custodian || '—'),
+      t('colUpdated') + ': ' + updated,
+    ];
+    const primary = bundle.primary;
+    if (primary) {
+      lines.push(
+        'version: ' + primary.version,
+        'srcEid: ' + primary.srcEid,
+        'dstEid: ' + primary.dstEid,
+        'lifetimeMs: ' + primary.lifetimeMs,
+        'byteLength: ' + primary.byteLength,
+        'hex32: ' + primary.hex32
+      );
+    }
+    if (bundle.wireLength != null) lines.push('wireLength: ' + bundle.wireLength);
+    return lines.join('\\n');
+  }
+
+  function inboxText(messages) {
+    const list = messages || [];
+    if (!list.length) return '[]';
+    return list.map((m) => [
+      t('colSrc') + ': ' + (m.src || ''),
+      t('colDst') + ': ' + (m.dst || ''),
+      t('payload') + ': ' + (m.payload || ''),
+      'deliveredAt: ' + (m.deliveredAt != null ? new Date(m.deliveredAt).toLocaleString() : '—'),
+    ].join('\\n')).join('\\n\\n');
+  }
+
   function renderLinks(links) {
     const el = $('cn-links');
     if (!el) return;
@@ -952,13 +993,7 @@ export function buildConsoleHtml(opts: {
         return;
       }
       $('bd-title').textContent = body.bundle.id;
-      $('bd-meta').textContent = JSON.stringify({
-        state: stateLabel(body.bundle.state),
-        src: body.bundle.src,
-        dst: body.bundle.dst,
-        payload: body.bundle.payload,
-        custodian: body.bundle.custodian,
-      }, null, 2);
+      $('bd-meta').textContent = bundleMetaText(body.bundle);
       const events = body.bundle.events || [];
       const shown = events.filter((e, i) => {
         const prev = events[i - 1];
@@ -996,6 +1031,11 @@ export function buildConsoleHtml(opts: {
       $('cn-duration').textContent = sch.openDurationMs != null ? String(sch.openDurationMs) : '—';
       const bw = c.contact && c.contact.bandwidthBps;
       $('cn-bw').textContent = bw != null ? bw + ' bps' : '—';
+      $('cn-local-eid').textContent = c.localEid || '—';
+      const peerName = c.peer || (c.contact && c.contact.peer) || '';
+      const eidMap = c.eidByNode || {};
+      $('cn-peer-eid').textContent = eidMap[peerName] || '—';
+      $('cn-wire').textContent = c.wireFormat || '—';
       if (c.contact) {
         $('cn-ends').textContent = (c.contact.a || '') + ' ↔ ' + (c.contact.b || '');
       }
@@ -1069,16 +1109,21 @@ export function buildConsoleHtml(opts: {
         body: JSON.stringify(body),
       });
       const j = await r.json();
-      $('send-out').textContent = JSON.stringify(j, null, 2);
       const openBtn = $('btn-open-bundle');
-      if (j.ok && j.bundle && j.bundle.id) {
+      if (j.ok && j.id) {
+        $('send-out').textContent = [
+          'id: ' + j.id,
+          'dst: ' + (j.dst || ''),
+          'payload: ' + (j.payload || ''),
+        ].join('\\n');
         openBtn.hidden = false;
-        openBtn.dataset.id = j.bundle.id;
-        openBtn.textContent = t('openBundle') + ' ' + j.bundle.id;
+        openBtn.dataset.id = j.id;
+        openBtn.textContent = t('openBundle') + ' ' + j.id;
       } else {
+        $('send-out').textContent = j.error || t('toastSendFail');
         openBtn.hidden = true;
       }
-      toast(j.ok ? t('toastSent') + (j.bundle && j.bundle.id ? j.bundle.id : 'ok') : (j.error || t('toastSendFail')), !j.ok);
+      toast(j.ok ? t('toastSent') + (j.id || 'ok') : (j.error || t('toastSendFail')), !j.ok);
       void refresh();
     } catch (e) {
       $('send-out').textContent = String(e);
@@ -1090,7 +1135,7 @@ export function buildConsoleHtml(opts: {
     const url = clear ? '/api/recv' : '/api/inbox';
     const r = await fetch(url).then((x) => x.json());
     const messages = r.messages || [];
-    $('inbox-out').textContent = JSON.stringify(messages, null, 2);
+    $('inbox-out').textContent = inboxText(messages);
     return r;
   }
 

@@ -33,8 +33,6 @@ export interface DeliveredMessage {
   hops: Array<{ from: string; to: string; at: number }>;
 }
 
-import type { BpInspect } from '../bp/bp-codec';
-
 /** Fields returned by POST /api/send on success (no custody/state/wire). */
 export type BusinessSendFields = Pick<
   RelayBundle,
