@@ -88,6 +88,19 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
   private readonly lastForwardAttempt = new Map<string, number>();
   /** Upstream acks held until the return contact opens. */
   private readonly pendingAcks: PendingAck[] = [];
+  /** Serializes send, ingest, ack, and tick so store writes cannot interleave. */
+  private opChain: Promise<void> = Promise.resolve();
+  /** True while a tick is queued or running; interval ticks do not stack. */
+  private tickQueued = false;
+
+  private enqueue<T>(work: () => Promise<T>): Promise<T> {
+    const result = this.opChain.then(work, work);
+    this.opChain = result.then(
+      () => undefined,
+      () => undefined
+    );
+    return result;
+  }
 
   constructor(
     @Inject(RELAY_CONFIG) private readonly cfg: RelayRuntimeConfig,
@@ -98,7 +111,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
   onModuleInit(): void {
     this.timer = setInterval(() => {
-      void this.tick();
+      this.tick();
     }, 500);
     this.pushEvent('BOOT', `relay ${this.cfg.nodeId} ready peer=${this.cfg.peerUrl}`);
   }
@@ -115,6 +128,10 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
   }
 
   async send(dst: string, payload: string, ttlMs = 120000): Promise<RelayBundle> {
+    return this.enqueue(() => this.sendExclusive(dst, payload, ttlMs));
+  }
+
+  private async sendExclusive(dst: string, payload: string, ttlMs: number): Promise<RelayBundle> {
     if (this.cfg.role === 'relay') {
       throw new Error('role=relay cannot inject application traffic');
     }
@@ -147,6 +164,19 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
   /** Peer CLA ingest — called when the arrival contact is open and a peer pushes a bundle. */
   async ingestFromPeer(
+    bundle: RelayBundle,
+    from: string
+  ): Promise<{
+    accepted: boolean;
+    delivered: boolean;
+    duplicate?: boolean;
+    event: string;
+    msg: string;
+  }> {
+    return this.enqueue(() => this.ingestFromPeerExclusive(bundle, from));
+  }
+
+  private async ingestFromPeerExclusive(
     bundle: RelayBundle,
     from: string
   ): Promise<{
@@ -227,6 +257,14 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onAck(bundleId: string, from: string, downstreamEvents: BundleEvent[] = []): Promise<void> {
+    return this.enqueue(() => this.onAckExclusive(bundleId, from, downstreamEvents));
+  }
+
+  private async onAckExclusive(
+    bundleId: string,
+    from: string,
+    downstreamEvents: BundleEvent[]
+  ): Promise<void> {
     const bundle = await this.store.getBundle(bundleId);
     if (!bundle) return;
     const now = Date.now();
@@ -237,18 +275,18 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     this.pushEvent('ACK', `${bundleId} acked by ${from} — release custody`);
     this.lastForwardAttempt.delete(bundleId);
     if (custody) await this.store.releaseCustody(bundleId);
-    if (upstream) this.notifyUpstream(bundleId, upstream, acked.events, now);
+    if (upstream) await this.notifyUpstream(bundleId, upstream, acked.events, now);
   }
 
-  private notifyUpstream(
+  private async notifyUpstream(
     bundleId: string,
     upstream: string,
     events: BundleEvent[],
     now: number
-  ): void {
+  ): Promise<void> {
     if (this.contacts.isOpenTo(upstream, now)) {
-      void this.peer.sendAck(peerUrlFor(this.cfg, upstream), bundleId, events);
-      return;
+      const sent = await this.peer.sendAck(peerUrlFor(this.cfg, upstream), bundleId, events);
+      if (sent) return;
     }
     this.pendingAcks.push({ bundleId, upstream, events });
   }
@@ -340,19 +378,37 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
   private async noteForwardAttemptFailed(bundle: RelayBundle, error: string | undefined): Promise<void> {
     const stored = await this.store.getBundle(bundle.id);
     const custody = await this.store.getCustody(bundle.id);
-    if (!stored || stored.state === 'ACKED' || !custody) return;
+    if (!stored || !custody) return;
+    if (stored.state === 'ACKED' || stored.state === 'EXPIRED' || stored.state === 'ARRIVED') return;
 
     const reason = error ?? 'forward failed';
     const failed = noteForwardFailed(toTracked(stored), Date.now(), this.cfg.nodeId, reason);
     await this.store.putBundle(fromTracked(failed, stored.delivered));
+
+    const latest = await this.store.getBundle(bundle.id);
     const current = await this.store.getCustody(bundle.id);
-    if (!current) return;
+    if (!latest || !current) return;
+    if (latest.state === 'ACKED' || latest.state === 'EXPIRED' || latest.state === 'ARRIVED') return;
     current.waitingAck = false;
     await this.store.putCustody(current);
     this.pushEvent('RETRY', `${bundle.id} forward failed: ${reason}`);
   }
 
-  private async tick(): Promise<void> {
+  private tick(): void {
+    if (this.tickQueued) return;
+    this.tickQueued = true;
+    void this.enqueue(async () => {
+      try {
+        await this.runTick();
+      } finally {
+        this.tickQueued = false;
+      }
+    }).catch((err: unknown) => {
+      this.log.error(`tick failed: ${err instanceof Error ? err.message : String(err)}`);
+    });
+  }
+
+  private async runTick(): Promise<void> {
     const open = this.contacts.isOpen();
     if (this.lastContactOpen === null || this.lastContactOpen !== open) {
       const st = this.contacts.getState();
