@@ -15,6 +15,7 @@
 | 角色 | `ground`／`orbiter`／`lander`／`cruise`；`role-policy`；选路 `rolePenaltyMs` |
 | 计划可运营 | `POST /api/plan/reload`、文件监视、`GET /api/plan` |
 | Agent 入口 | `@yinghuo/mcp` stdio（Cursor 等本机 Agent） |
+| 控制台信任／验收 | 计划横幅 + 磁盘重载；`apps/relay/scripts/smoke-all.sh`（`npm run smoke`） |
 
 设计／计划文档：`docs/superpowers/specs/`、`docs/superpowers/plans/`。
 
@@ -31,8 +32,8 @@
 
 ### 体验与验收
 
-- [ ] 控制台按角色／计划错误的更完整引导（热更失败、禁发原因）
-- [ ] 一键冒烟汇总脚本（tri + dual-island + unhealthy + mcp client）
+- [x] 控制台按角色／计划错误的更完整引导（热更失败、禁发原因）
+- [x] 一键冒烟汇总脚本（unit + 可选 dual-island／unhealthy；tri live 仍用 `test:relay:live`）
 
 ---
 

@@ -58,7 +58,7 @@
 | 动态加入／多岛 | `join`／`graph`／`graph/join`；`join-cluster.sh`／`dual-island.sh`／`unhealthy-retry.sh` |
 | 萤火控制台 | 各节点 `/`：概览、存储、连接、操作、束、日志（人类监督面） |
 | CLI／SDK | `status`／`send`／`recv`／`wait`；`@yinghuo/sdk` 订阅投递 |
-| 测试 | `npm run test:relay`；`npm test -w @yinghuo/mcp`；live：`DTN_LIVE_SMOKE`／`GRAPH`／`DUAL` |
+| 测试 | `npm run smoke`（默认单元）；`SMOKE_LIVE=1 npm run smoke`（含 live 脚本）；分项见「测试」节 |
 
 ## 仓库结构
 
@@ -343,7 +343,12 @@ kubectl apply --dry-run=client -k k8s/
 
 ## 测试
 
+萤火控制台概览区展示计划信任条（版本／校验 ok·warn、来源、路径、监视状态）；热更失败保留旧计划并显示横幅，可点「从磁盘重新加载」触发 `POST /api/plan/reload`。
+
 ```bash
+npm run smoke                                               # 近栈冒烟：relay + mcp 单元；可选探测本机 relay HTTP
+SMOKE_LIVE=1 npm run smoke                                  # 另跑 dual-island + unhealthy-retry（占端口，慎用）
+SMOKE_STRICT=1 npm run smoke                                # 无 relay 时 MCP 探测失败即非零退出
 npm run test:relay                                          # relay 单元（graph / codec / 状态机 / 角色 / 计划）
 npm test -w @yinghuo/mcp                                    # MCP HTTP 客户端单元
 DTN_LIVE_SMOKE=1 npm run test:relay:live                    # 三节点 live（需 3101/3102/3103）

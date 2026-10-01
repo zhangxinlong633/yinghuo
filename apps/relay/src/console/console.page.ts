@@ -159,6 +159,44 @@ export function buildConsoleHtml(opts: {
       border-color: transparent;
     }
     .status-chip.muted { color: var(--faint); }
+    .status-chip.warn {
+      color: var(--warn);
+      background: rgba(180, 83, 9, 0.10);
+      border-color: transparent;
+    }
+    html[data-theme="dark"] .status-chip.warn {
+      background: rgba(251, 191, 36, 0.14);
+    }
+    .plan-trust { display: flex; flex-direction: column; align-items: flex-start; gap: 0.35rem; }
+    .plan-trust .plan-row { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.5rem; }
+    .faint { color: var(--faint); }
+    .plan-banner {
+      color: var(--warn);
+      background: rgba(180, 83, 9, 0.10);
+      border: 1px solid rgba(180, 83, 9, 0.22);
+      font-size: 0.82rem;
+      line-height: 1.35;
+      margin: 0;
+      padding: 0.45rem 0.55rem;
+      border-radius: var(--radius-sm);
+      max-width: 100%;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    html[data-theme="dark"] .plan-banner {
+      background: rgba(251, 191, 36, 0.12);
+      border-color: rgba(251, 191, 36, 0.28);
+    }
+    .plan-trust .secondary { margin-top: 0.1rem; }
+    .plan-trust .secondary:disabled { opacity: 0.55; cursor: wait; }
+    .send-gate {
+      color: var(--warn);
+      background: rgba(180, 83, 9, 0.08);
+      border-radius: var(--radius-sm);
+      padding: 0.4rem 0.55rem;
+      margin: 0.55rem 0 0;
+    }
+    html[data-theme="dark"] .send-gate { background: rgba(251, 191, 36, 0.10); }
     .mast-uptime {
       font-family: var(--mono);
       font-size: 0.72rem;
@@ -565,22 +603,44 @@ export function buildConsoleHtml(opts: {
       border-radius: var(--radius-sm);
       border: 1px solid var(--border-soft);
     }
-    #cn-svg .edge.direct { stroke: var(--accent); stroke-width: 2.5; }
-    #cn-svg .edge.heard { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 7 5; }
-    #cn-svg .edge-hit { stroke: transparent; stroke-width: 16; cursor: pointer; }
-    #cn-svg .node circle { fill: var(--surface); stroke: var(--accent-2); stroke-width: 2; }
-    #cn-svg .node.self circle { fill: var(--accent); stroke: var(--accent-2); }
+    #cn-svg .edge.direct { stroke: var(--accent); stroke-width: 2.25; fill: none; stroke-linecap: round; stroke-linejoin: round; }
+    #cn-svg .edge.heard { stroke: var(--muted); stroke-width: 1.75; fill: none; stroke-dasharray: 6 5; stroke-linecap: round; stroke-linejoin: round; }
+    #cn-svg .edge-hit { stroke: transparent; stroke-width: 14; fill: none; cursor: pointer; }
+    #cn-svg .node circle { fill: var(--surface); stroke: var(--accent-2); stroke-width: 2.5; }
+    #cn-svg .node.self circle { fill: var(--accent); stroke: var(--accent-2); stroke-width: 3; }
     #cn-svg .node.c0 circle { stroke: #0d9488; }
     #cn-svg .node.c1 circle { stroke: #c2410c; }
     #cn-svg .node.c2 circle { stroke: #1d4ed8; }
     #cn-svg .node.c3 circle { stroke: #a16207; }
     #cn-svg .node.c0.self circle, #cn-svg .node.c1.self circle,
     #cn-svg .node.c2.self circle, #cn-svg .node.c3.self circle { fill: var(--accent); }
-    #cn-svg .node text { fill: var(--text); font-size: 12px; font-family: var(--sans); font-weight: 600; }
+    #cn-svg .node text {
+      fill: var(--text);
+      font-size: 11px;
+      font-family: var(--sans);
+      font-weight: 650;
+      paint-order: stroke fill;
+      stroke: var(--bg-soft);
+      stroke-width: 4px;
+      stroke-linejoin: round;
+    }
+    #cn-svg .node.self text { font-size: 12px; font-weight: 700; }
     #cn-svg .edge.heard.stale { stroke: #b91c1c; stroke-dasharray: 3 4; opacity: 0.75; }
-    #cn-svg .edge.selected { stroke: var(--warn); }
+    #cn-svg .edge.selected { stroke: var(--warn); stroke-width: 2.75; }
+    #cn-svg .sch-grid { stroke: var(--border-soft); stroke-width: 1; pointer-events: none; }
     .cluster-legend { font-size: 0.78rem; color: var(--muted); margin-top: 0.4rem; }
-    .unhealthy-banner { font-size: 0.8rem; color: #b91c1c; margin-top: 0.35rem; min-height: 1.2em; }
+    .unhealthy-banner {
+      font-size: 0.8rem;
+      color: var(--danger);
+      background: var(--danger-soft);
+      border-radius: var(--radius-sm);
+      padding: 0.4rem 0.55rem;
+      margin-top: 0.45rem;
+      min-height: 1.2em;
+      white-space: pre-line;
+      line-height: 1.4;
+    }
+    .unhealthy-banner.is-clear { color: var(--muted); background: transparent; padding-left: 0; padding-right: 0; }
     .cn-detail { margin-top: 0.85rem; }
     .cn-detail > summary { cursor: pointer; font-weight: 600; color: var(--muted); }
     .route-cols pre { min-height: 4.5rem; }
@@ -674,7 +734,16 @@ export function buildConsoleHtml(opts: {
               <div class="k">port</div><div class="v">:${port}</div>
               <div class="k">peerUrl</div><div class="v" id="ov-peer">${peerUrl}</div>
               <div class="k">dataDir</div><div class="v" id="ov-datadir">—</div>
-              <div class="k">plan</div><div class="v" id="ov-plan">—</div>
+              <div class="k" data-i18n="planMeta">接触计划</div>
+              <div class="v plan-trust" id="ov-plan-block">
+                <div class="plan-row"><span class="mono" id="ov-plan-ver">—</span>
+                  <span class="status-chip muted" id="ov-plan-ok">—</span>
+                  <span class="faint" id="ov-plan-src">—</span></div>
+                <div class="plan-row faint mono" id="ov-plan-path">—</div>
+                <div class="plan-row faint" id="ov-plan-watch">—</div>
+                <div class="plan-banner" id="ov-plan-banner" hidden></div>
+                <button type="button" class="secondary" id="btn-plan-reload" data-i18n="planReload">从磁盘重载</button>
+              </div>
               <div class="k">uptime</div><div class="v" id="ov-uptime">—</div>
             </div>
           </div>
@@ -829,6 +898,7 @@ export function buildConsoleHtml(opts: {
               <input id="payload" value="${defaultPayload}"/>
             </div>
             <button type="button" id="btn-send" data-i18n="send">发送</button>
+            <p class="hint send-gate" id="send-gate-hint" hidden></p>
             <h3 style="margin-top:0.85rem" data-i18n="response">响应</h3>
             <pre id="send-out">—</pre>
             <button type="button" class="secondary" id="btn-open-bundle" hidden style="margin-top:0.6rem"></button>
@@ -928,6 +998,7 @@ export function buildConsoleHtml(opts: {
   let openBundleId = null;
   const DEFAULT_DST = '${defaultDst}';
   let logClearedAt = 0;
+  let planReloadBannerExtra = null;
   let lang = localStorage.getItem('dtn-console-lang') === 'en' ? 'en' : 'zh';
   let theme = localStorage.getItem('dtn-console-theme') === 'dark' ? 'dark' : 'light';
   const I18N = {
@@ -941,6 +1012,10 @@ export function buildConsoleHtml(opts: {
       unhealthyNone: '无可达故障邻居', unhealthyList: 'unhealthy', unhealthyShort: '故障',
       staleShort: '陈旧听说边',
       custodySem: '保管语义', routeBias: '选路偏好', sendDisabledRole: '当前角色不可注入业务报文',
+      planMeta: '接触计划', planReload: '从磁盘重载', planOk: '有效', planBad: '无效',
+      planWatchOn: '文件监视已开启', planWatchOff: '文件监视已关闭',
+      planKeepOld: '校验失败，仍在用旧计划',
+      sendDisabledDetail: '当前角色（{role}）不可注入业务报文',
       nodeInfo: '节点信息', contactWin: '接触窗口', contactHint: '周期开窗时链路可转发；关闭时先存储再转发。',
       recent: '最近事件', storageTitle: '存储',
       storageHint: '三层存储深度来自 /api/status 的 store（bundles / custody / index）。收发在「操作」页。',
@@ -973,7 +1048,9 @@ export function buildConsoleHtml(opts: {
       kindArrived: '已到达', kindAcked: '已确认', kindExpired: '已过期', kindRoute: '选路',
       stateWaiting: '等待窗口', stateForwarding: '转发中', stateArrived: '已到达', stateAcked: '已确认', stateExpired: '已过期',
       toastStatus: '状态轮询失败：', toastSent: '已发送 ', toastSendFail: '发送失败',
-      toastPeek: '已查看收件箱', toastRecv: '已接收并清空', toastRecvOk: '接收成功'
+      toastPeek: '已查看收件箱', toastRecv: '已接收并清空', toastRecvOk: '接收成功',
+      toastPlanReload: '计划已重载 {detail}',
+      planReloading: '重载中…'
     },
     en: {
       navOverview: 'Overview', navStorage: 'Storage', navConnections: 'Connections', navOps: 'Ops', navBundles: 'Bundles', navLogs: 'Logs',
@@ -985,6 +1062,10 @@ export function buildConsoleHtml(opts: {
       unhealthyNone: 'No unhealthy neighbors', unhealthyList: 'unhealthy', unhealthyShort: 'down',
       staleShort: 'stale heard',
       custodySem: 'Custody', routeBias: 'Route bias', sendDisabledRole: 'This role cannot inject traffic',
+      planMeta: 'Contact plan', planReload: 'Reload from disk', planOk: 'OK', planBad: 'BAD',
+      planWatchOn: 'File watch on', planWatchOff: 'File watch off',
+      planKeepOld: 'Validation failed; previous plan remains active',
+      sendDisabledDetail: 'Role ({role}) cannot inject traffic',
       nodeInfo: 'Node', contactWin: 'Contact', contactHint: 'Forward while the window is open; store-and-forward while it is closed.',
       recent: 'Recent events', storageTitle: 'Storage',
       storageHint: 'Depths come from /api/status store (bundles / custody / index). Send and receive live on Ops.',
@@ -1017,7 +1098,9 @@ export function buildConsoleHtml(opts: {
       kindArrived: 'Arrived', kindAcked: 'Acked', kindExpired: 'Expired', kindRoute: 'Route',
       stateWaiting: 'Waiting for window', stateForwarding: 'Forwarding', stateArrived: 'Arrived', stateAcked: 'Acknowledged', stateExpired: 'Expired',
       toastStatus: 'status poll failed: ', toastSent: 'sent ', toastSendFail: 'send failed',
-      toastPeek: 'inbox peeked', toastRecv: 'recv cleared', toastRecvOk: 'recv ok'
+      toastPeek: 'inbox peeked', toastRecv: 'recv cleared', toastRecvOk: 'recv ok',
+      toastPlanReload: 'Plan reloaded {detail}',
+      planReloading: 'Reloading…'
     }
   };
   function t(key) {
@@ -1054,6 +1137,41 @@ export function buildConsoleHtml(opts: {
     document.querySelectorAll('.theme-btn').forEach((b) => {
       b.classList.toggle('active', b.getAttribute('data-theme') === theme);
     });
+  }
+
+  function shortPlanVersion(version, maxLen) {
+    maxLen = maxLen == null ? 12 : maxLen;
+    if (!version) return '—';
+    return version.length <= maxLen ? version : version.slice(0, maxLen);
+  }
+  function formatUnhealthyLine(u) {
+    if (u.remainMs == null || Number.isNaN(u.remainMs)) return u.id;
+    const sec = Math.ceil(u.remainMs / 1000);
+    return u.id + ' · ' + sec + 's';
+  }
+  function setPlanBanner(text) {
+    const banner = $('ov-plan-banner');
+    if (!banner) return;
+    if (text) {
+      banner.textContent = text;
+      banner.hidden = false;
+    } else {
+      banner.textContent = '';
+      banner.hidden = true;
+    }
+  }
+  /** Normalize Nest BadRequest body (flat or message-wrapped). */
+  function planReloadPayload(j) {
+    if (!j || typeof j !== 'object') return { ok: false, errors: ['invalid response'] };
+    if (j.ok === true || j.ok === false) return j;
+    if (j.message && typeof j.message === 'object') {
+      return Object.assign({}, j, j.message);
+    }
+    return j;
+  }
+  function applyPlanFromPayload(plan) {
+    if (plan && lastStatus) applyStatus(Object.assign({}, lastStatus, { plan: plan }));
+    else void refresh();
   }
 
   function fmtUptime(ms) {
@@ -1194,9 +1312,11 @@ export function buildConsoleHtml(opts: {
     const store = readStore(s);
     const contact = s.contact || {};
     const open = !!contact.open;
+    const canInject = !(s.capabilities && s.capabilities.canInject === false);
     $('tb-role').textContent = s.role || '—';
-    $('tb-role').className = 'status-chip muted';
+    $('tb-role').className = 'status-chip ' + (canInject ? 'muted' : 'warn');
     if (s.missionRole) $('tb-role').title = s.missionRole + (s.routeBias ? ' — ' + s.routeBias : '');
+    else if (s.routeBias) $('tb-role').title = s.routeBias;
     setContactPill(open, contact.phase);
     $('tb-uptime').textContent = fmtUptime(s.uptimeMs);
 
@@ -1216,20 +1336,46 @@ export function buildConsoleHtml(opts: {
     if ($('ov-route-bias')) $('ov-route-bias').textContent = s.routeBias || '—';
     const sendBtn = $('btn-send');
     if (sendBtn) {
-      const allow = !(s.capabilities && s.capabilities.canInject === false);
-      sendBtn.disabled = !allow;
-      sendBtn.title = allow ? '' : t('sendDisabledRole');
+      sendBtn.disabled = !canInject;
+      sendBtn.title = canInject ? '' : t('sendDisabledRole');
+    }
+    const sendGate = $('send-gate-hint');
+    if (sendGate) {
+      if (!canInject) {
+        sendGate.hidden = false;
+        sendGate.textContent = t('sendDisabledDetail').replace('{role}', s.missionRole || s.role || '—');
+      } else {
+        sendGate.hidden = true;
+        sendGate.textContent = '';
+      }
     }
     $('ov-peer').textContent = s.peerUrl || '—';
     $('ov-datadir').textContent = s.dataDir || '—';
-    if ($('ov-plan')) {
-      const p = s.plan || {};
-      let planText = (p.version ? p.version : '—') + (p.source ? ' · ' + p.source : '');
-      if (p.ok === false && p.lastError) planText += ' · ERR ' + p.lastError;
-      else if (p.ok === false) planText += ' · error';
-      $('ov-plan').textContent = planText;
-      $('ov-plan').title = p.path || '';
+    const p = s.plan || {};
+    const planVerEl = $('ov-plan-ver');
+    if (planVerEl) {
+      planVerEl.textContent = shortPlanVersion(p.version || '');
+      planVerEl.title = p.version ? p.version : '';
     }
+    if ($('ov-plan-ok')) {
+      const okChip = $('ov-plan-ok');
+      okChip.textContent = p.ok === false ? t('planBad') : t('planOk');
+      okChip.className = 'status-chip ' + (p.ok === false ? 'warn' : 'ok');
+    }
+    if ($('ov-plan-src')) $('ov-plan-src').textContent = p.source || '—';
+    if ($('ov-plan-path')) $('ov-plan-path').textContent = p.path || '—';
+    if ($('ov-plan-watch')) {
+      $('ov-plan-watch').textContent = p.watchEnabled ? t('planWatchOn') : t('planWatchOff');
+    }
+    let bannerText = null;
+    if (p.ok !== false) {
+      planReloadBannerExtra = null;
+    } else if (planReloadBannerExtra) {
+      bannerText = t('planKeepOld') + ' · ' + planReloadBannerExtra;
+    } else {
+      bannerText = t('planKeepOld') + (p.lastError ? ' · ' + p.lastError : '');
+    }
+    setPlanBanner(bannerText);
     $('ov-uptime').textContent = fmtUptime(s.uptimeMs);
     $('ov-c-peer').textContent = contact.peer || '—';
     $('ov-c-link').innerHTML = linkHtml(open);
@@ -1519,6 +1665,10 @@ export function buildConsoleHtml(opts: {
     if (!svg || !g) return;
     const nodes = g.nodes || [];
     const edges = g.edges || [];
+    const w = 640, h = 420, pad = 56;
+    const byId = {};
+    nodes.forEach((n) => { byId[n.id] = n; });
+
     let minX = 0, maxX = 1, minY = 0, maxY = 1;
     if (nodes.length) {
       minX = Math.min.apply(null, nodes.map((n) => Number(n.x) || 0));
@@ -1526,33 +1676,178 @@ export function buildConsoleHtml(opts: {
       minY = Math.min.apply(null, nodes.map((n) => Number(n.y) || 0));
       maxY = Math.max.apply(null, nodes.map((n) => Number(n.y) || 0));
     }
-    const w = 640, h = 420, pad = 46;
-    const spanX = Math.max(maxX - minX, 1);
-    const spanY = Math.max(maxY - minY, 1);
-    const scale = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY);
-    const byId = {};
-    nodes.forEach((n) => { byId[n.id] = n; });
-    function px(n) { return pad + ((Number(n.x) || 0) - minX) * scale; }
-    function py(n) { return h - pad - ((Number(n.y) || 0) - minY) * scale; }
-    const lines = edges.map((e) => {
-      const a = byId[e.a], b = byId[e.b];
-      if (!a || !b) return '';
+    const spanX = Math.max(maxX - minX, 1e-6);
+    const spanY = Math.max(maxY - minY, 1e-6);
+    const flat = nodes.length > 1 && (spanY / spanX) < 0.08;
+
+    const pos = {};
+    if (!nodes.length) {
+      /* empty */
+    } else if (flat) {
+      // Circuit board row: even spacing left→right by mission x
+      const ranked = nodes.slice().sort((a, b) => {
+        const dx = (Number(a.x) || 0) - (Number(b.x) || 0);
+        if (dx !== 0) return dx;
+        return String(a.id).localeCompare(String(b.id));
+      });
+      const n = ranked.length;
+      const yBus = Math.round(h * 0.42);
+      ranked.forEach((node, i) => {
+        const t = n === 1 ? 0.5 : i / (n - 1);
+        pos[node.id] = {
+          x: Math.round(pad + t * (w - pad * 2)),
+          y: yBus,
+        };
+      });
+    } else {
+      // Snap to sparse grid from unique coord ranks (schematic style)
+      const xs = Array.from(new Set(nodes.map((n) => Number(n.x) || 0))).sort((a, b) => a - b);
+      const ys = Array.from(new Set(nodes.map((n) => Number(n.y) || 0))).sort((a, b) => a - b);
+      const xi = {}; xs.forEach((v, i) => { xi[v] = i; });
+      const yi = {}; ys.forEach((v, i) => { yi[v] = i; });
+      const cols = Math.max(xs.length - 1, 1);
+      const rows = Math.max(ys.length - 1, 1);
+      nodes.forEach((n) => {
+        const xv = Number(n.x) || 0;
+        const yv = Number(n.y) || 0;
+        pos[n.id] = {
+          x: Math.round(pad + (xi[xv] / cols) * (w - pad * 2)),
+          y: Math.round(h - pad - (yi[yv] / rows) * (h - pad * 2)),
+        };
+      });
+    }
+
+    // Keep nodes from stacking
+    const minSep = 52;
+    for (let iter = 0; iter < 10; iter++) {
+      let moved = false;
+      const ids = Object.keys(pos);
+      for (let i = 0; i < ids.length; i++) {
+        for (let j = i + 1; j < ids.length; j++) {
+          const a = pos[ids[i]], b = pos[ids[j]];
+          let dx = b.x - a.x, dy = b.y - a.y;
+          let dist = Math.sqrt(dx * dx + dy * dy) || 0.01;
+          if (dist >= minSep) continue;
+          const push = (minSep - dist) / 2;
+          dx /= dist; dy /= dist;
+          a.x -= dx * push; a.y -= dy * push;
+          b.x += dx * push; b.y += dy * push;
+          moved = true;
+        }
+      }
+      if (!moved) break;
+      ids.forEach((id) => {
+        pos[id].x = Math.min(w - pad * 0.5, Math.max(pad * 0.5, Math.round(pos[id].x)));
+        pos[id].y = Math.min(h - pad * 0.5, Math.max(pad * 0.5, Math.round(pos[id].y)));
+      });
+    }
+
+    function pof(id) { return pos[id] || { x: w / 2, y: h / 2 }; }
+
+    const nodeR = 16;
+    function segHitsNode(x1, y1, x2, y2, skipA, skipB) {
+      let hits = 0;
+      for (let i = 0; i < nodes.length; i++) {
+        const id = nodes[i].id;
+        if (id === skipA || id === skipB) continue;
+        const p = pof(id);
+        // distance from point to segment
+        const vx = x2 - x1, vy = y2 - y1;
+        const len2 = vx * vx + vy * vy || 1;
+        let t = ((p.x - x1) * vx + (p.y - y1) * vy) / len2;
+        t = Math.max(0, Math.min(1, t));
+        const cx = x1 + t * vx, cy = y1 + t * vy;
+        const d = Math.sqrt((p.x - cx) * (p.x - cx) + (p.y - cy) * (p.y - cy));
+        if (d < nodeR) hits++;
+      }
+      return hits;
+    }
+    function pathCost(pts, skipA, skipB) {
+      let len = 0, hits = 0;
+      for (let i = 1; i < pts.length; i++) {
+        const a = pts[i - 1], b = pts[i];
+        len += Math.abs(b[0] - a[0]) + Math.abs(b[1] - a[1]);
+        hits += segHitsNode(a[0], a[1], b[0], b[1], skipA, skipB);
+      }
+      return len + hits * 220;
+    }
+    function routeOrtho(a, b, lane) {
+      const ax = a.x, ay = a.y, bx = b.x, by = b.y;
+      const skipA = a.id, skipB = b.id;
+      // Channel lanes above / below the node bus (circuit style)
+      const topCh = Math.round(pad + 28 + (lane % 5) * 14);
+      const botCh = Math.round(h - pad - 28 - (lane % 5) * 14);
+      const leftCh = Math.round(pad + 24 + (lane % 4) * 12);
+      const rightCh = Math.round(w - pad - 24 - (lane % 4) * 12);
+      const midX = Math.round((ax + bx) / 2 + ((lane % 2) ? 10 : -10));
+      const midY = Math.round((ay + by) / 2 + ((lane % 2) ? 12 : -12));
+      const cands = [
+        [[ax, ay], [bx, ay], [bx, by]],
+        [[ax, ay], [ax, by], [bx, by]],
+        [[ax, ay], [ax, topCh], [bx, topCh], [bx, by]],
+        [[ax, ay], [ax, botCh], [bx, botCh], [bx, by]],
+        [[ax, ay], [leftCh, ay], [leftCh, by], [bx, by]],
+        [[ax, ay], [rightCh, ay], [rightCh, by], [bx, by]],
+        [[ax, ay], [ax, midY], [bx, midY], [bx, by]],
+        [[ax, ay], [midX, ay], [midX, by], [bx, by]],
+        [[ax, ay], [ax, topCh], [midX, topCh], [midX, botCh], [bx, botCh], [bx, by]],
+      ];
+      let best = cands[0], bestCost = Infinity;
+      for (let i = 0; i < cands.length; i++) {
+        // collapse zero-length jogs
+        const raw = cands[i];
+        const pts = [raw[0]];
+        for (let k = 1; k < raw.length; k++) {
+          const p = raw[k], q = pts[pts.length - 1];
+          if (Math.abs(p[0] - q[0]) < 0.5 && Math.abs(p[1] - q[1]) < 0.5) continue;
+          pts.push(p);
+        }
+        const c = pathCost(pts, skipA, skipB);
+        if (c < bestCost) { bestCost = c; best = pts; }
+      }
+      return best;
+    }
+    function pathD(pts) {
+      if (!pts || pts.length < 2) return '';
+      let d = 'M ' + pts[0][0] + ' ' + pts[0][1];
+      for (let i = 1; i < pts.length; i++) d += ' L ' + pts[i][0] + ' ' + pts[i][1];
+      return d;
+    }
+
+    // Faint schematic grid
+    let grid = '';
+    for (let x = pad; x <= w - pad; x += 40) {
+      grid += '<line class="sch-grid" x1="' + x + '" y1="' + pad + '" x2="' + x + '" y2="' + (h - pad) + '"/>';
+    }
+    for (let y = pad; y <= h - pad; y += 40) {
+      grid += '<line class="sch-grid" x1="' + pad + '" y1="' + y + '" x2="' + (w - pad) + '" y2="' + y + '"/>';
+    }
+
+    const lines = edges.map((e, ei) => {
+      if (!byId[e.a] || !byId[e.b]) return '';
+      const a = Object.assign({ id: e.a }, pof(e.a));
+      const b = Object.assign({ id: e.b }, pof(e.b));
+      const pts = routeOrtho(a, b, ei);
+      const d = pathD(pts);
       const key = edgeKeyOf(e);
       const cls = (e.kind === 'direct' || e.direct) ? 'direct' : 'heard';
       const stale = e.stale ? ' stale' : '';
       const sel = selectedEdge && edgeKeyOf(selectedEdge) === key ? ' selected' : '';
-      return '<line class="edge ' + cls + stale + sel + '" x1="' + px(a) + '" y1="' + py(a) + '" x2="' + px(b) + '" y2="' + py(b) + '"/>' +
-        '<line class="edge-hit" data-edge="' + esc(key) + '" x1="' + px(a) + '" y1="' + py(a) + '" x2="' + px(b) + '" y2="' + py(b) + '"/>';
+      return '<path class="edge ' + cls + stale + sel + '" d="' + d + '"/>' +
+        '<path class="edge-hit" data-edge="' + esc(key) + '" d="' + d + '"/>';
     }).join('');
+
     const dots = nodes.map((n) => {
+      const p = pof(n.id);
       const self = n.id === NODE_ID ? ' self' : '';
       const cid = n.componentId != null ? Number(n.componentId) : 0;
       const cluster = ' c' + (cid % 4);
-      const r = n.id === NODE_ID ? 12 : 8;
-      return '<g class="node' + self + cluster + '" data-component="' + cid + '" transform="translate(' + px(n) + ',' + py(n) + ')">' +
-        '<circle r="' + r + '"/><text y="-16" text-anchor="middle">' + esc(n.id) + '</text></g>';
+      const r = n.id === NODE_ID ? 13 : 9;
+      const labelY = self ? -18 : -15;
+      return '<g class="node' + self + cluster + '" data-component="' + cid + '" transform="translate(' + p.x + ',' + p.y + ')">' +
+        '<circle r="' + r + '"/><text y="' + labelY + '" text-anchor="middle">' + esc(n.id) + '</text></g>';
     }).join('');
-    svg.innerHTML = lines + dots;
+    svg.innerHTML = grid + lines + dots;
     const legend = $('cn-cluster-legend');
     if (legend) {
       const nComp = (g.stats && g.stats.componentCount != null)
@@ -1563,12 +1858,12 @@ export function buildConsoleHtml(opts: {
     const uh = $('cn-unhealthy');
     if (uh) {
       const list = g.unhealthy || [];
-      if (!list.length) uh.textContent = t('unhealthyNone');
-      else {
-        uh.textContent = t('unhealthyList') + ': ' + list.map((u) => {
-          const rem = u.remainMs != null ? Math.ceil(u.remainMs / 1000) + 's' : '?';
-          return u.id + ' (' + rem + ')';
-        }).join(', ');
+      if (!list.length) {
+        uh.textContent = t('unhealthyNone');
+        uh.classList.add('is-clear');
+      } else {
+        uh.textContent = t('unhealthyList') + ':\\n' + list.map(formatUnhealthyLine).join('\\n');
+        uh.classList.remove('is-clear');
       }
     }
   }
@@ -1669,6 +1964,45 @@ export function buildConsoleHtml(opts: {
   applyTheme();
 
   $('btn-refresh').addEventListener('click', () => { void refresh(); });
+  const planReloadBtn = $('btn-plan-reload');
+  if (planReloadBtn) {
+    planReloadBtn.addEventListener('click', async () => {
+      if (planReloadBtn.disabled) return;
+      const prevLabel = planReloadBtn.textContent;
+      planReloadBtn.disabled = true;
+      planReloadBtn.textContent = t('planReloading');
+      try {
+        const r = await fetch('/api/plan/reload', { method: 'POST' });
+        const raw = await r.json();
+        const j = planReloadPayload(raw);
+        if (j.ok) {
+          planReloadBannerExtra = null;
+          setPlanBanner(null);
+          const detail = (j.version ? j.version + ' ' : '') + (j.source || 'ok');
+          toast(t('toastPlanReload').replace('{detail}', detail));
+          applyPlanFromPayload(j.plan);
+        } else {
+          const errText = Array.isArray(j.errors)
+            ? j.errors.join('; ')
+            : (typeof j.error === 'string'
+              ? j.error
+              : (typeof j.message === 'string' ? j.message : ''));
+          planReloadBannerExtra = errText || String(r.status);
+          setPlanBanner(t('planKeepOld') + (errText ? ' · ' + errText : ''));
+          toast(t('planKeepOld'), true);
+          applyPlanFromPayload(j.plan);
+        }
+      } catch (e) {
+        const msg = e && e.message ? e.message : String(e);
+        planReloadBannerExtra = msg;
+        setPlanBanner(t('planKeepOld') + ' · ' + msg);
+        toast(msg, true);
+      } finally {
+        planReloadBtn.disabled = false;
+        planReloadBtn.textContent = t('planReload') || prevLabel;
+      }
+    });
+  }
   $('cn-svg').addEventListener('click', (ev) => {
     const hit = ev.target.closest ? ev.target.closest('[data-edge]') : null;
     if (!hit || !lastGraph) return;
