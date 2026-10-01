@@ -40,7 +40,7 @@ export class RelayController {
   }
 
   @Get('bundles')
-  async bundles() {
+  async listBundles() {
     return { ok: true, bundles: await this.bundles.listBundles() };
   }
 
@@ -58,8 +58,16 @@ export class RelayController {
     if (!body?.dst || body.payload == null) {
       return { ok: false, error: 'dst and payload required' };
     }
-    const bundle = await this.bundles.send(body.dst, String(body.payload), body.ttlMs);
-    return { ok: true, bundle };
+    try {
+      const bundle = await this.bundles.send(body.dst, String(body.payload), body.ttlMs);
+      return { ok: true, bundle };
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      if (message.includes('role=relay')) {
+        return { ok: false, error: message };
+      }
+      throw err;
+    }
   }
 
   @Get('recv')
