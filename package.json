@@ -12,6 +12,7 @@
     "demo": "npm run demo -w @dtn-demo/core",
     "demo:plan": "npm run demo:plan -w @dtn-demo/core",
     "relay:earth": "npm run start:earth -w @dtn-demo/relay",
+    "relay:relay": "npm run start:relay -w @dtn-demo/relay",
     "relay:mars": "npm run start:mars -w @dtn-demo/relay",
     "cli": "npm run start -w @dtn-demo/cli --",
     "api": "npm run start -w @dtn-demo/api",

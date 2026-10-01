@@ -6,8 +6,9 @@
     "build": "tsc -p tsconfig.json",
     "start": "tsx src/main.ts",
     "start:dev": "tsx watch src/main.ts",
-    "start:earth": "NODE_ID=Earth PORT=3101 PEER_URL=http://127.0.0.1:3102 tsx src/main.ts",
-    "start:mars": "NODE_ID=Mars PORT=3102 PEER_URL=http://127.0.0.1:3101 tsx src/main.ts",
+    "start:earth": "NODE_ID=Earth PORT=3101 tsx src/main.ts",
+    "start:relay": "NODE_ID=Relay PORT=3103 tsx src/main.ts",
+    "start:mars": "NODE_ID=Mars PORT=3102 tsx src/main.ts",
     "test": "node --import tsx --test src/**/*.test.ts"
   },
   "dependencies": {
