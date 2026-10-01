@@ -1,0 +1,108 @@
+# Educational CRDs — not production BP/ION. Valid YAML for kubectl apply --dry-run=client.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: dtnnodes.dtn.demo.space
+spec:
+  group: dtn.demo.space
+  names:
+    kind: DTNNode
+    listKind: DTNNodeList
+    plural: dtnnodes
+    singular: dtnnode
+    shortNames: [dtnn]
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: [nodeId]
+              properties:
+                nodeId:
+                  type: string
+                  description: DTN node name (e.g. Earth, Relay, Mars)
+                nextHop:
+                  type: object
+                  additionalProperties:
+                    type: string
+                  description: Static dest -> next-hop table (CGR stand-in)
+                role:
+                  type: string
+                  enum: [endpoint, relay, hybrid]
+                  default: hybrid
+                  description: "endpoint=inject/deliver only; relay=store-forward only; hybrid=both"
+                bundleStore:
+                  type: string
+                  description: PVC or emptyDir name for custody store
+                  default: bundle-store
+            status:
+              type: object
+              properties:
+                storeDepth:
+                  type: integer
+                phase:
+                  type: string
+      subresources:
+        status: {}
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: dtncontacts.dtn.demo.space
+spec:
+  group: dtn.demo.space
+  names:
+    kind: DTNContact
+    listKind: DTNContactList
+    plural: dtncontacts
+    singular: dtncontact
+    shortNames: [dtnc]
+  scope: Namespaced
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required: [endpointA, endpointB, windowStart, windowEnd]
+              properties:
+                endpointA:
+                  type: string
+                endpointB:
+                  type: string
+                windowStart:
+                  type: string
+                  format: date-time
+                  description: Contact open (RFC3339); maps to sim openAt
+                windowEnd:
+                  type: string
+                  format: date-time
+                  description: Contact close (RFC3339); maps to sim closeAt
+                delayMs:
+                  type: integer
+                  minimum: 0
+                  description: One-way propagation + tx delay
+                bandwidthBps:
+                  type: integer
+                  minimum: 0
+            status:
+              type: object
+              properties:
+                linkState:
+                  type: string
+                  enum: [Pending, Open, Closed]
+                lastTransitionTime:
+                  type: string
+                  format: date-time
+      subresources:
+        status: {}

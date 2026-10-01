@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>DTN Relay — Earth</title>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --bg-elev: #0f1729;
+      --sidebar: #0c1424;
+      --panel: #121a2b;
+      --panel-2: #162033;
+      --border: #243049;
+      --border-soft: #1c2740;
+      --text: #e8eefc;
+      --muted: #8b9bb8;
+      --accent: #3b82f6;
+      --accent-2: #60a5fa;
+      --ok: #3ddc97;
+      --warn: #f5a524;
+      --danger: #ff6b6b;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      --sidebar-w: 220px;
+      --topbar-h: 52px;
+      --radius: 10px;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--text); font-family: var(--sans); }
+    a { color: var(--accent-2); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    code, .mono { font-family: var(--mono); font-size: 0.9em; }
+    .app { display: grid; grid-template-columns: var(--sidebar-w) 1fr; grid-template-rows: var(--topbar-h) 1fr; min-height: 100vh; }
+    .sidebar {
+      grid-row: 1 / -1;
+      background: var(--sidebar);
+      border-right: 1px solid var(--border);
+      padding: 1rem 0.75rem;
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .brand { padding: 0.35rem 0.65rem 1rem; border-bottom: 1px solid var(--border-soft); margin-bottom: 0.5rem; }
+    .brand .logo { font-weight: 700; font-size: 0.95rem; letter-spacing: 0.02em; }
+    .brand .sub { color: var(--muted); font-size: 0.72rem; margin-top: 0.25rem; }
+    .nav-btn {
+      display: flex; align-items: center; gap: 0.55rem;
+      width: 100%; text-align: left;
+      background: transparent; border: none; color: var(--muted);
+      padding: 0.55rem 0.7rem; border-radius: 8px; cursor: pointer;
+      font-size: 0.9rem; font-weight: 500;
+    }
+    .nav-btn:hover { background: var(--panel); color: var(--text); }
+    .nav-btn.active { background: #1a2a48; color: var(--text); box-shadow: inset 3px 0 0 var(--accent); }
+    .nav-btn .ico { width: 1.1rem; text-align: center; opacity: 0.85; }
+    .nav-btn .en { color: var(--muted); font-size: 0.72rem; font-weight: 400; margin-left: auto; font-family: var(--mono); }
+    .topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 1.25rem; background: var(--bg-elev); border-bottom: 1px solid var(--border);
+    }
+    .topbar-left { display: flex; align-items: center; gap: 0.75rem; }
+    .topbar h1 { font-size: 0.95rem; margin: 0; font-weight: 600; }
+    .pill {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      padding: 0.2rem 0.55rem; border-radius: 999px; font-size: 0.72rem; font-weight: 600;
+      border: 1px solid var(--border);
+      background: var(--panel);
+    }
+    .pill.ok { color: var(--ok); border-color: #1e4a38; background: #0f2a1f; }
+    .pill.bad { color: var(--danger); border-color: #4a1e1e; background: #2a1212; }
+    .pill.muted { color: var(--muted); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+    .topbar-right { display: flex; align-items: center; gap: 0.6rem; color: var(--muted); font-size: 0.8rem; }
+    .main { padding: 1.15rem 1.25rem 2rem; overflow: auto; background: linear-gradient(180deg, #0b1220 0%, #0a101c 100%); }
+    .view { display: none; }
+    .view.active { display: block; }
+    .view-title { margin: 0 0 1rem; font-size: 1.15rem; font-weight: 650; }
+    .view-title span { color: var(--muted); font-weight: 500; font-size: 0.85rem; margin-left: 0.4rem; }
+    .grid { display: grid; gap: 0.9rem; }
+    .grid.stats { grid-template-columns: repeat(4, 1fr); }
+    .grid.two { grid-template-columns: 1fr 1fr; }
+    .grid.three { grid-template-columns: repeat(3, 1fr); }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.1rem;
+    }
+    .card h3 {
+      margin: 0 0 0.75rem; font-size: 0.8rem; font-weight: 600;
+      color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .stat-val { font-size: 1.65rem; font-weight: 700; font-family: var(--mono); line-height: 1.1; }
+    .stat-label { color: var(--muted); font-size: 0.78rem; margin-top: 0.35rem; }
+    .kv { display: grid; grid-template-columns: 7.5rem 1fr; gap: 0.4rem 0.75rem; font-size: 0.88rem; }
+    .kv .k { color: var(--muted); }
+    .kv .v { font-family: var(--mono); word-break: break-all; }
+    .badge-open { color: var(--ok); font-weight: 700; }
+    .badge-closed { color: var(--danger); font-weight: 700; }
+    button, .btn {
+      background: var(--accent); color: #fff; border: none; border-radius: 8px;
+      padding: 0.5rem 0.95rem; font-weight: 600; cursor: pointer; font-size: 0.88rem;
+    }
+    button:hover { filter: brightness(1.08); }
+    button.secondary { background: #243049; color: var(--text); }
+    button.ghost { background: transparent; border: 1px solid var(--border); color: var(--muted); }
+    input, select, textarea {
+      background: var(--panel-2); color: var(--text);
+      border: 1px solid var(--border); border-radius: 8px;
+      padding: 0.5rem 0.7rem; font-size: 0.88rem; font-family: var(--sans);
+    }
+    input:focus, select:focus, textarea:focus { outline: 1px solid var(--accent); border-color: var(--accent); }
+    .form-row { display: flex; flex-wrap: wrap; gap: 0.65rem; align-items: flex-end; margin-bottom: 0.85rem; }
+    .field { display: flex; flex-direction: column; gap: 0.3rem; }
+    .field label { font-size: 0.75rem; color: var(--muted); font-weight: 600; }
+    .field input { min-width: 10rem; }
+    .field input#payload { min-width: 18rem; }
+    pre, .logbox {
+      margin: 0; white-space: pre-wrap; word-break: break-word;
+      font-family: var(--mono); font-size: 0.75rem; line-height: 1.45;
+      max-height: 320px; overflow: auto; color: #c8d4ee;
+      background: #0a101c; border: 1px solid var(--border-soft);
+      border-radius: 8px; padding: 0.75rem;
+    }
+    .store-depth {
+      display: flex; flex-direction: column; gap: 0.5rem;
+    }
+    .depth-bar-wrap { height: 8px; background: #0a101c; border-radius: 999px; overflow: hidden; border: 1px solid var(--border-soft); }
+    .depth-bar { height: 100%; background: linear-gradient(90deg, var(--accent), #22d3ee); width: 0%; transition: width 0.35s ease; }
+    .depth-meta { display: flex; justify-content: space-between; font-size: 0.8rem; }
+    .depth-meta .name { color: var(--muted); }
+    .depth-meta .count { font-family: var(--mono); font-weight: 700; }
+    .toast {
+      position: fixed; right: 1rem; bottom: 1rem; z-index: 50;
+      background: #163528; color: var(--ok); border: 1px solid #1e4a38;
+      padding: 0.65rem 0.9rem; border-radius: 8px; font-size: 0.85rem;
+      opacity: 0; transform: translateY(8px); transition: all 0.2s; pointer-events: none;
+      max-width: 360px; font-family: var(--mono);
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    .toast.err { background: #2a1212; color: var(--danger); border-color: #4a1e1e; }
+    .hint { color: var(--muted); font-size: 0.8rem; margin: 0.25rem 0 0.75rem; }
+    .progress-ring {
+      height: 6px; background: #0a101c; border-radius: 999px; overflow: hidden; margin-top: 0.6rem;
+      border: 1px solid var(--border-soft);
+    }
+    .progress-ring > span { display: block; height: 100%; background: var(--ok); width: 50%; transition: width 0.4s linear, background 0.2s; }
+    .progress-ring.closed > span { background: var(--danger); }
+    table.simple { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    table.simple th, table.simple td { text-align: left; padding: 0.45rem 0.35rem; border-bottom: 1px solid var(--border-soft); }
+    table.simple th { color: var(--muted); font-weight: 600; font-size: 0.75rem; }
+    table.simple td.mono { font-family: var(--mono); }
+    @media (max-width: 960px) {
+      .grid.stats, .grid.three { grid-template-columns: 1fr 1fr; }
+      .grid.two { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 720px) {
+      .app { grid-template-columns: 1fr; grid-template-rows: auto var(--topbar-h) 1fr; }
+      .sidebar { grid-row: auto; flex-direction: row; flex-wrap: wrap; border-right: none; border-bottom: 1px solid var(--border); padding: 0.65rem; }
+      .brand { border: none; margin: 0; padding: 0.35rem 0.5rem; width: 100%; }
+      .nav-btn { width: auto; }
+      .nav-btn .en { display: none; }
+      .grid.stats { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">DTN Relay Console</div>
+        <div class="sub">ops dashboard · /api</div>
+      </div>
+      <button type="button" class="nav-btn active" data-view="overview"><span class="ico">◉</span>概览<span class="en">Overview</span></button>
+      <button type="button" class="nav-btn" data-view="storage"><span class="ico">▣</span>存储<span class="en">Storage</span></button>
+      <button type="button" class="nav-btn" data-view="connections"><span class="ico">⇄</span>连接<span class="en">Connections</span></button>
+      <button type="button" class="nav-btn" data-view="send"><span class="ico">➤</span>发送<span class="en">Send</span></button>
+      <button type="button" class="nav-btn" data-view="logs"><span class="ico">≡</span>日志<span class="en">Logs</span></button>
+    </aside>
+
+    <header class="topbar">
+      <div class="topbar-left">
+        <h1>节点 <code id="tb-node">Earth</code></h1>
+        <span class="pill muted" id="tb-role">role=—</span>
+        <span class="pill bad" id="tb-contact"><span class="dot"></span><span id="tb-contact-text">—</span></span>
+      </div>
+      <div class="topbar-right">
+        <span>port <code>:3101</code></span>
+        <span>·</span>
+        <span id="tb-uptime">uptime —</span>
+        <button type="button" class="ghost" id="btn-refresh" title="Refresh now">↻</button>
+      </div>
+    </header>
+
+    <main class="main">
+      <!-- Overview -->
+      <section class="view active" id="view-overview">
+        <h2 class="view-title">概览 <span>Overview</span></h2>
+        <div class="grid stats">
+          <div class="card"><div class="stat-val" id="st-bundles">0</div><div class="stat-label">Bundles · LevelDB</div></div>
+          <div class="card"><div class="stat-val" id="st-custody">0</div><div class="stat-label">Custody · held</div></div>
+          <div class="card"><div class="stat-val" id="st-index">0</div><div class="stat-label">Index · keys</div></div>
+          <div class="card"><div class="stat-val" id="st-inbox">0</div><div class="stat-label">Inbox · local</div></div>
+        </div>
+        <div class="grid two" style="margin-top:0.9rem">
+          <div class="card">
+            <h3>节点信息 Node</h3>
+            <div class="kv">
+              <div class="k">nodeId</div><div class="v" id="ov-node">Earth</div>
+              <div class="k">role</div><div class="v" id="ov-role">—</div>
+              <div class="k">port</div><div class="v">:3101</div>
+              <div class="k">peerUrl</div><div class="v" id="ov-peer">http://127.0.0.1:3102</div>
+              <div class="k">dataDir</div><div class="v" id="ov-datadir">—</div>
+              <div class="k">uptime</div><div class="v" id="ov-uptime">—</div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>接触窗口 Contact</h3>
+            <div class="kv">
+              <div class="k">peer</div><div class="v" id="ov-c-peer">—</div>
+              <div class="k">link</div><div class="v" id="ov-c-link">—</div>
+              <div class="k">phase</div><div class="v" id="ov-c-phase">—</div>
+              <div class="k">delayMs</div><div class="v" id="ov-c-delay">—</div>
+              <div class="k">nextChange</div><div class="v" id="ov-c-next">—</div>
+            </div>
+            <div class="progress-ring" id="ov-c-bar"><span style="width:40%"></span></div>
+            <p class="hint" style="margin-top:0.55rem">周期开窗时链路可转发；关闭时 store-and-forward。</p>
+          </div>
+        </div>
+        <div class="card" style="margin-top:0.9rem">
+          <h3>最近事件 Recent events</h3>
+          <pre id="ov-events">loading…</pre>
+        </div>
+      </section>
+
+      <!-- Storage -->
+      <section class="view" id="view-storage">
+        <h2 class="view-title">存储 <span>Storage · LevelDB depths</span></h2>
+        <p class="hint">三层存储深度来自 <code>/api/status</code> store 计数（bundles / custody / index），另含本地 inbox。</p>
+        <div class="grid three">
+          <div class="card">
+            <h3>Bundles</h3>
+            <div class="store-depth">
+              <div class="depth-meta"><span class="name">pending / stored</span><span class="count" id="st2-bundles">0</span></div>
+              <div class="depth-bar-wrap"><div class="depth-bar" id="bar-bundles"></div></div>
+              <p class="hint">应用 / 转发中的 bundle 条目</p>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Custody</h3>
+            <div class="store-depth">
+              <div class="depth-meta"><span class="name">custody held</span><span class="count" id="st2-custody">0</span></div>
+              <div class="depth-bar-wrap"><div class="depth-bar" id="bar-custody"></div></div>
+              <p class="hint">等待 ACK / 接触窗口的托管</p>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Index</h3>
+            <div class="store-depth">
+              <div class="depth-meta"><span class="name">index keys</span><span class="count" id="st2-index">0</span></div>
+              <div class="depth-bar-wrap"><div class="depth-bar" id="bar-index"></div></div>
+              <p class="hint">查找索引深度</p>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:0.9rem">
+          <h3>本地投递 Inbox</h3>
+          <div class="form-row">
+            <button type="button" id="btn-inbox-peek" class="secondary">Peek inbox</button>
+            <button type="button" id="btn-inbox-recv">Recv (poll+clear)</button>
+            <span class="hint" style="margin:0">当前深度 <code id="st2-inbox">0</code></span>
+          </div>
+          <pre id="inbox-out">[]</pre>
+        </div>
+        <div class="card" style="margin-top:0.9rem">
+          <h3>路径 Paths</h3>
+          <div class="kv">
+            <div class="k">dataDir</div><div class="v" id="st-datadir">—</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Connections -->
+      <section class="view" id="view-connections">
+        <h2 class="view-title">连接 <span>Connections</span></h2>
+        <div class="grid two">
+          <div class="card">
+            <h3>对等链路 Peer link</h3>
+            <div class="kv">
+              <div class="k">peer</div><div class="v" id="cn-peer">—</div>
+              <div class="k">peerUrl</div><div class="v" id="cn-url">http://127.0.0.1:3102</div>
+              <div class="k">status</div><div class="v" id="cn-status">—</div>
+              <div class="k">phase</div><div class="v" id="cn-phase">—</div>
+              <div class="k">delayMs</div><div class="v" id="cn-delay">—</div>
+              <div class="k">bandwidth</div><div class="v" id="cn-bw">—</div>
+            </div>
+          </div>
+          <div class="card">
+            <h3>接触计划 Contact window</h3>
+            <div class="kv">
+              <div class="k">schedule</div><div class="v" id="cn-sched">—</div>
+              <div class="k">periodMs</div><div class="v" id="cn-period">—</div>
+              <div class="k">openOffset</div><div class="v" id="cn-offset">—</div>
+              <div class="k">openDuration</div><div class="v" id="cn-duration">—</div>
+              <div class="k">nextChangeAt</div><div class="v" id="cn-next">—</div>
+              <div class="k">endpoints</div><div class="v" id="cn-ends">—</div>
+            </div>
+            <div class="progress-ring" id="cn-bar"><span></span></div>
+          </div>
+        </div>
+        <div class="card" style="margin-top:0.9rem">
+          <h3>摘要 Summary</h3>
+          <table class="simple">
+            <thead><tr><th>字段 Field</th><th>值 Value</th></tr></thead>
+            <tbody>
+              <tr><td>本节点</td><td class="mono" id="cn-self">Earth</td></tr>
+              <tr><td>对端</td><td class="mono" id="cn-peer2">—</td></tr>
+              <tr><td>链路</td><td id="cn-link-cell">—</td></tr>
+              <tr><td>API</td><td class="mono">/api/contacts · /api/status</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Send -->
+      <section class="view" id="view-send">
+        <h2 class="view-title">发送 <span>Send Bundle</span></h2>
+        <div class="card">
+          <p class="hint">经本节点 <code>/api/send</code> 注入应用流量；接触关闭时将 custody 存证，开窗后转发至 peer。</p>
+          <div class="form-row">
+            <div class="field">
+              <label for="dst">目的地 dst</label>
+              <input id="dst" value="Mars"/>
+            </div>
+            <div class="field">
+              <label for="payload">载荷 payload</label>
+              <input id="payload" value="Hello from Earth"/>
+            </div>
+            <div class="field">
+              <label for="ttl">TTL ms (optional)</label>
+              <input id="ttl" type="number" placeholder="120000" style="min-width:8rem"/>
+            </div>
+            <button type="button" id="btn-send">Send</button>
+          </div>
+          <h3 style="margin-top:0.5rem">响应 Response</h3>
+          <pre id="send-out">—</pre>
+        </div>
+        <div class="card" style="margin-top:0.9rem">
+          <h3>快捷 Quick</h3>
+          <div class="form-row">
+            <button type="button" class="secondary" id="btn-recv-quick">Recv inbox</button>
+            <span class="hint" style="margin:0">投递结果也会出现在 存储 → Inbox</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Logs -->
+      <section class="view" id="view-logs">
+        <h2 class="view-title">日志 <span>Logs · recentEvents</span></h2>
+        <p class="hint">来自 <code>/api/status</code> 的 recentEvents 轮询（约 1s）。无独立日志流 API 时以此为占位。</p>
+        <div class="card">
+          <div class="form-row">
+            <button type="button" class="secondary" id="btn-clear-logview">Clear view</button>
+            <span class="hint" style="margin:0" id="log-count">0 events</span>
+          </div>
+          <pre id="log-out">loading…</pre>
+        </div>
+      </section>
+    </main>
+  </div>
+  <div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  let lastStatus = null;
+  let logClearedAt = 0;
+
+  function fmtUptime(ms) {
+    if (ms == null || !isFinite(ms)) return '—';
+    const s = Math.floor(ms / 1000);
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return h + 'h ' + m + 'm ' + sec + 's';
+    if (m > 0) return m + 'm ' + sec + 's';
+    return sec + 's';
+  }
+
+  function fmtTime(t) {
+    try { return new Date(t).toLocaleTimeString(); } catch (_) { return String(t); }
+  }
+
+  function toast(msg, err) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.className = 'toast show' + (err ? ' err' : '');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => { el.className = 'toast'; }, 2800);
+  }
+
+  function setContactPill(open, phase) {
+    const pill = $('tb-contact');
+    const text = $('tb-contact-text');
+    pill.className = 'pill ' + (open ? 'ok' : 'bad');
+    text.textContent = open ? 'OPEN' : 'CLOSED';
+    pill.title = phase || '';
+  }
+
+  function contactProgress(contact) {
+    if (!contact || !contact.schedule) return { pct: 50, open: false };
+    const s = contact.schedule;
+    const now = Date.now();
+    const elapsed = now % s.periodMs;
+    const open = !!contact.open;
+    let pct;
+    if (open) {
+      const closeAt = s.openOffsetMs + s.openDurationMs;
+      const remain = Math.max(0, closeAt - elapsed);
+      pct = Math.max(2, Math.min(100, (remain / s.openDurationMs) * 100));
+    } else if (elapsed < s.openOffsetMs) {
+      pct = Math.max(2, Math.min(100, (elapsed / s.openOffsetMs) * 100));
+    } else {
+      const after = elapsed - (s.openOffsetMs + s.openDurationMs);
+      const closedTail = s.periodMs - (s.openOffsetMs + s.openDurationMs);
+      pct = Math.max(2, Math.min(100, (after / Math.max(1, closedTail)) * 100));
+    }
+    return { pct, open };
+  }
+
+  function applyBar(el, contact) {
+    if (!el) return;
+    const { pct, open } = contactProgress(contact);
+    el.className = 'progress-ring' + (open ? '' : ' closed');
+    const span = el.querySelector('span');
+    if (span) span.style.width = pct + '%';
+  }
+
+  function depthPct(n, maxRef) {
+    const m = Math.max(maxRef, 1);
+    return Math.min(100, Math.round((n / m) * 100));
+  }
+
+  function renderEvents(events, el, since) {
+    const list = (events || []).filter((e) => !since || e.t >= since);
+    el.textContent = list.length
+      ? list.map((e) => fmtTime(e.t) + '  ' + String(e.event).padEnd(10) + '  ' + e.msg).join('\n')
+      : '(no events)';
+    return list.length;
+  }
+
+  function applyStatus(s) {
+    lastStatus = s;
+    const open = !!(s.contact && s.contact.open);
+    $('tb-node').textContent = s.nodeId;
+    $('tb-role').textContent = 'role=' + s.role;
+    setContactPill(open, s.contact && s.contact.phase);
+    $('tb-uptime').textContent = 'uptime ' + fmtUptime(s.uptimeMs);
+
+    $('st-bundles').textContent = s.store.bundles;
+    $('st-custody').textContent = s.store.custody;
+    $('st-index').textContent = s.store.index;
+    $('st-inbox').textContent = s.store.inbox;
+
+    $('ov-node').textContent = s.nodeId;
+    $('ov-role').textContent = s.role;
+    $('ov-peer').textContent = s.peerUrl;
+    $('ov-datadir').textContent = s.dataDir;
+    $('ov-uptime').textContent = fmtUptime(s.uptimeMs);
+    $('ov-c-peer').textContent = s.contact.peer;
+    $('ov-c-link').innerHTML = open
+      ? '<span class="badge-open">OPEN</span>'
+      : '<span class="badge-closed">CLOSED</span>';
+    $('ov-c-phase').textContent = s.contact.phase;
+    $('ov-c-delay').textContent = String(s.contact.delayMs);
+    $('ov-c-next').textContent = s.contact.nextChangeAt
+      ? new Date(s.contact.nextChangeAt).toLocaleString() + ' (' + fmtTime(s.contact.nextChangeAt) + ')'
+      : '—';
+    applyBar($('ov-c-bar'), s.contact);
+    renderEvents((s.recentEvents || []).slice(-14), $('ov-events'));
+
+    const maxStore = Math.max(s.store.bundles, s.store.custody, s.store.index, s.store.inbox, 4);
+    $('st2-bundles').textContent = s.store.bundles;
+    $('st2-custody').textContent = s.store.custody;
+    $('st2-index').textContent = s.store.index;
+    $('st2-inbox').textContent = s.store.inbox;
+    $('bar-bundles').style.width = depthPct(s.store.bundles, maxStore) + '%';
+    $('bar-custody').style.width = depthPct(s.store.custody, maxStore) + '%';
+    $('bar-index').style.width = depthPct(s.store.index, maxStore) + '%';
+    $('st-datadir').textContent = s.dataDir;
+
+    $('cn-peer').textContent = s.contact.peer;
+    $('cn-peer2').textContent = s.contact.peer;
+    $('cn-url').textContent = s.peerUrl;
+    $('cn-status').innerHTML = open
+      ? '<span class="badge-open">OPEN</span>'
+      : '<span class="badge-closed">CLOSED</span>';
+    $('cn-link-cell').innerHTML = open
+      ? '<span class="badge-open">OPEN</span>'
+      : '<span class="badge-closed">CLOSED</span>';
+    $('cn-phase').textContent = s.contact.phase;
+    $('cn-delay').textContent = String(s.contact.delayMs);
+    applyBar($('cn-bar'), s.contact);
+    $('cn-next').textContent = s.contact.nextChangeAt
+      ? new Date(s.contact.nextChangeAt).toLocaleString()
+      : '—';
+
+    const n = renderEvents(s.recentEvents || [], $('log-out'), logClearedAt || 0);
+    $('log-count').textContent = n + ' events';
+  }
+
+  async function refreshContacts(s) {
+    try {
+      const c = await fetch('/api/contacts').then((r) => r.json());
+      if (!c) return;
+      const sch = c.schedule || (c.contact && c.contact.schedule) || {};
+      $('cn-sched').textContent = sch.type || '—';
+      $('cn-period').textContent = sch.periodMs != null ? String(sch.periodMs) : '—';
+      $('cn-offset').textContent = sch.openOffsetMs != null ? String(sch.openOffsetMs) : '—';
+      $('cn-duration').textContent = sch.openDurationMs != null ? String(sch.openDurationMs) : '—';
+      const bw = c.contact && c.contact.bandwidthBps;
+      $('cn-bw').textContent = bw != null ? bw + ' bps' : '—';
+      if (c.contact) {
+        $('cn-ends').textContent = (c.contact.a || '') + ' ↔ ' + (c.contact.b || '');
+      }
+      if (s && s.contact) {
+        s.contact.schedule = sch;
+        applyBar($('ov-c-bar'), s.contact);
+        applyBar($('cn-bar'), Object.assign({}, s.contact, { schedule: sch, open: c.open }));
+      }
+    } catch (_) { /* ignore */ }
+  }
+
+  async function refresh() {
+    try {
+      const s = await fetch('/api/status').then((r) => r.json());
+      applyStatus(s);
+      await refreshContacts(s);
+    } catch (e) {
+      toast('status poll failed: ' + (e && e.message ? e.message : e), true);
+    }
+  }
+
+  document.querySelectorAll('.nav-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
+      document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+      btn.classList.add('active');
+      const view = btn.getAttribute('data-view');
+      const el = document.getElementById('view-' + view);
+      if (el) el.classList.add('active');
+    });
+  });
+
+  $('btn-refresh').addEventListener('click', () => { void refresh(); });
+
+  $('btn-send').addEventListener('click', async () => {
+    const dst = $('dst').value;
+    const payload = $('payload').value;
+    const ttlRaw = $('ttl').value;
+    const body = { dst, payload };
+    if (ttlRaw) body.ttlMs = Number(ttlRaw);
+    try {
+      const r = await fetch('/api/send', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const j = await r.json();
+      $('send-out').textContent = JSON.stringify(j, null, 2);
+      toast(j.ok ? 'sent ' + (j.bundle && j.bundle.id ? j.bundle.id : 'ok') : (j.error || 'send failed'), !j.ok);
+      void refresh();
+    } catch (e) {
+      $('send-out').textContent = String(e);
+      toast(String(e), true);
+    }
+  });
+
+  async function doRecv(clear) {
+    const url = clear ? '/api/recv' : '/api/inbox';
+    const r = await fetch(url).then((x) => x.json());
+    const messages = r.messages || [];
+    $('inbox-out').textContent = JSON.stringify(messages, null, 2);
+    return r;
+  }
+
+  $('btn-inbox-peek').addEventListener('click', async () => {
+    try { await doRecv(false); toast('inbox peeked'); void refresh(); }
+    catch (e) { toast(String(e), true); }
+  });
+  $('btn-inbox-recv').addEventListener('click', async () => {
+    try { await doRecv(true); toast('recv cleared'); void refresh(); }
+    catch (e) { toast(String(e), true); }
+  });
+  $('btn-recv-quick').addEventListener('click', async () => {
+    try {
+      const r = await doRecv(true);
+      $('send-out').textContent = 'recv:\n' + JSON.stringify(r, null, 2);
+      toast('recv ok');
+      void refresh();
+    } catch (e) { toast(String(e), true); }
+  });
+  $('btn-clear-logview').addEventListener('click', () => {
+    logClearedAt = Date.now();
+    $('log-out').textContent = '(cleared — new events will appear)';
+    $('log-count').textContent = '0 events';
+  });
+
+  void refresh();
+  setInterval(() => { void refresh(); }, 1000);
+})();
+</script>
+</body>
+</html>

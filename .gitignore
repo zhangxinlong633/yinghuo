@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.next/
+*.tsbuildinfo
+.DS_Store
+# LevelDB simulation run store
+apps/api/data/
+# Dual-relay daemon LevelDB roots (bundles/custody/index per node)
+data/

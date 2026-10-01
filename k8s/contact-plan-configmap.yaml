@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: dtn-contact-plan
+  namespace: dtn-demo
+data:
+  contact-plan.json: |
+    {
+      "description": "Earth ↔ Relay ↔ Mars educational contact plan (virtual ms)",
+      "scale": "Virtual ms: Earth-Relay [0,800), Relay-Mars [2000,3500). CronJobs below are illustrative wall-clock slots.",
+      "nodes": [
+        { "name": "Earth", "role": "endpoint", "nextHop": { "Mars": "Relay", "Relay": "Relay" } },
+        { "name": "Relay", "role": "relay", "nextHop": { "Mars": "Mars", "Earth": "Earth" } },
+        { "name": "Mars", "role": "endpoint", "nextHop": { "Earth": "Relay", "Relay": "Relay" } }
+      ],
+      "contacts": [
+        {
+          "a": "Earth",
+          "b": "Relay",
+          "windows": [[0, 800]],
+          "delayMs": 200,
+          "bandwidthBps": 1000000
+        },
+        {
+          "a": "Relay",
+          "b": "Mars",
+          "windows": [[2000, 3500]],
+          "delayMs": 400,
+          "bandwidthBps": 500000
+        }
+      ],
+      "application": {
+        "src": "Earth",
+        "dst": "Mars",
+        "payload": "Hello Mars",
+        "ttlMs": 10000,
+        "atMs": 0
+      },
+      "maxTimeMs": 5000,
+      "tickMs": 100
+    }

@@ -1,0 +1,34 @@
+# DTNContact CRs — windows scaled to illustrative wall-clock (classroom day).
+# Virtual demo: Earth-Relay [0,800)ms, Relay-Mars [2000,3500)ms.
+# Mapped here as relative RFC3339 placeholders; controller compares now vs window.
+apiVersion: dtn.demo.space/v1alpha1
+kind: DTNContact
+metadata:
+  name: earth-relay-window-1
+  namespace: dtn-demo
+  labels:
+    dtn.demo.space/pair: Earth-Relay
+spec:
+  endpointA: Earth
+  endpointB: Relay
+  # Cron comment: open early slot — maps to sim [0, 800)
+  windowStart: "2026-10-01T00:00:00Z"
+  windowEnd: "2026-10-01T00:00:00.800Z"
+  delayMs: 200
+  bandwidthBps: 1000000
+---
+apiVersion: dtn.demo.space/v1alpha1
+kind: DTNContact
+metadata:
+  name: relay-mars-window-1
+  namespace: dtn-demo
+  labels:
+    dtn.demo.space/pair: Relay-Mars
+spec:
+  endpointA: Relay
+  endpointB: Mars
+  # Cron comment: open late slot after outage — maps to sim [2000, 3500)
+  windowStart: "2026-10-01T00:00:02Z"
+  windowEnd: "2026-10-01T00:00:03.500Z"
+  delayMs: 400
+  bandwidthBps: 500000

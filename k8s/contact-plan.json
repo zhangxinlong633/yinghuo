@@ -1,0 +1,34 @@
+{
+  "description": "Earth ↔ Relay ↔ Mars educational contact plan (virtual ms)",
+  "scale": "Virtual ms aligned with demo: Earth-Relay [0,800), outage, Relay-Mars [2000,3500). CronJob comments map windows to wall-clock slots for classroom demos.",
+  "nodes": [
+    { "name": "Earth", "role": "endpoint", "nextHop": { "Mars": "Relay", "Relay": "Relay" } },
+    { "name": "Relay", "role": "relay", "nextHop": { "Mars": "Mars", "Earth": "Earth" } },
+    { "name": "Mars", "role": "endpoint", "nextHop": { "Earth": "Relay", "Relay": "Relay" } }
+  ],
+  "contacts": [
+    {
+      "a": "Earth",
+      "b": "Relay",
+      "windows": [[0, 800]],
+      "delayMs": 200,
+      "bandwidthBps": 1000000
+    },
+    {
+      "a": "Relay",
+      "b": "Mars",
+      "windows": [[2000, 3500]],
+      "delayMs": 400,
+      "bandwidthBps": 500000
+    }
+  ],
+  "application": {
+    "src": "Earth",
+    "dst": "Mars",
+    "payload": "Hello Mars",
+    "ttlMs": 10000,
+    "atMs": 0
+  },
+  "maxTimeMs": 5000,
+  "tickMs": 100
+}

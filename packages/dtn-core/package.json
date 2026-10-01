@@ -1,0 +1,17 @@
+{
+  "name": "@dtn-demo/core",
+  "version": "1.0.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "demo": "tsx src/cli-demo.ts",
+    "demo:plan": "tsx src/cli-plan.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}

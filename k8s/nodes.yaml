@@ -1,0 +1,163 @@
+# Stub Deployments for Earth / Relay / Mars DTN nodes.
+# In a real cluster they would run the NestJS agent or a CLA sidecar.
+# Educational only — image is a sleep placeholder.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dtn-demo
+---
+apiVersion: dtn.demo.space/v1alpha1
+kind: DTNNode
+metadata:
+  name: earth
+  namespace: dtn-demo
+spec:
+  nodeId: Earth
+  role: endpoint
+  nextHop:
+    Mars: Relay
+    Relay: Relay
+  bundleStore: earth-store
+---
+apiVersion: dtn.demo.space/v1alpha1
+kind: DTNNode
+metadata:
+  name: relay
+  namespace: dtn-demo
+spec:
+  nodeId: Relay
+  role: relay
+  nextHop:
+    Mars: Mars
+    Earth: Earth
+  bundleStore: relay-store
+---
+apiVersion: dtn.demo.space/v1alpha1
+kind: DTNNode
+metadata:
+  name: mars
+  namespace: dtn-demo
+spec:
+  nodeId: Mars
+  role: endpoint
+  nextHop:
+    Earth: Relay
+    Relay: Relay
+  bundleStore: mars-store
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dtn-earth
+  namespace: dtn-demo
+  labels:
+    dtn.demo.space/node: Earth
+    dtn.demo.space/role: endpoint
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      dtn.demo.space/node: Earth
+  template:
+    metadata:
+      labels:
+        dtn.demo.space/node: Earth
+        dtn.demo.space/role: endpoint
+    spec:
+      containers:
+        - name: agent
+          image: node:20-alpine
+          command: ["sh", "-c", "echo 'DTN Earth agent stub — mount contact plan / run NestJS'; sleep infinity"]
+          volumeMounts:
+            - name: store
+              mountPath: /var/dtn/store
+            - name: plan
+              mountPath: /etc/dtn
+              readOnly: true
+          env:
+            - name: DTN_NODE_ID
+              value: Earth
+      volumes:
+        - name: store
+          emptyDir: {}
+        - name: plan
+          configMap:
+            name: dtn-contact-plan
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dtn-relay
+  namespace: dtn-demo
+  labels:
+    dtn.demo.space/node: Relay
+    dtn.demo.space/role: relay
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      dtn.demo.space/node: Relay
+  template:
+    metadata:
+      labels:
+        dtn.demo.space/node: Relay
+        dtn.demo.space/role: relay
+    spec:
+      containers:
+        - name: agent
+          image: node:20-alpine
+          command: ["sh", "-c", "echo 'DTN Relay agent stub'; sleep infinity"]
+          volumeMounts:
+            - name: store
+              mountPath: /var/dtn/store
+            - name: plan
+              mountPath: /etc/dtn
+              readOnly: true
+          env:
+            - name: DTN_NODE_ID
+              value: Relay
+      volumes:
+        - name: store
+          emptyDir: {}
+        - name: plan
+          configMap:
+            name: dtn-contact-plan
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dtn-mars
+  namespace: dtn-demo
+  labels:
+    dtn.demo.space/node: Mars
+    dtn.demo.space/role: endpoint
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      dtn.demo.space/node: Mars
+  template:
+    metadata:
+      labels:
+        dtn.demo.space/node: Mars
+        dtn.demo.space/role: endpoint
+    spec:
+      containers:
+        - name: agent
+          image: node:20-alpine
+          command: ["sh", "-c", "echo 'DTN Mars agent stub'; sleep infinity"]
+          volumeMounts:
+            - name: store
+              mountPath: /var/dtn/store
+            - name: plan
+              mountPath: /etc/dtn
+              readOnly: true
+          env:
+            - name: DTN_NODE_ID
+              value: Mars
+      volumes:
+        - name: store
+          emptyDir: {}
+        - name: plan
+          configMap:
+            name: dtn-contact-plan

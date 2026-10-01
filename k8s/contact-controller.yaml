@@ -1,0 +1,104 @@
+# Educational contact-graph controller + CronJobs that "open" contacts.
+# Real implementation would reconcile DTNContact CRs → NetworkPolicy/Service
+# and spawn forward Jobs when linkState=Open.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dtn-contact-controller
+  namespace: dtn-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dtn-contact-controller
+  template:
+    metadata:
+      labels:
+        app: dtn-contact-controller
+    spec:
+      containers:
+        - name: controller
+          image: node:20-alpine
+          command:
+            - sh
+            - -c
+            - |
+              echo "Educational controller stub"
+              echo "Reconcile loop (documented):"
+              echo "  1. watch DTNContact"
+              echo "  2. if now in [windowStart, windowEnd) -> status.linkState=Open"
+              echo "  3. apply NetworkPolicy allow A<->B; create forward Job"
+              echo "  4. else linkState=Closed; deny traffic; drain workers"
+              sleep infinity
+          volumeMounts:
+            - name: plan
+              mountPath: /etc/dtn
+              readOnly: true
+      volumes:
+        - name: plan
+          configMap:
+            name: dtn-contact-plan
+---
+# Illustrative CronJobs — comments map to demo windows (not live deep-space clocks).
+# Earth-Relay "open" burst near minute 0; Relay-Mars near minute 2 of a demo hour.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: open-earth-relay
+  namespace: dtn-demo
+  annotations:
+    dtn.demo.space/maps-to: "sim window Earth-Relay [0, 800)"
+spec:
+  # Classroom placeholder schedule (every hour at :00)
+  schedule: "0 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: open-contact
+              image: bitnami/kubectl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "PATCH DTNContact earth-relay-window-1 linkState=Open"
+                  echo "kubectl annotate / create Job forward-earth-relay"
+                  echo "(dry-run educational stub — no cluster mutation required)"
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: open-relay-mars
+  namespace: dtn-demo
+  annotations:
+    dtn.demo.space/maps-to: "sim window Relay-Mars [2000, 3500)"
+spec:
+  # Classroom placeholder: :02 past each hour ≈ late contact after outage
+  schedule: "2 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: open-contact
+              image: bitnami/kubectl:latest
+              command:
+                - /bin/sh
+                - -c
+                - |
+                  echo "PATCH DTNContact relay-mars-window-1 linkState=Open"
+                  echo "create Job forward-relay-mars (transfer burst)"
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: dtn-default-deny-inter-node
+  namespace: dtn-demo
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+  # Default deny between DTN node pods — contacts temporarily open allow rules
+  # (controller would add ephemeral NetworkPolicies per open DTNContact).

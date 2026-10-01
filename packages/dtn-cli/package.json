@@ -1,0 +1,20 @@
+{
+  "name": "@dtn-demo/cli",
+  "version": "1.0.0",
+  "private": true,
+  "bin": {
+    "dtn": "./src/cli.ts"
+  },
+  "scripts": {
+    "start": "tsx src/cli.ts",
+    "build": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dtn-demo/sdk": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}
