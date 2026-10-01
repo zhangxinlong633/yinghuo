@@ -340,6 +340,8 @@ export function buildConsoleHtml(opts: {
     }
     table.simple th { color: var(--faint); font-weight: 600; font-size: 0.88rem; }
     table.simple td.mono { font-family: var(--mono); }
+    tr[data-id] { cursor: pointer; }
+    tr[data-id]:hover { background: var(--bg-soft); }
     #bundle-rows tr { cursor: pointer; }
     #bundle-rows tr:hover td { background: var(--bg-soft); }
     @media (max-width: 1100px) {
@@ -633,8 +635,10 @@ export function buildConsoleHtml(opts: {
       themeLight: '浅色', themeDark: '深色',
       bundlesTitle: '报文', colId: 'id', colSrc: '源', colDst: '目的', colState: '状态', colWhere: '当前节点', colUpdated: '更新时间',
       timeline: '时间线', notFound: '未找到', openBundle: '查看报文', notDirect: '本机不直连',
+      upstream: '上游', downstream: '下游',
+      kindStored: '已存储', kindWaiting: '等待窗口', kindForward: '转发', kindRetry: '重试',
+      kindArrived: '已到达', kindAcked: '已确认', kindExpired: '已过期',
       stateWaiting: '等待窗口', stateForwarding: '转发中', stateArrived: '已到达', stateAcked: '已确认', stateExpired: '已过期',
-      kindStored: '已存储',
       toastStatus: '状态轮询失败：', toastSent: '已发送 ', toastSendFail: '发送失败',
       toastPeek: '已查看收件箱', toastRecv: '已接收并清空', toastRecvOk: '接收成功'
     },
@@ -661,8 +665,10 @@ export function buildConsoleHtml(opts: {
       themeLight: 'Light', themeDark: 'Dark',
       bundlesTitle: 'Bundles', colId: 'id', colSrc: 'Source', colDst: 'Dest', colState: 'State', colWhere: 'Current node', colUpdated: 'Updated',
       timeline: 'Timeline', notFound: 'Not found', openBundle: 'Open bundle', notDirect: 'not a direct link',
+      upstream: 'upstream', downstream: 'downstream',
+      kindStored: 'Stored', kindWaiting: 'Waiting', kindForward: 'Forward', kindRetry: 'Retry',
+      kindArrived: 'Arrived', kindAcked: 'Acked', kindExpired: 'Expired',
       stateWaiting: 'Waiting for window', stateForwarding: 'Forwarding', stateArrived: 'Arrived', stateAcked: 'Acknowledged', stateExpired: 'Expired',
-      kindStored: 'Stored',
       toastStatus: 'status poll failed: ', toastSent: 'sent ', toastSendFail: 'send failed',
       toastPeek: 'inbox peeked', toastRecv: 'recv cleared', toastRecvOk: 'recv ok'
     }
@@ -860,9 +866,27 @@ export function buildConsoleHtml(opts: {
     return map[state] ? t(map[state]) : (state || '—');
   }
 
+  const NODE_ID = '${nodeId}';
+  const HOP_ORDER = ['Earth', 'Relay', 'Mars'];
+  let openSeq = 0;
+
   function kindLabel(kind) {
-    if (kind === 'STORED') return t('kindStored');
-    return kind || '';
+    const map = {
+      STORED: 'kindStored', WAITING: 'kindWaiting', FORWARD: 'kindForward', RETRY: 'kindRetry',
+      ARRIVED: 'kindArrived', ACKED: 'kindAcked', EXPIRED: 'kindExpired',
+    };
+    return map[kind] ? t(map[kind]) : (kind || '');
+  }
+
+  function hopSide(link) {
+    if (link.local) return '';
+    const me = HOP_ORDER.indexOf(NODE_ID);
+    const ia = HOP_ORDER.indexOf(link.a);
+    const ib = HOP_ORDER.indexOf(link.b);
+    if (me < 0 || ia < 0 || ib < 0) return t('notDirect');
+    if (ia > me && ib > me) return t('downstream') + ' · ' + t('notDirect');
+    if (ia < me && ib < me) return t('upstream') + ' · ' + t('notDirect');
+    return t('notDirect');
   }
 
   function bundleRowsHtml(bundles) {
@@ -885,7 +909,8 @@ export function buildConsoleHtml(opts: {
     $('ov-bundle-counts').textContent = ['WAITING', 'FORWARDING', 'ARRIVED', 'EXPIRED']
       .map((s) => stateLabel(s) + ' ' + counts[s]).join(' · ');
     $('bundle-rows').innerHTML = bundleRowsHtml(list);
-    $('ov-bundle-recent').innerHTML = bundleRowsHtml(list.slice(0, 5));
+    const held = list.filter((b) => b.state === 'WAITING' || b.state === 'FORWARDING' || b.state === 'ARRIVED');
+    $('ov-bundle-recent').innerHTML = bundleRowsHtml(held.slice(0, 5));
   }
 
   function renderLinks(links) {
@@ -895,7 +920,7 @@ export function buildConsoleHtml(opts: {
       const label = (l.a || '') + ' ↔ ' + (l.b || '');
       const extra = l.local
         ? linkHtml(!!l.open) + ' <span class="mono">' + esc(l.phase || '—') + '</span>'
-        : esc(t('notDirect'));
+        : esc(hopSide(l));
       return '<tr><td class="mono">' + esc(label) + '</td><td>' + extra + '</td></tr>';
     }).join('');
     el.hidden = !rows;
@@ -913,27 +938,40 @@ export function buildConsoleHtml(opts: {
   }
 
   async function openBundle(id) {
+    const seq = ++openSeq;
     openBundleId = id;
-    const res = await fetch('/api/bundles/' + encodeURIComponent(id));
-    const body = await res.json();
     $('bundle-detail').hidden = false;
-    if (!body.ok) {
-      $('bd-title').textContent = id;
+    $('bd-title').textContent = id;
+    try {
+      const res = await fetch('/api/bundles/' + encodeURIComponent(id));
+      const body = await res.json();
+      if (seq !== openSeq) return;
+      if (!body.ok) {
+        $('bd-meta').textContent = '—';
+        $('bd-events').textContent = t('notFound');
+        return;
+      }
+      $('bd-title').textContent = body.bundle.id;
+      $('bd-meta').textContent = JSON.stringify({
+        state: stateLabel(body.bundle.state),
+        src: body.bundle.src,
+        dst: body.bundle.dst,
+        payload: body.bundle.payload,
+        custodian: body.bundle.custodian,
+      }, null, 2);
+      const events = body.bundle.events || [];
+      const shown = events.filter((e, i) => {
+        const prev = events[i - 1];
+        return !prev || prev.node !== e.node || prev.kind !== e.kind;
+      });
+      $('bd-events').textContent = shown
+        .map((e) => new Date(e.t).toLocaleTimeString() + '  ' + e.node + '  ' + kindLabel(e.kind))
+        .join('\\n') || t('noEvents');
+    } catch (e) {
+      if (seq !== openSeq) return;
       $('bd-meta').textContent = '—';
-      $('bd-events').textContent = t('notFound');
-      return;
+      $('bd-events').textContent = String(e);
     }
-    $('bd-title').textContent = body.bundle.id;
-    $('bd-meta').textContent = JSON.stringify({
-      state: body.bundle.state,
-      src: body.bundle.src,
-      dst: body.bundle.dst,
-      payload: body.bundle.payload,
-      custodian: body.bundle.custodian,
-    }, null, 2);
-    $('bd-events').textContent = (body.bundle.events || [])
-      .map((e) => new Date(e.t).toISOString().slice(11, 19) + '  ' + e.node + '  ' + kindLabel(e.kind) + '  ' + e.msg)
-      .join('\\n');
   }
 
   function showView(view) {

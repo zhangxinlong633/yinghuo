@@ -122,6 +122,15 @@ export class LevelStore implements OnModuleInit, OnModuleDestroy {
     return ids;
   }
 
+  /** Every stored bundle id, including ones touched before this process started. */
+  async listBundleIds(): Promise<string[]> {
+    const ids: string[] = [];
+    for await (const key of this.bundlesDb.keys()) {
+      ids.push(key);
+    }
+    return ids;
+  }
+
   async deliverLocal(msg: DeliveredMessage): Promise<void> {
     this.inbox.push(msg);
     await this.indexDb.put(`inbox:${msg.id}`, JSON.stringify(msg));

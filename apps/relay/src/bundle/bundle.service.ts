@@ -541,7 +541,10 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       updatedAt: number;
     }>
   > {
-    const custodyIds = await this.store.listPendingBundleIds();
+    const [custodyIds, storedIds] = await Promise.all([
+      this.store.listPendingBundleIds(),
+      this.store.listBundleIds(),
+    ]);
     const seen = new Set<string>();
     const ids: string[] = [];
     for (let i = this.recent.length - 1; i >= 0; i--) {
@@ -551,6 +554,11 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       ids.push(id);
     }
     for (const id of custodyIds) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+    }
+    for (const id of storedIds) {
       if (seen.has(id)) continue;
       seen.add(id);
       ids.push(id);
@@ -577,7 +585,8 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
         updatedAt,
       });
     }
-    return rows;
+    rows.sort((a, b) => b.updatedAt - a.updatedAt);
+    return rows.slice(0, BundleService.RECENT_CAP);
   }
 
   recv(clear = true): DeliveredMessage[] {

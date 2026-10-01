@@ -34,6 +34,7 @@ export class PeerService {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ bundle, from: this.cfg.nodeId }),
+        signal: AbortSignal.timeout(3000),
       });
       const body = (await res.json()) as PeerIngestResult;
       if (!res.ok) return { ok: false, body, error: `HTTP ${res.status}` };
@@ -52,6 +53,7 @@ export class PeerService {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ bundleId, from: this.cfg.nodeId, events }),
+        signal: AbortSignal.timeout(3000),
       });
       return res.ok;
     } catch (err: unknown) {
