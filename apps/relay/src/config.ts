@@ -83,7 +83,16 @@ export interface RelayRuntimeConfig {
   bootstrapUrl?: string;
 }
 
-export function peerUrlFor(cfg: RelayRuntimeConfig, nextHopName: string): string {
+/** Graph-mode join peers win over the static plan map and the single peerUrl fallback. */
+export function peerUrlFor(
+  cfg: RelayRuntimeConfig,
+  nextHopName: string,
+  graph?: { peerUrl(id: string): string | undefined } | null,
+): string {
+  if (cfg.graphMode && graph) {
+    const fromGraph = graph.peerUrl(nextHopName);
+    if (fromGraph) return fromGraph;
+  }
   const fromMap = cfg.peers[nextHopName];
   if (fromMap) return fromMap;
   return cfg.peerUrl;

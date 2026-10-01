@@ -67,6 +67,15 @@ export class RelayController {
     return this.requireGraph().snapshot();
   }
 
+  /** Read-only next-hop trial. Same decide() the forwarder uses. */
+  @Get('graph/route')
+  graphRoute(@Query('dst') dst?: string) {
+    if (!dst) {
+      throw new BadRequestException({ ok: false, error: 'dst required' });
+    }
+    return this.requireGraph().decide(dst, Date.now());
+  }
+
   /**
    * Bootstrap side of join. Records the caller as a direct peer with an
    * always-open cyclic contact (period 30s, openDuration 30s) and returns

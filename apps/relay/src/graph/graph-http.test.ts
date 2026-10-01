@@ -106,6 +106,14 @@ test('join and graph handlers record peers and ingest summaries', () => {
   const heard = graph.exportSummary().edges.find((e) => edgeKey(e.a, e.b) === edgeKey('Probe', 'Far'));
   assert.equal(heard?.hopCount, 1);
   assert.equal(api.graphSnapshot().nodes.some((n) => n.id === 'Far'), true);
+  const route = api.graphRoute('Far');
+  assert.equal(route.nextHop, 'Probe');
+  assert.ok(Array.isArray(route.candidates));
+  assert.ok(Array.isArray(route.culled));
+  assert.throws(
+    () => api.graphRoute(''),
+    (err: unknown) => err instanceof BadRequestException,
+  );
 
   assert.throws(
     () => api.peerJoin({ nodeId: 'X' } as never),
@@ -190,6 +198,10 @@ test('postJoin and postGraph update both sides over HTTP', async () => {
     });
     assert.equal(await peer.postGraph(base, clientGraph.exportSummary()), true);
     assert.equal(serverGraph.listKnownNodeIds().includes('Far'), true);
+    const decision = api.graphRoute('Far');
+    assert.equal(decision.nextHop, 'Probe');
+    assert.ok(Array.isArray(decision.candidates));
+    assert.ok(Array.isArray(decision.culled));
   } finally {
     await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
   }

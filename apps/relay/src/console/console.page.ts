@@ -344,6 +344,31 @@ export function buildConsoleHtml(opts: {
     tr[data-id]:hover { background: var(--bg-soft); }
     #bundle-rows tr { cursor: pointer; }
     #bundle-rows tr:hover td { background: var(--bg-soft); }
+    .graph-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1.7fr) minmax(220px, 0.7fr);
+      gap: 0.85rem;
+      min-height: 420px;
+    }
+    .cn-map-card { min-height: 420px; display: flex; flex-direction: column; }
+    #cn-svg {
+      width: 100%;
+      flex: 1;
+      min-height: 360px;
+      background: var(--bg-soft);
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-soft);
+    }
+    #cn-svg .edge.direct { stroke: var(--accent); stroke-width: 2.5; }
+    #cn-svg .edge.heard { stroke: var(--muted); stroke-width: 2; stroke-dasharray: 7 5; }
+    #cn-svg .edge-hit { stroke: transparent; stroke-width: 16; cursor: pointer; }
+    #cn-svg .node circle { fill: var(--surface); stroke: var(--accent-2); stroke-width: 2; }
+    #cn-svg .node.self circle { fill: var(--accent); stroke: var(--accent-2); }
+    #cn-svg .node text { fill: var(--text); font-size: 13px; font-family: var(--sans); font-weight: 650; }
+    #cn-svg .edge.selected { stroke: var(--warn); }
+    .cn-detail { margin-top: 0.85rem; }
+    .cn-detail > summary { cursor: pointer; font-weight: 650; color: var(--muted); }
+    .route-cols pre { min-height: 4.5rem; }
     @media (max-width: 1100px) {
       .grid.stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .grid.three { grid-template-columns: 1fr 1fr; }
@@ -351,11 +376,11 @@ export function buildConsoleHtml(opts: {
     @media (max-width: 900px) {
       .mast-row { flex-wrap: wrap; }
       .nav { order: 3; flex-basis: 100%; }
-      .grid.two { grid-template-columns: 1fr; }
+      .grid.two, .graph-layout { grid-template-columns: 1fr; }
       .card.stretch pre, .card.stretch .logbox { max-height: min(52vh, 480px); }
     }
     @media (max-width: 560px) {
-      .grid.stats, .grid.three { grid-template-columns: 1fr; }
+      .grid.stats, .grid.three, .graph-layout { grid-template-columns: 1fr; }
       .main { padding: 1rem; }
       .brand span.brand-text { display: none; }
     }
@@ -407,6 +432,10 @@ export function buildConsoleHtml(opts: {
           <div class="card stat-card"><div class="stat-val" id="st-custody">—</div><div class="stat-label" data-i18n="statCustody">托管 · 持有</div></div>
           <div class="card stat-card"><div class="stat-val" id="st-index">—</div><div class="stat-label" data-i18n="statIndex">索引 · 键</div></div>
           <div class="card stat-card"><div class="stat-val" id="st-inbox">—</div><div class="stat-label" data-i18n="statInbox">收件箱 · 本地</div></div>
+          <div class="card stat-card"><div class="stat-val" id="st-nodes">—</div><div class="stat-label" data-i18n="statNodes">已知节点</div></div>
+          <div class="card stat-card"><div class="stat-val" id="st-seeds">—</div><div class="stat-label" data-i18n="statSeeds">种子邻居</div></div>
+          <div class="card stat-card"><div class="stat-val" id="st-age">—</div><div class="stat-label" data-i18n="statAge">摘要最大年龄</div></div>
+          <div class="card stat-card"><div class="stat-val" id="st-dests">—</div><div class="stat-label" data-i18n="statDests">可试算目的</div></div>
         </div>
         <div id="ov-bundle-counts" class="hint"></div>
         <table class="simple"><tbody id="ov-bundle-recent"></tbody></table>
@@ -480,7 +509,30 @@ export function buildConsoleHtml(opts: {
 
       <section class="view" id="view-connections">
         <h2 class="view-title" data-i18n="connectionsTitle">连接</h2>
-        <div class="grid two">
+        <div class="graph-layout">
+          <div class="card cn-map-card">
+            <h3 data-i18n="netMap">网络图</h3>
+            <svg id="cn-svg" viewBox="0 0 640 420" role="img" aria-label="contact graph"></svg>
+          </div>
+          <div class="card" id="cn-edge">
+            <h3 data-i18n="edgeSide">选中边</h3>
+            <p class="hint" data-i18n="edgeHint">点击实线（直连）或虚线（听说）查看窗口、时延、新鲜度和跳数。</p>
+            <div class="kv">
+              <div class="k" data-i18n="edgeEnds">端点</div><div class="v" id="eg-ends">—</div>
+              <div class="k" data-i18n="edgeKind">类型</div><div class="v" id="eg-kind">—</div>
+              <div class="k">delayMs</div><div class="v" id="eg-delay">—</div>
+              <div class="k">hopCount</div><div class="v" id="eg-hops">—</div>
+              <div class="k" data-i18n="edgeAge">新鲜度</div><div class="v" id="eg-age">—</div>
+              <div class="k">schedule</div><div class="v" id="eg-sched">—</div>
+              <div class="k">periodMs</div><div class="v" id="eg-period">—</div>
+              <div class="k">openOffset</div><div class="v" id="eg-offset">—</div>
+              <div class="k">openDuration</div><div class="v" id="eg-duration">—</div>
+            </div>
+          </div>
+        </div>
+        <details class="card cn-detail">
+          <summary data-i18n="linkDetail">链路明细</summary>
+        <div class="grid two" style="margin-top:0.85rem">
           <div class="card">
             <h3 data-i18n="peerLink">对等链路</h3>
             <div class="kv">
@@ -517,10 +569,11 @@ export function buildConsoleHtml(opts: {
               <tr><td data-i18n="self">本节点</td><td class="mono" id="cn-self">${nodeId}</td></tr>
               <tr><td data-i18n="peerRow">对端</td><td class="mono" id="cn-peer2">—</td></tr>
               <tr><td data-i18n="linkRow">链路</td><td id="cn-link-cell">—</td></tr>
-              <tr><td>API</td><td class="mono">/api/contacts · /api/status</td></tr>
+              <tr><td>API</td><td class="mono">/api/contacts · /api/graph</td></tr>
             </tbody>
           </table>
         </div>
+        </details>
       </section>
 
       <section class="view" id="view-ops">
@@ -533,7 +586,7 @@ export function buildConsoleHtml(opts: {
             <div class="form-row">
               <div class="field">
                 <label for="dst" data-i18n="dst">目的地</label>
-                <input id="dst" value="${defaultDst}"/>
+                <select id="dst"><option value="${defaultDst}">${defaultDst}</option></select>
               </div>
               <div class="field">
                 <label for="ttl" data-i18n="ttl">存活时间（毫秒，可选）</label>
@@ -558,6 +611,34 @@ export function buildConsoleHtml(opts: {
               <span class="hint" style="margin:0"><span data-i18n="depthNow">当前深度</span> <code id="st2-inbox">0</code></span>
             </div>
             <pre id="inbox-out">[]</pre>
+          </div>
+        </div>
+        <div class="card" id="route-strip">
+          <h3 data-i18n="routeTitle">选路</h3>
+          <p class="hint" data-i18n="routeHint">对试算目的或当前打开的束调用 /api/graph/route，对照被裁掉、时延候选和下一跳。</p>
+          <div class="form-row">
+            <div class="field">
+              <label for="route-dst" data-i18n="trialDst">试算目的</label>
+              <select id="route-dst"><option value="${defaultDst}">${defaultDst}</option></select>
+            </div>
+            <label class="hint" style="display:flex;align-items:center;gap:0.4rem;margin:0">
+              <input type="checkbox" id="route-follow" checked/>
+              <span data-i18n="followBundle">跟随当前束</span>
+            </label>
+          </div>
+          <div class="grid three route-cols">
+            <div>
+              <div class="k" data-i18n="routeCulled">被裁掉</div>
+              <pre id="route-culled">—</pre>
+            </div>
+            <div>
+              <div class="k" data-i18n="routeCandidates">时延排序</div>
+              <pre id="route-candidates">—</pre>
+            </div>
+            <div>
+              <div class="k" data-i18n="routeNext">下一跳</div>
+              <pre id="route-next">—</pre>
+            </div>
           </div>
         </div>
       </section>
@@ -610,7 +691,11 @@ export function buildConsoleHtml(opts: {
   let lastStatus = null;
   let lastBundles = [];
   let lastLinks = null;
+  let lastGraph = null;
+  let selectedEdge = null;
+  let eidByNode = {};
   let openBundleId = null;
+  const DEFAULT_DST = '${defaultDst}';
   let logClearedAt = 0;
   let lang = localStorage.getItem('dtn-console-lang') === 'en' ? 'en' : 'zh';
   let theme = localStorage.getItem('dtn-console-theme') === 'dark' ? 'dark' : 'light';
@@ -619,6 +704,7 @@ export function buildConsoleHtml(opts: {
       navOverview: '概览', navStorage: '存储', navConnections: '连接', navOps: '操作', navBundles: '束', navLogs: '日志',
       peer: '对端 ', nodeLabel: '节点', role: '角色', uptime: '运行时间',
       overviewTitle: '概览', statBundles: '报文 · LevelDB', statCustody: '托管 · 持有', statIndex: '索引 · 键', statInbox: '收件箱 · 本地',
+      statNodes: '已知节点', statSeeds: '种子邻居', statAge: '摘要最大年龄', statDests: '可试算目的',
       nodeInfo: '节点信息', contactWin: '接触窗口', contactHint: '周期开窗时链路可转发；关闭时先存储再转发。',
       recent: '最近事件', storageTitle: '存储',
       storageHint: '三层存储深度来自 /api/status 的 store（bundles / custody / index）。收发在「操作」页。',
@@ -627,12 +713,17 @@ export function buildConsoleHtml(opts: {
       index: '索引', indexKeys: '索引键', indexHint: '查找索引深度',
       inboxTitle: '本地投递收件箱', peek: '查看收件箱', recv: '接收并清空', depthNow: '当前深度', paths: '路径',
       connectionsTitle: '连接', peerLink: '对等链路', contactPlan: '接触计划', summary: '摘要',
+      netMap: '网络图', edgeSide: '选中边', edgeHint: '点击实线（直连）或虚线（听说）查看窗口、时延、新鲜度和跳数。',
+      edgeEnds: '端点', edgeKind: '类型', edgeAge: '新鲜度', linkDetail: '链路明细',
+      kindDirect: '直连', kindHeard: '听说',
       field: '字段', value: '值', self: '本节点', peerRow: '对端', linkRow: '链路',
       localEid: '本端 EID', peerEid: '对端 EID', wireFormat: '线上格式',
       opsTitle: '操作', opsHint: '在本节点发送报文，并查看或取走本地收件箱。',
       sendTitle: '发送', sendHint: '经本节点 /api/send 注入；接触关闭时先存储，开窗后转发到对端。',
       recvHint: '查看不取出；接收会清空本地收件箱。',
       dst: '目的地', payload: '载荷', ttl: '存活时间（毫秒，可选）', send: '发送', response: '响应',
+      routeTitle: '选路', routeHint: '对试算目的或当前打开的束调用 /api/graph/route，对照被裁掉、时延候选和下一跳。',
+      trialDst: '试算目的', followBundle: '跟随当前束', routeCulled: '被裁掉', routeCandidates: '时延排序', routeNext: '下一跳',
       logsTitle: '日志', logsHint: '来自 /api/status 的 recentEvents，大约每秒刷新。',
       clear: '清空视图', loading: '加载中…', noEvents: '（无事件）', cleared: '（已清空，新事件会显示在这里）',
       eventsWord: '条事件', open: '开启', closed: '关闭', refresh: '立即刷新',
@@ -644,7 +735,7 @@ export function buildConsoleHtml(opts: {
       primaryLifetime: '生存时间（毫秒）', primaryBytes: '字节长度', primaryHex: '前 32 字节',
       wireLength: '线上长度', deliveredAt: '到达时间',
       kindStored: '已存储', kindWaiting: '等待窗口', kindForward: '转发', kindRetry: '重试',
-      kindArrived: '已到达', kindAcked: '已确认', kindExpired: '已过期',
+      kindArrived: '已到达', kindAcked: '已确认', kindExpired: '已过期', kindRoute: '选路',
       stateWaiting: '等待窗口', stateForwarding: '转发中', stateArrived: '已到达', stateAcked: '已确认', stateExpired: '已过期',
       toastStatus: '状态轮询失败：', toastSent: '已发送 ', toastSendFail: '发送失败',
       toastPeek: '已查看收件箱', toastRecv: '已接收并清空', toastRecvOk: '接收成功'
@@ -653,6 +744,7 @@ export function buildConsoleHtml(opts: {
       navOverview: 'Overview', navStorage: 'Storage', navConnections: 'Connections', navOps: 'Ops', navBundles: 'Bundles', navLogs: 'Logs',
       peer: 'Peer ', nodeLabel: 'Node', role: 'role', uptime: 'uptime',
       overviewTitle: 'Overview', statBundles: 'Bundles · LevelDB', statCustody: 'Custody · held', statIndex: 'Index · keys', statInbox: 'Inbox · local',
+      statNodes: 'Known nodes', statSeeds: 'Seed peers', statAge: 'Summary age', statDests: 'Trial dests',
       nodeInfo: 'Node', contactWin: 'Contact', contactHint: 'Forward while the window is open; store-and-forward while it is closed.',
       recent: 'Recent events', storageTitle: 'Storage',
       storageHint: 'Depths come from /api/status store (bundles / custody / index). Send and receive live on Ops.',
@@ -661,12 +753,17 @@ export function buildConsoleHtml(opts: {
       index: 'Index', indexKeys: 'index keys', indexHint: 'Lookup index depth',
       inboxTitle: 'Local inbox', peek: 'Peek inbox', recv: 'Recv and clear', depthNow: 'Depth', paths: 'Paths',
       connectionsTitle: 'Connections', peerLink: 'Peer link', contactPlan: 'Contact plan', summary: 'Summary',
+      netMap: 'Network map', edgeSide: 'Selected edge', edgeHint: 'Click a solid (direct) or dashed (heard) edge for window, delay, freshness, and hops.',
+      edgeEnds: 'Ends', edgeKind: 'Kind', edgeAge: 'Freshness', linkDetail: 'Link detail',
+      kindDirect: 'direct', kindHeard: 'heard',
       field: 'Field', value: 'Value', self: 'This node', peerRow: 'Peer', linkRow: 'Link',
       localEid: 'Local EID', peerEid: 'Peer EID', wireFormat: 'Wire format',
       opsTitle: 'Ops', opsHint: 'Send from this node, and peek or take the local inbox.',
       sendTitle: 'Send', sendHint: 'Inject via /api/send. Closed contacts store the bundle and forward it when the window opens.',
       recvHint: 'Peek leaves the inbox in place. Recv clears it.',
       dst: 'Destination', payload: 'Payload', ttl: 'TTL ms (optional)', send: 'Send', response: 'Response',
+      routeTitle: 'Route', routeHint: 'Trial a destination, or follow the open bundle, via /api/graph/route.',
+      trialDst: 'Trial dest', followBundle: 'Follow open bundle', routeCulled: 'Culled', routeCandidates: 'By delay', routeNext: 'Next hop',
       logsTitle: 'Logs', logsHint: 'recentEvents from /api/status, refreshed about once a second.',
       clear: 'Clear view', loading: 'Loading…', noEvents: '(no events)', cleared: '(cleared — new events will appear)',
       eventsWord: 'events', open: 'OPEN', closed: 'CLOSED', refresh: 'Refresh now',
@@ -678,7 +775,7 @@ export function buildConsoleHtml(opts: {
       primaryLifetime: 'Lifetime (ms)', primaryBytes: 'Byte length', primaryHex: 'First 32 bytes',
       wireLength: 'Wire length', deliveredAt: 'Delivered at',
       kindStored: 'Stored', kindWaiting: 'Waiting', kindForward: 'Forward', kindRetry: 'Retry',
-      kindArrived: 'Arrived', kindAcked: 'Acked', kindExpired: 'Expired',
+      kindArrived: 'Arrived', kindAcked: 'Acked', kindExpired: 'Expired', kindRoute: 'Route',
       stateWaiting: 'Waiting for window', stateForwarding: 'Forwarding', stateArrived: 'Arrived', stateAcked: 'Acknowledged', stateExpired: 'Expired',
       toastStatus: 'status poll failed: ', toastSent: 'sent ', toastSendFail: 'send failed',
       toastPeek: 'inbox peeked', toastRecv: 'recv cleared', toastRecvOk: 'recv ok'
@@ -884,7 +981,7 @@ export function buildConsoleHtml(opts: {
   function kindLabel(kind) {
     const map = {
       STORED: 'kindStored', WAITING: 'kindWaiting', FORWARD: 'kindForward', RETRY: 'kindRetry',
-      ARRIVED: 'kindArrived', ACKED: 'kindAcked', EXPIRED: 'kindExpired',
+      ARRIVED: 'kindArrived', ACKED: 'kindAcked', EXPIRED: 'kindExpired', ROUTE: 'kindRoute',
     };
     return map[kind] ? t(map[kind]) : (kind || '');
   }
@@ -1003,10 +1100,13 @@ export function buildConsoleHtml(opts: {
       const events = body.bundle.events || [];
       const shown = events.filter((e, i) => {
         const prev = events[i - 1];
-        return !prev || prev.node !== e.node || prev.kind !== e.kind;
+        return !prev || prev.node !== e.node || prev.kind !== e.kind || prev.msg !== e.msg;
       });
       $('bd-events').textContent = shown
-        .map((e) => new Date(e.t).toLocaleTimeString() + '  ' + e.node + '  ' + kindLabel(e.kind))
+        .map((e) => {
+          const line = new Date(e.t).toLocaleTimeString() + '  ' + e.node + '  ' + kindLabel(e.kind);
+          return e.msg ? line + '  ' + e.msg : line;
+        })
         .join('\\n') || t('noEvents');
     } catch (e) {
       if (seq !== openSeq) return;
@@ -1037,6 +1137,7 @@ export function buildConsoleHtml(opts: {
       $('cn-duration').textContent = sch.openDurationMs != null ? String(sch.openDurationMs) : '—';
       const bw = c.contact && c.contact.bandwidthBps;
       $('cn-bw').textContent = bw != null ? bw + ' bps' : '—';
+      eidByNode = c.eidByNode || {};
       $('cn-local-eid').textContent = c.localEid || '—';
       const peerName = c.peer || (c.contact && c.contact.peer) || '';
       const eidMap = c.eidByNode || {};
@@ -1053,6 +1154,130 @@ export function buildConsoleHtml(opts: {
     } catch (_) { /* ignore */ }
   }
 
+  function fmtAge(ms) {
+    if (ms == null || !isFinite(ms)) return '—';
+    if (ms < 1000) return Math.round(ms) + ' ms';
+    const s = Math.round(ms / 1000);
+    if (s < 60) return s + ' s';
+    return Math.floor(s / 60) + ' m ' + (s % 60) + ' s';
+  }
+
+  function edgeKeyOf(e) {
+    return (e.a || '') + '|' + (e.b || '');
+  }
+
+  function fillSelect(el, ids, prefer) {
+    if (!el) return;
+    const current = el.value || prefer || '';
+    const list = ids.length ? ids : [DEFAULT_DST];
+    el.innerHTML = list.map((id) => '<option value="' + esc(id) + '">' + esc(id) + '</option>').join('');
+    if (list.indexOf(current) >= 0) el.value = current;
+    else if (prefer && list.indexOf(prefer) >= 0) el.value = prefer;
+    else el.value = list[0];
+  }
+
+  function showEdge(edge) {
+    selectedEdge = edge || null;
+    if (!edge) return;
+    const sch = edge.schedule || {};
+    const direct = edge.kind === 'direct' || edge.direct;
+    $('eg-ends').textContent = edge.a + ' ↔ ' + edge.b;
+    $('eg-kind').textContent = direct ? t('kindDirect') : t('kindHeard');
+    $('eg-delay').textContent = edge.delayMs != null ? String(edge.delayMs) : '—';
+    $('eg-hops').textContent = edge.hopCount != null ? String(edge.hopCount) : '—';
+    $('eg-age').textContent = edge.originatedAt != null ? fmtAge(Math.max(0, Date.now() - edge.originatedAt)) : '—';
+    $('eg-sched').textContent = sch.type || '—';
+    $('eg-period').textContent = sch.periodMs != null ? String(sch.periodMs) : '—';
+    $('eg-offset').textContent = sch.openOffsetMs != null ? String(sch.openOffsetMs) : '—';
+    $('eg-duration').textContent = sch.openDurationMs != null ? String(sch.openDurationMs) : '—';
+  }
+
+  function renderMap(g) {
+    const svg = $('cn-svg');
+    if (!svg || !g) return;
+    const nodes = g.nodes || [];
+    const edges = g.edges || [];
+    let minX = 0, maxX = 1, minY = 0, maxY = 1;
+    if (nodes.length) {
+      minX = Math.min.apply(null, nodes.map((n) => Number(n.x) || 0));
+      maxX = Math.max.apply(null, nodes.map((n) => Number(n.x) || 0));
+      minY = Math.min.apply(null, nodes.map((n) => Number(n.y) || 0));
+      maxY = Math.max.apply(null, nodes.map((n) => Number(n.y) || 0));
+    }
+    const w = 640, h = 420, pad = 46;
+    const spanX = Math.max(maxX - minX, 1);
+    const spanY = Math.max(maxY - minY, 1);
+    const scale = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY);
+    const byId = {};
+    nodes.forEach((n) => { byId[n.id] = n; });
+    function px(n) { return pad + ((Number(n.x) || 0) - minX) * scale; }
+    function py(n) { return h - pad - ((Number(n.y) || 0) - minY) * scale; }
+    const lines = edges.map((e) => {
+      const a = byId[e.a], b = byId[e.b];
+      if (!a || !b) return '';
+      const key = edgeKeyOf(e);
+      const cls = (e.kind === 'direct' || e.direct) ? 'direct' : 'heard';
+      const sel = selectedEdge && edgeKeyOf(selectedEdge) === key ? ' selected' : '';
+      return '<line class="edge ' + cls + sel + '" x1="' + px(a) + '" y1="' + py(a) + '" x2="' + px(b) + '" y2="' + py(b) + '"/>' +
+        '<line class="edge-hit" data-edge="' + esc(key) + '" x1="' + px(a) + '" y1="' + py(a) + '" x2="' + px(b) + '" y2="' + py(b) + '"/>';
+    }).join('');
+    const dots = nodes.map((n) => {
+      const self = n.id === NODE_ID ? ' self' : '';
+      const r = n.id === NODE_ID ? 12 : 8;
+      return '<g class="node' + self + '" transform="translate(' + px(n) + ',' + py(n) + ')">' +
+        '<circle r="' + r + '"/><text y="-16" text-anchor="middle">' + esc(n.id) + '</text></g>';
+    }).join('');
+    svg.innerHTML = lines + dots;
+  }
+
+  function renderOverviewGraph(g) {
+    const stats = (g && g.stats) || {};
+    const nodes = (g && g.nodes) || [];
+    $('st-nodes').textContent = String(stats.nodeCount != null ? stats.nodeCount : nodes.length);
+    $('st-seeds').textContent = String(stats.peerCount != null ? stats.peerCount : ((g && g.peers) || []).length);
+    $('st-age').textContent = fmtAge(stats.maxEdgeAgeMs || 0);
+    $('st-dests').textContent = String(nodes.filter((n) => n.id !== NODE_ID).length);
+    const ids = nodes.map((n) => n.id).concat(Object.keys(eidByNode || {}));
+    const choices = ids.filter((id, i) => id && id !== NODE_ID && ids.indexOf(id) === i);
+    fillSelect($('dst'), choices, DEFAULT_DST);
+    fillSelect($('route-dst'), choices, DEFAULT_DST);
+  }
+
+  async function refreshGraph() {
+    try {
+      const g = await fetch('/api/graph').then((r) => r.json());
+      if (!g || !Array.isArray(g.nodes)) return;
+      lastGraph = g;
+      renderMap(g);
+      renderOverviewGraph(g);
+    } catch (_) { /* static installs still have GraphService */ }
+  }
+
+  async function refreshRoute() {
+    const follow = $('route-follow') && $('route-follow').checked;
+    let dst = $('route-dst') ? $('route-dst').value : '';
+    if (follow && openBundleId) {
+      const open = (lastBundles || []).find((b) => b.id === openBundleId);
+      if (open && open.dst) dst = open.dst;
+    }
+    if (!dst) return;
+    try {
+      const res = await fetch('/api/graph/route?dst=' + encodeURIComponent(dst));
+      const d = await res.json();
+      const culled = d.culled || [];
+      const cands = (d.candidates || []).slice().sort((a, b) => (a.costMs || 0) - (b.costMs || 0));
+      $('route-culled').textContent = culled.length
+        ? culled.map((c) => c.neighbor + '  cost=' + c.costMs + '  closer=' + c.closer).join('\\n')
+        : '—';
+      $('route-candidates').textContent = cands.length
+        ? cands.map((c) => c.neighbor + '  cost=' + c.costMs + '  wait=' + c.waitMs).join('\\n')
+        : '—';
+      $('route-next').textContent = d.nextHop ? String(d.nextHop) : (d.reason || '—');
+    } catch (e) {
+      $('route-next').textContent = String(e);
+    }
+  }
+
   async function refresh() {
     try {
       const res = await fetch('/api/status');
@@ -1060,10 +1285,12 @@ export function buildConsoleHtml(opts: {
       const s = await res.json();
       applyStatus(s);
       await refreshContacts(s);
+      await refreshGraph();
     } catch (e) {
       toast(t('toastStatus') + (e && e.message ? e.message : e), true);
     }
     await refreshBundles();
+    await refreshRoute();
   }
 
   document.querySelectorAll('.nav-btn').forEach((btn) => {
@@ -1090,6 +1317,20 @@ export function buildConsoleHtml(opts: {
   applyTheme();
 
   $('btn-refresh').addEventListener('click', () => { void refresh(); });
+  $('cn-svg').addEventListener('click', (ev) => {
+    const hit = ev.target.closest ? ev.target.closest('[data-edge]') : null;
+    if (!hit || !lastGraph) return;
+    const key = hit.getAttribute('data-edge');
+    const edge = (lastGraph.edges || []).find((e) => edgeKeyOf(e) === key);
+    if (!edge) return;
+    showEdge(edge);
+    renderMap(lastGraph);
+  });
+  $('route-dst').addEventListener('change', () => {
+    if ($('route-follow')) $('route-follow').checked = false;
+    void refreshRoute();
+  });
+  $('route-follow').addEventListener('change', () => { void refreshRoute(); });
   $('bundle-rows').addEventListener('click', (ev) => {
     const tr = ev.target.closest('tr');
     if (!tr || !tr.dataset.id) return;

@@ -25,7 +25,7 @@ import {
   type TrackedBundle,
 } from './bundle-machine';
 import { ContactService } from '../contact/contact.service';
-import { peerUrlFor, type RelayRuntimeConfig } from '../config';
+import type { RelayRuntimeConfig } from '../config';
 import { GraphService } from '../graph/graph.service';
 import type { RouteDecision } from '../graph/graph-route';
 import { LevelStore } from '../store/level-store';
@@ -352,7 +352,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     const failed: PendingAck[] = [];
     for (const pending of acks) {
       const sent = await this.peer.sendAck(
-        peerUrlFor(this.cfg, pending.upstream),
+        this.peer.urlFor(pending.upstream),
         pending.bundleId,
         pending.events
       );
@@ -459,7 +459,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       permanentEncode?: boolean;
     };
     try {
-      result = await this.peer.forwardTo(peerUrlFor(this.cfg, job.next), job.bundle);
+      result = await this.peer.forwardTo(this.peer.urlFor(job.next), job.bundle);
     } finally {
       this.forwardsInFlight.delete(job.bundleId);
     }

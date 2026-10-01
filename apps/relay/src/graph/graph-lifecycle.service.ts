@@ -13,9 +13,9 @@ export class GraphLifecycleService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     @Inject(RELAY_CONFIG) private readonly cfg: RelayRuntimeConfig,
-    private readonly graph: GraphService,
-    private readonly contacts: ContactService,
-    private readonly peer: PeerService,
+    @Inject(GraphService) private readonly graph: GraphService,
+    @Inject(ContactService) private readonly contacts: ContactService,
+    @Inject(PeerService) private readonly peer: PeerService,
   ) {}
 
   onModuleInit(): void {

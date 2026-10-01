@@ -185,6 +185,38 @@ test('forward failure marks the chosen next hop unhealthy', async () => {
   assert.equal(after.reason, 'no closer neighbor');
 });
 
+test('join-only peer URL is used when it is absent from cfg.peers', async () => {
+  loadBpCodec();
+  const cfg = runtime(true);
+  cfg.peers = {};
+  cfg.peerUrl = 'http://127.0.0.1:1';
+  const store = new MemoryStore();
+  const graph = new GraphService(cfg);
+  graph.upsertDirectPeer(
+    'Near',
+    'http://127.0.0.1:4102',
+    { id: 'Near', eid: 'ipn:2.1', x: 3, y: 0 },
+    DEFAULT_JOIN_SCHEDULE,
+  );
+  graph.ingestSummary({
+    from: 'Near',
+    nodes: [{ id: 'Mars', eid: 'ipn:3.1', x: 10, y: 0 }],
+    edges: [],
+  });
+  const contacts = new ContactService(cfg, graph);
+  const peer = new PeerService(cfg, graph);
+  let url = '';
+  peer.forwardTo = async (hopUrl, bundle) => {
+    url = hopUrl;
+    return { ok: true, wireBase64: bundle.wire };
+  };
+  const bundles = new BundleService(cfg, store as unknown as LevelStore, contacts, peer, graph);
+
+  await bundles.send('Mars', 'hi');
+  assert.equal(url, 'http://127.0.0.1:4102');
+  assert.equal(peer.urlFor('Near'), 'http://127.0.0.1:4102');
+});
+
 test('static nextHop is unchanged when graphMode is off', async () => {
   loadBpCodec();
   const { graph, bundles, setForward } = harness(false);

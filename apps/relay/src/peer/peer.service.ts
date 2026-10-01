@@ -2,7 +2,7 @@ import { Inject, Injectable, Logger, Optional } from '@nestjs/common';
 import type { RelayBundle } from '../bundle/bundle.types';
 import { toWireBundle } from '../bp/wire';
 import { RELAY_CONFIG } from '../relay.tokens';
-import type { RelayRuntimeConfig } from '../config';
+import { peerUrlFor, type RelayRuntimeConfig } from '../config';
 import {
   GraphService,
   type JoinRemote,
@@ -79,6 +79,11 @@ export class PeerService {
       this.log.warn(`graph gossip failed: ${err instanceof Error ? err.message : err}`);
       return false;
     }
+  }
+
+  /** Join-recorded URL when graphMode, otherwise the static plan map. */
+  urlFor(id: string): string {
+    return peerUrlFor(this.cfg, id, this.graph);
   }
 
   /** Push bundle to a specific next-hop relay over HTTP (CLA-ish). */
