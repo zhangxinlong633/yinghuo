@@ -150,6 +150,14 @@ export class LevelStore implements OnModuleInit, OnModuleDestroy {
     return [...this.inbox];
   }
 
+  /** Drop one locally delivered payload. Expired bundles must not stay readable. */
+  dropInbox(id: string): void {
+    this.inbox = this.inbox.filter((m) => m.id !== id);
+    const db = this.indexDb;
+    if (!db || db.status !== 'open') return;
+    void db.del(`inbox:${id}`).catch(() => undefined);
+  }
+
   /** Count keys via keys() iterator (values skipped); close iterator explicitly. */
   private async countKeys(db: ClassicLevel<string, string>): Promise<number> {
     let n = 0;

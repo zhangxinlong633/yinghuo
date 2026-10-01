@@ -9,14 +9,18 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { BundleService } from '../bundle/bundle.service';
+import type { BundleEvent } from '../bundle/bundle-machine';
 import type { RelayBundle } from '../bundle/bundle.types';
 import { ContactService } from '../contact/contact.service';
+import type { RelayRuntimeConfig } from '../config';
+import { RELAY_CONFIG } from '../relay.tokens';
 
 @Controller()
 export class RelayController {
   constructor(
     @Inject(BundleService) private readonly bundles: BundleService,
-    @Inject(ContactService) private readonly contacts: ContactService
+    @Inject(ContactService) private readonly contacts: ContactService,
+    @Inject(RELAY_CONFIG) private readonly cfg: RelayRuntimeConfig
   ) {}
 
   @Get('health')
@@ -69,7 +73,7 @@ export class RelayController {
     if (!body?.bundle || !body?.from) {
       return { accepted: false, delivered: false, event: 'ERROR', msg: 'bundle+from required' };
     }
-    if (!this.contacts.isOpen() && force !== '1') {
+    if (force !== '1' && !this.ingestContactOpen(body.bundle, body.from)) {
       throw new ServiceUnavailableException({
         accepted: false,
         delivered: false,
@@ -80,12 +84,24 @@ export class RelayController {
     return this.bundles.ingestFromPeer(body.bundle, body.from);
   }
 
+  /**
+   * Gate on the arrival contact (`from`), which is the sender's next hop.
+   * Do not use the single first-contact `isOpen()`: when this node is the
+   * destination, a different closed segment must not 503. A relay likewise
+   * stores while its own outgoing hop is still closed.
+   */
+  private ingestContactOpen(bundle: RelayBundle, from: string): boolean {
+    const deliveringLocally = bundle.dst === this.cfg.nodeId;
+    if (deliveringLocally) return this.contacts.isOpenTo(from);
+    return this.contacts.isOpenTo(from);
+  }
+
   @Post('peer/ack')
-  async peerAck(@Body() body: { bundleId: string; from: string }) {
+  async peerAck(@Body() body: { bundleId: string; from: string; events?: BundleEvent[] }) {
     if (!body?.bundleId || !body?.from) {
       return { ok: false };
     }
-    await this.bundles.onAck(body.bundleId, body.from);
+    await this.bundles.onAck(body.bundleId, body.from, body.events ?? []);
     return { ok: true };
   }
 }
