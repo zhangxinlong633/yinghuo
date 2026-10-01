@@ -4,6 +4,7 @@ import {
   Logger,
   OnModuleDestroy,
   OnModuleInit,
+  Optional,
 } from '@nestjs/common';
 import { inspectBundle } from '../bp/bp-codec';
 import { toWireBundle, WireEncodeError } from '../bp/wire';
@@ -25,6 +26,8 @@ import {
 } from './bundle-machine';
 import { ContactService } from '../contact/contact.service';
 import { peerUrlFor, type RelayRuntimeConfig } from '../config';
+import { GraphService } from '../graph/graph.service';
+import type { RouteDecision } from '../graph/graph-route';
 import { LevelStore } from '../store/level-store';
 import { PeerService } from '../peer/peer.service';
 import { RELAY_CONFIG } from '../relay.tokens';
@@ -65,6 +68,13 @@ function fromTracked(tracked: TrackedBundle, delivered: boolean, wire?: string):
     events: tracked.events,
     ...(wire !== undefined ? { wire } : {}),
   };
+}
+
+function routeNote(decision: RouteDecision): string {
+  const culled = decision.culled.map((candidate) => candidate.neighbor).join(', ');
+  return culled.length > 0
+    ? `selected ${decision.nextHop}; culled ${culled}`
+    : `selected ${decision.nextHop}`;
 }
 
 function lastRetryAt(events: RelayBundle['events']): number | null {
@@ -125,7 +135,8 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     @Inject(RELAY_CONFIG) private readonly cfg: RelayRuntimeConfig,
     @Inject(LevelStore) private readonly store: LevelStore,
     @Inject(ContactService) private readonly contacts: ContactService,
-    @Inject(PeerService) private readonly peer: PeerService
+    @Inject(PeerService) private readonly peer: PeerService,
+    @Optional() @Inject(GraphService) private readonly graph?: GraphService,
   ) {}
 
   onModuleInit(): void {
@@ -167,8 +178,8 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     }
     const now = Date.now();
     const id = newBundleId(this.cfg.nodeId);
-    const next = this.cfg.nextHop[dst] ?? dst;
-    const contactOpen = this.contacts.isOpenTo(next, now);
+    const picked = this.pickNext(dst, now);
+    const contactOpen = picked.next !== null && this.contacts.isOpenTo(picked.next, now);
     const draft: RelayBundle = {
       id,
       src: this.cfg.nodeId,
@@ -358,7 +369,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     if (this.forwardsInFlight.has(bundleId)) return null;
     const custody = await this.store.getCustody(bundleId);
     if (!custody) return null;
-    const bundle = await this.store.getBundle(bundleId);
+    let bundle = await this.store.getBundle(bundleId);
     if (!bundle || bundle.delivered) return null;
     if (bundle.state === 'ACKED' || bundle.state === 'EXPIRED' || bundle.state === 'ARRIVED') return null;
 
@@ -376,7 +387,17 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
     if (this.encodeRejected(bundle)) return null;
 
-    const next = this.cfg.nextHop[bundle.dst] ?? bundle.dst;
+    const picked = this.pickNext(bundle.dst, now);
+    if (picked.next === null) {
+      await this.recordRoute(bundle, now, picked.routeMsg ?? 'no next hop', true);
+      if (custody.waitingAck) {
+        custody.waitingAck = false;
+        await this.store.putCustody(custody);
+      }
+      return null;
+    }
+    const next = picked.next;
+    if (picked.routeMsg) bundle = await this.recordRoute(bundle, now, picked.routeMsg, false);
     const contactOpen = this.contacts.isOpenTo(next, now);
 
     if (custody.waitingAck) {
@@ -453,9 +474,41 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       if (result.permanentEncode) {
         await this.enqueue(() => this.abandonEncode(job.bundleId, result.error ?? 'encode failed'));
       } else {
+        if (this.cfg.graphMode) this.graph?.markUnhealthy(job.next);
         await this.enqueue(() => this.applyForwardFailure(job.bundleId, result.error));
       }
     }
+  }
+
+  /** Static table outside graph mode. Graph mode asks the local contact graph. */
+  private pickNext(dst: string, now: number): { next: string | null; routeMsg: string | null } {
+    if (!this.cfg.graphMode || !this.graph) {
+      return { next: this.cfg.nextHop[dst] ?? dst, routeMsg: null };
+    }
+    const decision = this.graph.decide(dst, now);
+    if (!decision.nextHop) return { next: null, routeMsg: decision.reason };
+    return { next: decision.nextHop, routeMsg: routeNote(decision) };
+  }
+
+  /** Persist a ROUTE line once per distinct reason. A null next hop parks WAITING. */
+  private async recordRoute(
+    bundle: RelayBundle,
+    now: number,
+    msg: string,
+    parkWaiting: boolean,
+  ): Promise<RelayBundle> {
+    const events = bundle.events ?? [];
+    const lastRoute = [...events].reverse().find((event) => event.kind === 'ROUTE');
+    const state = parkWaiting ? 'WAITING' : (bundle.state ?? 'WAITING');
+    if (lastRoute?.msg === msg && (bundle.state ?? 'WAITING') === state) return bundle;
+    const updated: RelayBundle = {
+      ...bundle,
+      state,
+      events: [...events, { t: now, node: this.cfg.nodeId, kind: 'ROUTE', msg }],
+    };
+    await this.store.putBundle(updated);
+    this.pushEvent('ROUTE', `${bundle.id} ${msg}`);
+    return updated;
   }
 
   /** Cached BPv7 bytes, or a fresh encode. Throws WireEncodeError; does not touch state. */
