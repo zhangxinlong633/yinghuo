@@ -2,6 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { CyclicSchedule, DualContact } from '../bundle/bundle.types';
 import { RELAY_CONFIG } from '../relay.tokens';
 import type { RelayRuntimeConfig } from '../config';
+import { isCyclicOpen } from './contact-window';
 
 export interface ContactState {
   peer: string;
@@ -13,26 +14,37 @@ export interface ContactState {
   contact: DualContact;
 }
 
+export interface ContactLinkState {
+  a: string;
+  b: string;
+  peer: string;
+  local: boolean;
+  open: boolean;
+  delayMs: number;
+  schedule: CyclicSchedule;
+  nextChangeAt: number;
+  phase: string;
+  bandwidthBps?: number;
+}
+
 /**
- * Wall-clock cyclic contact windows for dual-relay demo.
+ * Wall-clock cyclic contact windows.
  * Within each periodMs: open for [openOffsetMs, openOffsetMs+openDurationMs).
  */
 @Injectable()
 export class ContactService {
-  private readonly contact: DualContact;
+  private readonly contacts: DualContact[];
+  private readonly localContact: DualContact;
   private readonly peerName: string;
 
   constructor(@Inject(RELAY_CONFIG) private readonly cfg: RelayRuntimeConfig) {
-    const c = cfg.plan.contacts.find(
-      (x) =>
-        (x.a === cfg.nodeId && x.b !== cfg.nodeId) ||
-        (x.b === cfg.nodeId && x.a !== cfg.nodeId)
-    );
-    if (!c) {
-      throw new Error(`No contact involving ${cfg.nodeId} in plan`);
+    this.contacts = cfg.plan.contacts;
+    const local = this.contacts.find((x) => x.a === cfg.nodeId || x.b === cfg.nodeId);
+    if (!local) {
+      throw new Error(`No contact involving ${cfg.nodeId}`);
     }
-    this.contact = c;
-    this.peerName = c.a === cfg.nodeId ? c.b : c.a;
+    this.localContact = local;
+    this.peerName = this.peerOf(local);
   }
 
   getPeerName(): string {
@@ -40,20 +52,71 @@ export class ContactService {
   }
 
   isOpen(now = Date.now()): boolean {
-    const s = this.contact.schedule;
-    if (s.type !== 'cyclic') return false;
-    const elapsed = now % s.periodMs;
-    return elapsed >= s.openOffsetMs && elapsed < s.openOffsetMs + s.openDurationMs;
+    return isCyclicOpen(now, this.localContact.schedule);
   }
 
   delayMs(): number {
-    return this.contact.delayMs;
+    return this.localContact.delayMs;
+  }
+
+  listLinks(now = Date.now()): ContactLinkState[] {
+    return this.contacts.map((c) => {
+      const timing = this.windowTiming(c.schedule, now);
+      const link: ContactLinkState = {
+        a: c.a,
+        b: c.b,
+        peer: this.peerOf(c),
+        local: c.a === this.cfg.nodeId || c.b === this.cfg.nodeId,
+        open: timing.open,
+        delayMs: c.delayMs,
+        schedule: c.schedule,
+        nextChangeAt: timing.nextChangeAt,
+        phase: timing.phase,
+      };
+      if (c.bandwidthBps !== undefined) link.bandwidthBps = c.bandwidthBps;
+      return link;
+    });
+  }
+
+  isOpenTo(nextHopName: string, now = Date.now()): boolean {
+    const link = this.listLinks(now).find((l) => l.local && l.peer === nextHopName);
+    return link ? link.open : false;
+  }
+
+  delayTo(nextHopName: string): number {
+    const link = this.contacts.find(
+      (c) =>
+        (c.a === this.cfg.nodeId || c.b === this.cfg.nodeId) && this.peerOf(c) === nextHopName
+    );
+    return link ? link.delayMs : 0;
   }
 
   getState(now = Date.now()): ContactState {
-    const s = this.contact.schedule;
-    const elapsed = now % s.periodMs;
-    const open = this.isOpen(now);
+    const timing = this.windowTiming(this.localContact.schedule, now);
+    return {
+      peer: this.peerName,
+      open: timing.open,
+      delayMs: this.localContact.delayMs,
+      schedule: this.localContact.schedule,
+      nextChangeAt: timing.nextChangeAt,
+      phase: timing.phase,
+      contact: this.localContact,
+    };
+  }
+
+  private peerOf(c: DualContact): string {
+    if (c.a === this.cfg.nodeId) return c.b;
+    if (c.b === this.cfg.nodeId) return c.a;
+    return '';
+  }
+
+  private windowTiming(
+    schedule: CyclicSchedule,
+    now: number
+  ): { open: boolean; nextChangeAt: number; phase: string } {
+    const s = schedule;
+    const elapsed = ((now % s.periodMs) + s.periodMs) % s.periodMs;
+    const open = isCyclicOpen(now, s);
     let nextChangeAt: number;
     let phase: string;
     if (open) {
@@ -67,14 +130,6 @@ export class ContactService {
       nextChangeAt = now + (s.periodMs - elapsed + s.openOffsetMs);
       phase = `CLOSED — opens in ${s.periodMs - elapsed + s.openOffsetMs}ms`;
     }
-    return {
-      peer: this.peerName,
-      open,
-      delayMs: this.contact.delayMs,
-      schedule: s,
-      nextChangeAt,
-      phase,
-      contact: this.contact,
-    };
+    return { open, nextChangeAt, phase };
   }
 }
