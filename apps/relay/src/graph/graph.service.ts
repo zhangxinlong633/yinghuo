@@ -19,6 +19,10 @@ export const DEFAULT_JOIN_SCHEDULE: CyclicSchedule = {
   openDurationMs: 30_000,
 };
 
+/** Gossip timer period and minimum spacing between graph pushes to the same peer. */
+export const GOSSIP_INTERVAL_MS = 2_000;
+export const GOSSIP_THROTTLE_MS = 2_000;
+
 export type JoinRemote = {
   nodeId: string;
   eid: string;
