@@ -340,6 +340,8 @@ export function buildConsoleHtml(opts: {
     }
     table.simple th { color: var(--faint); font-weight: 600; font-size: 0.88rem; }
     table.simple td.mono { font-family: var(--mono); }
+    #bundle-rows tr { cursor: pointer; }
+    #bundle-rows tr:hover td { background: var(--bg-soft); }
     @media (max-width: 1100px) {
       .grid.stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .grid.three { grid-template-columns: 1fr 1fr; }
@@ -367,6 +369,7 @@ export function buildConsoleHtml(opts: {
           <button type="button" class="nav-btn" data-view="storage"><span class="ico">▣</span><span data-i18n="navStorage">存储</span></button>
           <button type="button" class="nav-btn" data-view="connections"><span class="ico">⇄</span><span data-i18n="navConnections">连接</span></button>
           <button type="button" class="nav-btn" data-view="ops"><span class="ico">➤</span><span data-i18n="navOps">操作</span></button>
+          <button type="button" class="nav-btn" data-view="bundles"><span class="ico">☰</span><span data-i18n="navBundles">报文</span></button>
           <button type="button" class="nav-btn" data-view="logs"><span class="ico">≡</span><span data-i18n="navLogs">日志</span></button>
         </nav>
         <div class="mast-tools">
@@ -403,6 +406,8 @@ export function buildConsoleHtml(opts: {
           <div class="card stat-card"><div class="stat-val" id="st-index">—</div><div class="stat-label" data-i18n="statIndex">索引 · 键</div></div>
           <div class="card stat-card"><div class="stat-val" id="st-inbox">—</div><div class="stat-label" data-i18n="statInbox">收件箱 · 本地</div></div>
         </div>
+        <div id="ov-bundle-counts" class="hint"></div>
+        <table class="simple"><tbody id="ov-bundle-recent"></tbody></table>
         <div class="grid two">
           <div class="card">
             <h3 data-i18n="nodeInfo">节点信息</h3>
@@ -498,6 +503,7 @@ export function buildConsoleHtml(opts: {
             <div class="progress-ring" id="cn-bar"><span></span></div>
           </div>
         </div>
+        <div class="card" id="cn-links" style="margin-top:0.85rem"></div>
         <div class="card" style="margin-top:0.85rem">
           <h3 data-i18n="summary">摘要</h3>
           <table class="simple">
@@ -536,6 +542,7 @@ export function buildConsoleHtml(opts: {
             <button type="button" id="btn-send" data-i18n="send">发送</button>
             <h3 style="margin-top:0.85rem" data-i18n="response">响应</h3>
             <pre id="send-out">—</pre>
+            <button type="button" class="secondary" id="btn-open-bundle" hidden style="margin-top:0.6rem"></button>
           </div>
           <div class="card stretch">
             <h3 data-i18n="inboxTitle">本地投递收件箱</h3>
@@ -546,6 +553,33 @@ export function buildConsoleHtml(opts: {
               <span class="hint" style="margin:0"><span data-i18n="depthNow">当前深度</span> <code id="st2-inbox">0</code></span>
             </div>
             <pre id="inbox-out">[]</pre>
+          </div>
+        </div>
+      </section>
+
+      <section class="view" id="view-bundles">
+        <h2 class="view-title" data-i18n="bundlesTitle">报文</h2>
+        <table class="simple" id="bundle-table">
+          <thead>
+            <tr>
+              <th data-i18n="colId">id</th>
+              <th data-i18n="colSrc">源</th>
+              <th data-i18n="colDst">目的</th>
+              <th data-i18n="colState">状态</th>
+              <th data-i18n="colWhere">当前节点</th>
+              <th data-i18n="colUpdated">更新时间</th>
+            </tr>
+          </thead>
+          <tbody id="bundle-rows"></tbody>
+        </table>
+        <div class="grid two" id="bundle-detail" hidden>
+          <div class="card">
+            <h3 id="bd-title">—</h3>
+            <pre id="bd-meta">—</pre>
+          </div>
+          <div class="card stretch">
+            <h3 data-i18n="timeline">时间线</h3>
+            <pre id="bd-events">—</pre>
           </div>
         </div>
       </section>
@@ -569,12 +603,15 @@ export function buildConsoleHtml(opts: {
 (function () {
   const $ = (id) => document.getElementById(id);
   let lastStatus = null;
+  let lastBundles = [];
+  let lastLinks = null;
+  let openBundleId = null;
   let logClearedAt = 0;
   let lang = localStorage.getItem('dtn-console-lang') === 'en' ? 'en' : 'zh';
   let theme = localStorage.getItem('dtn-console-theme') === 'dark' ? 'dark' : 'light';
   const I18N = {
     zh: {
-      navOverview: '概览', navStorage: '存储', navConnections: '连接', navOps: '操作', navLogs: '日志',
+      navOverview: '概览', navStorage: '存储', navConnections: '连接', navOps: '操作', navBundles: '报文', navLogs: '日志',
       peer: '对端 ', nodeLabel: '节点', role: '角色', uptime: '运行时间',
       overviewTitle: '概览', statBundles: '报文 · LevelDB', statCustody: '托管 · 持有', statIndex: '索引 · 键', statInbox: '收件箱 · 本地',
       nodeInfo: '节点信息', contactWin: '接触窗口', contactHint: '周期开窗时链路可转发；关闭时先存储再转发。',
@@ -594,11 +631,15 @@ export function buildConsoleHtml(opts: {
       clear: '清空视图', loading: '加载中…', noEvents: '（无事件）', cleared: '（已清空，新事件会显示在这里）',
       eventsWord: '条事件', open: '开启', closed: '关闭', refresh: '立即刷新',
       themeLight: '浅色', themeDark: '深色',
+      bundlesTitle: '报文', colId: 'id', colSrc: '源', colDst: '目的', colState: '状态', colWhere: '当前节点', colUpdated: '更新时间',
+      timeline: '时间线', notFound: '未找到', openBundle: '查看报文', notDirect: '本机不直连',
+      stateWaiting: '等待窗口', stateForwarding: '转发中', stateArrived: '已到达', stateAcked: '已确认', stateExpired: '已过期',
+      kindStored: '已存储',
       toastStatus: '状态轮询失败：', toastSent: '已发送 ', toastSendFail: '发送失败',
       toastPeek: '已查看收件箱', toastRecv: '已接收并清空', toastRecvOk: '接收成功'
     },
     en: {
-      navOverview: 'Overview', navStorage: 'Storage', navConnections: 'Connections', navOps: 'Ops', navLogs: 'Logs',
+      navOverview: 'Overview', navStorage: 'Storage', navConnections: 'Connections', navOps: 'Ops', navBundles: 'Bundles', navLogs: 'Logs',
       peer: 'Peer ', nodeLabel: 'Node', role: 'role', uptime: 'uptime',
       overviewTitle: 'Overview', statBundles: 'Bundles · LevelDB', statCustody: 'Custody · held', statIndex: 'Index · keys', statInbox: 'Inbox · local',
       nodeInfo: 'Node', contactWin: 'Contact', contactHint: 'Forward while the window is open; store-and-forward while it is closed.',
@@ -618,6 +659,10 @@ export function buildConsoleHtml(opts: {
       clear: 'Clear view', loading: 'Loading…', noEvents: '(no events)', cleared: '(cleared — new events will appear)',
       eventsWord: 'events', open: 'OPEN', closed: 'CLOSED', refresh: 'Refresh now',
       themeLight: 'Light', themeDark: 'Dark',
+      bundlesTitle: 'Bundles', colId: 'id', colSrc: 'Source', colDst: 'Dest', colState: 'State', colWhere: 'Current node', colUpdated: 'Updated',
+      timeline: 'Timeline', notFound: 'Not found', openBundle: 'Open bundle', notDirect: 'not a direct link',
+      stateWaiting: 'Waiting for window', stateForwarding: 'Forwarding', stateArrived: 'Arrived', stateAcked: 'Acknowledged', stateExpired: 'Expired',
+      kindStored: 'Stored',
       toastStatus: 'status poll failed: ', toastSent: 'sent ', toastSendFail: 'send failed',
       toastPeek: 'inbox peeked', toastRecv: 'recv cleared', toastRecvOk: 'recv ok'
     }
@@ -645,6 +690,11 @@ export function buildConsoleHtml(opts: {
       b.classList.toggle('active', b.getAttribute('data-lang') === lang);
     });
     if (lastStatus) applyStatus(lastStatus);
+    renderBundles(lastBundles);
+    if (lastLinks) renderLinks(lastLinks);
+    if (openBundleId && $('bundle-detail') && !$('bundle-detail').hidden) void openBundle(openBundleId);
+    const openBtn = $('btn-open-bundle');
+    if (openBtn && openBtn.dataset.id) openBtn.textContent = t('openBundle') + ' ' + openBtn.dataset.id;
   }
   function applyTheme() {
     document.documentElement.setAttribute('data-theme', theme);
@@ -793,10 +843,114 @@ export function buildConsoleHtml(opts: {
     $('log-count').textContent = n + ' ' + t('eventsWord');
   }
 
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>"']/g, (ch) => (
+      { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+    ));
+  }
+
+  function stateLabel(state) {
+    const map = {
+      WAITING: 'stateWaiting',
+      FORWARDING: 'stateForwarding',
+      ARRIVED: 'stateArrived',
+      ACKED: 'stateAcked',
+      EXPIRED: 'stateExpired',
+    };
+    return map[state] ? t(map[state]) : (state || '—');
+  }
+
+  function kindLabel(kind) {
+    if (kind === 'STORED') return t('kindStored');
+    return kind || '';
+  }
+
+  function bundleRowsHtml(bundles) {
+    return (bundles || []).map((b) => {
+      const updated = b.updatedAt ? new Date(b.updatedAt).toLocaleString() : '—';
+      return '<tr data-id="' + esc(b.id) + '">' +
+        '<td class="mono">' + esc(b.id) + '</td>' +
+        '<td class="mono">' + esc(b.src) + '</td>' +
+        '<td class="mono">' + esc(b.dst) + '</td>' +
+        '<td>' + esc(stateLabel(b.state)) + '</td>' +
+        '<td class="mono">' + esc(b.custodian) + '</td>' +
+        '<td>' + esc(updated) + '</td></tr>';
+    }).join('');
+  }
+
+  function renderBundles(bundles) {
+    const list = bundles || [];
+    const counts = { WAITING: 0, FORWARDING: 0, ARRIVED: 0, EXPIRED: 0 };
+    list.forEach((b) => { if (counts[b.state] != null) counts[b.state] += 1; });
+    $('ov-bundle-counts').textContent = ['WAITING', 'FORWARDING', 'ARRIVED', 'EXPIRED']
+      .map((s) => stateLabel(s) + ' ' + counts[s]).join(' · ');
+    $('bundle-rows').innerHTML = bundleRowsHtml(list);
+    $('ov-bundle-recent').innerHTML = bundleRowsHtml(list.slice(0, 5));
+  }
+
+  function renderLinks(links) {
+    const el = $('cn-links');
+    if (!el) return;
+    const rows = (links || []).map((l) => {
+      const label = (l.a || '') + ' ↔ ' + (l.b || '');
+      const extra = l.local
+        ? linkHtml(!!l.open) + ' <span class="mono">' + esc(l.phase || '—') + '</span>'
+        : esc(t('notDirect'));
+      return '<tr><td class="mono">' + esc(label) + '</td><td>' + extra + '</td></tr>';
+    }).join('');
+    el.hidden = !rows;
+    el.innerHTML = rows
+      ? '<table class="simple"><tbody>' + rows + '</tbody></table>'
+      : '';
+  }
+
+  async function refreshBundles() {
+    try {
+      const body = await fetch('/api/bundles').then((r) => r.json());
+      lastBundles = (body && body.bundles) || [];
+      renderBundles(lastBundles);
+    } catch (_) { /* ignore */ }
+  }
+
+  async function openBundle(id) {
+    openBundleId = id;
+    const res = await fetch('/api/bundles/' + encodeURIComponent(id));
+    const body = await res.json();
+    $('bundle-detail').hidden = false;
+    if (!body.ok) {
+      $('bd-title').textContent = id;
+      $('bd-meta').textContent = '—';
+      $('bd-events').textContent = t('notFound');
+      return;
+    }
+    $('bd-title').textContent = body.bundle.id;
+    $('bd-meta').textContent = JSON.stringify({
+      state: body.bundle.state,
+      src: body.bundle.src,
+      dst: body.bundle.dst,
+      payload: body.bundle.payload,
+      custodian: body.bundle.custodian,
+    }, null, 2);
+    $('bd-events').textContent = (body.bundle.events || [])
+      .map((e) => new Date(e.t).toISOString().slice(11, 19) + '  ' + e.node + '  ' + kindLabel(e.kind) + '  ' + e.msg)
+      .join('\\n');
+  }
+
+  function showView(view) {
+    document.querySelectorAll('.nav-btn').forEach((b) => {
+      b.classList.toggle('active', b.getAttribute('data-view') === view);
+    });
+    document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
+    const el = document.getElementById('view-' + view);
+    if (el) el.classList.add('active');
+  }
+
   async function refreshContacts(s) {
     try {
       const c = await fetch('/api/contacts').then((r) => r.json());
       if (!c) return;
+      lastLinks = c.links || [];
+      renderLinks(lastLinks);
       const sch = c.schedule || (c.contact && c.contact.schedule) || {};
       $('cn-sched').textContent = sch.type || '—';
       $('cn-period').textContent = sch.periodMs != null ? String(sch.periodMs) : '—';
@@ -825,16 +979,12 @@ export function buildConsoleHtml(opts: {
     } catch (e) {
       toast(t('toastStatus') + (e && e.message ? e.message : e), true);
     }
+    await refreshBundles();
   }
 
   document.querySelectorAll('.nav-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
-      document.querySelectorAll('.nav-btn').forEach((b) => b.classList.remove('active'));
-      document.querySelectorAll('.view').forEach((v) => v.classList.remove('active'));
-      btn.classList.add('active');
-      const view = btn.getAttribute('data-view');
-      const el = document.getElementById('view-' + view);
-      if (el) el.classList.add('active');
+      showView(btn.getAttribute('data-view'));
     });
   });
 
@@ -856,6 +1006,17 @@ export function buildConsoleHtml(opts: {
   applyTheme();
 
   $('btn-refresh').addEventListener('click', () => { void refresh(); });
+  $('bundle-rows').addEventListener('click', (ev) => {
+    const tr = ev.target.closest('tr');
+    if (!tr || !tr.dataset.id) return;
+    void openBundle(tr.dataset.id);
+  });
+  $('btn-open-bundle').addEventListener('click', () => {
+    const id = $('btn-open-bundle').dataset.id;
+    if (!id) return;
+    showView('bundles');
+    void openBundle(id);
+  });
 
   $('btn-send').addEventListener('click', async () => {
     const dst = $('dst').value;
@@ -871,6 +1032,14 @@ export function buildConsoleHtml(opts: {
       });
       const j = await r.json();
       $('send-out').textContent = JSON.stringify(j, null, 2);
+      const openBtn = $('btn-open-bundle');
+      if (j.ok && j.bundle && j.bundle.id) {
+        openBtn.hidden = false;
+        openBtn.dataset.id = j.bundle.id;
+        openBtn.textContent = t('openBundle') + ' ' + j.bundle.id;
+      } else {
+        openBtn.hidden = true;
+      }
       toast(j.ok ? t('toastSent') + (j.bundle && j.bundle.id ? j.bundle.id : 'ok') : (j.error || t('toastSendFail')), !j.ok);
       void refresh();
     } catch (e) {
