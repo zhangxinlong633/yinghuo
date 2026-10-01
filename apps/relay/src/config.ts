@@ -76,6 +76,11 @@ export interface RelayRuntimeConfig {
   plan: DualContactPlan;
   planPath: string;
   startedAt: number;
+  /** DTN_GRAPH_MODE=1 or plan.mode === 'graph'. */
+  graphMode: boolean;
+  x: number;
+  y: number;
+  bootstrapUrl?: string;
 }
 
 export function peerUrlFor(cfg: RelayRuntimeConfig, nextHopName: string): string {
@@ -84,33 +89,53 @@ export function peerUrlFor(cfg: RelayRuntimeConfig, nextHopName: string): string
   return cfg.peerUrl;
 }
 
+function envFlag(name: string): boolean {
+  const v = process.env[name];
+  return v === '1' || v === 'true' || v === 'yes';
+}
+
+function numEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (raw === undefined || raw === '') return fallback;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : fallback;
+}
+
 export function loadRelayConfig(): RelayRuntimeConfig {
   const planPath = resolvePlanPath();
   const plan = JSON.parse(fs.readFileSync(planPath, 'utf8')) as DualContactPlan;
   const nodeId = process.env.NODE_ID ?? 'Earth';
+  const graphMode = envFlag('DTN_GRAPH_MODE') || plan.mode === 'graph';
   const node = plan.nodes.find((n) => n.name === nodeId);
-  if (!node) {
+  if (!node && !graphMode) {
     throw new Error(`NODE_ID=${nodeId} not found in contact plan ${planPath}`);
   }
-  const port = Number(process.env.PORT ?? node.port);
-  const peerUrl = process.env.PEER_URL ?? node.peerUrl;
+  const port = Number(process.env.PORT ?? node?.port ?? 0);
+  const peerUrl = process.env.PEER_URL ?? node?.peerUrl ?? '';
   const eidByNode = buildEidByNode(plan);
-  const eid = eidByNode[nodeId];
+  const eid = process.env.EID ?? eidByNode[nodeId];
   if (!eid) {
     throw new Error(`No EID configured for NODE_ID=${nodeId} in contact plan ${planPath}`);
   }
+  eidByNode[nodeId] = eid;
+  const bootstrapRaw = process.env.BOOTSTRAP_URL;
+  const bootstrapUrl = bootstrapRaw && bootstrapRaw.length > 0 ? bootstrapRaw : undefined;
   return {
     nodeId,
     eid,
     eidByNode,
     port,
     peerUrl,
-    peers: node.peers ?? {},
-    role: node.role,
-    nextHop: node.nextHop,
+    peers: node?.peers ?? {},
+    role: node?.role ?? 'endpoint',
+    nextHop: node?.nextHop ?? {},
     dataDir: resolveDataDir(nodeId),
     plan,
     planPath,
     startedAt: Date.now(),
+    graphMode,
+    x: numEnv('NODE_X', node?.x ?? 0),
+    y: numEnv('NODE_Y', node?.y ?? 0),
+    bootstrapUrl,
   };
 }

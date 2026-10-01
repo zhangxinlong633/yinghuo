@@ -56,6 +56,9 @@ function cfg(eidByNode: Record<string, string>): RelayRuntimeConfig {
     peers: { Mars: 'http://127.0.0.1:9' },
     role: 'endpoint',
     nextHop: { Mars: 'Mars' },
+    graphMode: false,
+    x: 0,
+    y: 0,
     dataDir: '',
     plan: {
       nodes: [],

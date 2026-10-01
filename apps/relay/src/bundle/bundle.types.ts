@@ -72,8 +72,11 @@ export interface DualNodeConfig {
   port: number;
   peerUrl: string;
   peers?: Record<string, string>;
-  nextHop: Record<string, string>;
+  /** Omitted in graph mode; static tri/dual plans still set a full table. */
+  nextHop?: Record<string, string>;
   eid?: string;
+  x?: number;
+  y?: number;
 }
 
 export interface DualContactPlan {
