@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Body,
   Controller,
   Get,
@@ -7,14 +8,31 @@ import {
   Param,
   Post,
   Query,
+  Req,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import type { Request } from 'express';
+import { decodeBundle, type BpDecoded } from '../bp/bp-codec';
+import { bundleFromDecoded } from '../bp/wire';
 import { BundleService } from '../bundle/bundle.service';
 import type { BundleEvent } from '../bundle/bundle-machine';
 import type { RelayBundle } from '../bundle/bundle.types';
 import { ContactService } from '../contact/contact.service';
 import type { RelayRuntimeConfig } from '../config';
 import { RELAY_CONFIG } from '../relay.tokens';
+
+function mediaType(contentType?: string): string {
+  return (contentType ?? '').split(';')[0].trim().toLowerCase();
+}
+
+async function readRawBody(req: Request): Promise<Buffer> {
+  if (Buffer.isBuffer(req.body)) return req.body;
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks);
+}
 
 @Controller()
 export class RelayController {
@@ -88,13 +106,73 @@ export class RelayController {
    */
   @Post('peer/ingest')
   async peerIngest(
-    @Body() body: { bundle: RelayBundle; from: string },
+    @Req() req: Request,
+    @Headers('content-type') contentType?: string,
+    @Headers('x-dtn-from') fromHeader?: string,
+    @Headers('x-dtn-bundle-id') bundleIdHeader?: string,
     @Headers('x-dtn-force') force?: string
   ) {
-    if (!body?.bundle || !body?.from) {
+    const type = mediaType(contentType);
+    if (type === 'application/json') {
+      if (process.env.DTN_ALLOW_JSON_INGEST !== '1') {
+        throw new BadRequestException({
+          accepted: false,
+          delivered: false,
+          event: 'DECODE_ERROR',
+          msg: 'JSON ingest disabled',
+        });
+      }
+      const body = req.body as { bundle?: RelayBundle; from?: string };
+      return this.acceptPeerBundle(body?.bundle, body?.from, force);
+    }
+
+    if (type !== 'application/cbor') {
+      throw new BadRequestException({
+        accepted: false,
+        delivered: false,
+        event: 'DECODE_ERROR',
+        msg: `unsupported content-type ${type || '(missing)'}`,
+      });
+    }
+
+    const raw = await readRawBody(req);
+    let decoded: BpDecoded;
+    try {
+      decoded = decodeBundle(raw);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      throw new BadRequestException({
+        accepted: false,
+        delivered: false,
+        event: 'DECODE_ERROR',
+        msg,
+      });
+    }
+
+    const mapped = bundleFromDecoded(decoded, this.cfg, bundleIdHeader ?? '');
+    if (!mapped.ok) {
+      this.bundles.recordOps('REJECT', `unknown eid ${mapped.eid}`);
+      throw new BadRequestException({
+        accepted: false,
+        delivered: false,
+        event: 'UNKNOWN_EID',
+        msg: `unknown eid ${mapped.eid}`,
+      });
+    }
+
+    const bundle: RelayBundle = { ...mapped.bundle, wire: raw.toString('base64') };
+    return this.acceptPeerBundle(bundle, fromHeader, force);
+  }
+
+  private acceptPeerBundle(
+    bundle: RelayBundle | undefined,
+    from: string | undefined,
+    force?: string
+  ) {
+    if (!bundle || !from) {
       return { accepted: false, delivered: false, event: 'ERROR', msg: 'bundle+from required' };
     }
-    if (force !== '1' && !this.ingestContactOpen(body.bundle, body.from)) {
+    if (force !== '1' && !this.ingestContactOpen(bundle, from)) {
       throw new ServiceUnavailableException({
         accepted: false,
         delivered: false,
@@ -102,7 +180,7 @@ export class RelayController {
         msg: 'contact window closed — peer should store-and-forward later',
       });
     }
-    return this.bundles.ingestFromPeer(body.bundle, body.from);
+    return this.bundles.ingestFromPeer(bundle, from);
   }
 
   /**

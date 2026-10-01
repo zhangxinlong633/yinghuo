@@ -47,7 +47,7 @@ function toTracked(bundle: RelayBundle): TrackedBundle {
   };
 }
 
-function fromTracked(tracked: TrackedBundle, delivered: boolean): RelayBundle {
+function fromTracked(tracked: TrackedBundle, delivered: boolean, wire?: string): RelayBundle {
   return {
     id: tracked.id,
     src: tracked.src,
@@ -60,6 +60,7 @@ function fromTracked(tracked: TrackedBundle, delivered: boolean): RelayBundle {
     state: tracked.state,
     custodian: tracked.custodian,
     events: tracked.events,
+    ...(wire !== undefined ? { wire } : {}),
   };
 }
 
@@ -140,6 +141,11 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     this.events.push(row);
     if (this.events.length > 200) this.events.shift();
     this.log.log(`${event} ${msg}`);
+  }
+
+  /** Ops timeline entry for ingest rejects that never reach custody. */
+  recordOps(event: string, msg: string): void {
+    this.pushEvent(event, msg);
   }
 
   async send(dst: string, payload: string, ttlMs = 120000): Promise<RelayBundle> {
@@ -225,7 +231,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
     if (bundle.dst === this.cfg.nodeId) {
       const accepted = acceptIngest(undefined, toTracked(bundle), now, this.cfg.nodeId, true);
-      const stored = fromTracked(accepted, true);
+      const stored = fromTracked(accepted, true, bundle.wire);
       await this.store.putBundle(stored);
       const msg: DeliveredMessage = {
         id: stored.id,
@@ -257,7 +263,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     }
 
     const accepted = acceptIngest(undefined, toTracked(bundle), now, this.cfg.nodeId, false);
-    const stored = fromTracked(accepted, false);
+    const stored = fromTracked(accepted, false, bundle.wire);
     await this.store.putBundle(stored);
     await this.store.putCustody({
       bundleId: stored.id,
@@ -291,7 +297,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     const custody = await this.store.getCustody(bundleId);
     const upstream = custody?.from ?? null;
     const acked = applyAck(toTracked(bundle), now, this.cfg.nodeId, from, downstreamEvents);
-    await this.store.putBundle(fromTracked(acked, bundle.delivered));
+    await this.store.putBundle(fromTracked(acked, bundle.delivered, bundle.wire));
     this.pushEvent('ACK', `${bundleId} acked by ${from} — release custody`);
     this.lastForwardAttempt.delete(bundleId);
     if (custody) await this.store.releaseCustody(bundleId);
@@ -345,7 +351,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     if (now - bundle.createdAt >= bundle.ttlMs) {
       const expired = markExpired(toTracked(bundle), now, this.cfg.nodeId);
       this.rememberBundle(bundleId);
-      await this.store.putBundle(fromTracked(expired, bundle.delivered));
+      await this.store.putBundle(fromTracked(expired, bundle.delivered, bundle.wire));
       await this.store.releaseCustody(bundleId);
       this.store.dropInbox(bundleId);
       this.lastForwardAttempt.delete(bundleId);
@@ -402,11 +408,18 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
   /** Peer HTTP. Must run while the bundle mutex is not held. */
   private async finishForward(job: ForwardJob): Promise<void> {
-    let result: { ok: boolean; error?: string };
+    let result: { ok: boolean; error?: string; wireBase64?: string };
     try {
       result = await this.peer.forwardTo(peerUrlFor(this.cfg, job.next), job.bundle);
     } finally {
       this.forwardsInFlight.delete(job.bundleId);
+    }
+    if (result.wireBase64) {
+      const wireBase64 = result.wireBase64;
+      await this.enqueue(async () => {
+        const current = await this.store.getBundle(job.bundleId);
+        if (current) await this.store.putBundle({ ...current, wire: wireBase64 });
+      });
     }
     if (!result.ok) {
       await this.enqueue(() => this.applyForwardFailure(job.bundleId, result.error));
@@ -423,7 +436,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
     const reason = error ?? 'forward failed';
     const failed = noteForwardFailed(toTracked(stored), Date.now(), this.cfg.nodeId, reason);
-    await this.store.putBundle(fromTracked(failed, stored.delivered));
+    await this.store.putBundle(fromTracked(failed, stored.delivered, stored.wire));
     custody.waitingAck = false;
     await this.store.putCustody(custody);
     this.pushEvent('RETRY', `${bundleId} forward failed: ${reason}`);
@@ -493,7 +506,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
       if (bundle && bundle.state !== 'EXPIRED') {
         const expired = markExpired(toTracked(bundle), now, this.cfg.nodeId);
-        await this.store.putBundle(fromTracked(expired, bundle.delivered));
+        await this.store.putBundle(fromTracked(expired, bundle.delivered, bundle.wire));
       }
       this.store.dropInbox(msg.id);
       this.rememberBundle(msg.id);

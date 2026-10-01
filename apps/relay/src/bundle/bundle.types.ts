@@ -11,6 +11,8 @@ export interface RelayBundle {
   state?: 'WAITING' | 'FORWARDING' | 'ARRIVED' | 'ACKED' | 'EXPIRED';
   custodian?: string;
   events?: Array<{ t: number; node: string; kind: string; msg: string }>;
+  /** Base64 BPv7 CBOR captured at forward or ingest. Task 6 may refine this. */
+  wire?: string;
 }
 
 export interface CustodyRecord {
