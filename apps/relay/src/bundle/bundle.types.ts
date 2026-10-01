@@ -8,6 +8,9 @@ export interface RelayBundle {
   ttlMs: number;
   hops: Array<{ from: string; to: string; at: number }>;
   delivered: boolean;
+  state?: 'WAITING' | 'FORWARDING' | 'ARRIVED' | 'ACKED' | 'EXPIRED';
+  custodian?: string;
+  events?: Array<{ t: number; node: string; kind: string; msg: string }>;
 }
 
 export interface CustodyRecord {
