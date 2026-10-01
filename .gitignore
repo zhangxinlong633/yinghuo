@@ -7,3 +7,5 @@ dist/
 apps/api/data/
 # Dual-relay daemon LevelDB roots (bundles/custody/index per node)
 data/
+native/third_party/
+native/bp-codec/build/
