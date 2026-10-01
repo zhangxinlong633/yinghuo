@@ -51,6 +51,7 @@ export interface DualNodeConfig {
   peerUrl: string;
   peers?: Record<string, string>;
   nextHop: Record<string, string>;
+  eid?: string;
 }
 
 export interface DualContactPlan {

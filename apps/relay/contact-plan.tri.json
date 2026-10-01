@@ -4,6 +4,7 @@
   "nodes": [
     {
       "name": "Earth",
+      "eid": "ipn:1.1",
       "role": "endpoint",
       "port": 3101,
       "peerUrl": "http://127.0.0.1:3103",
@@ -12,6 +13,7 @@
     },
     {
       "name": "Relay",
+      "eid": "ipn:2.1",
       "role": "relay",
       "port": 3103,
       "peerUrl": "http://127.0.0.1:3102",
@@ -23,6 +25,7 @@
     },
     {
       "name": "Mars",
+      "eid": "ipn:3.1",
       "role": "endpoint",
       "port": 3102,
       "peerUrl": "http://127.0.0.1:3103",

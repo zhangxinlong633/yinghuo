@@ -48,8 +48,25 @@ function resolveDataDir(nodeId: string): string {
   return fallback;
 }
 
+const DEFAULT_EID_BY_NODE: Record<string, string> = {
+  Earth: 'ipn:1.1',
+  Relay: 'ipn:2.1',
+  Mars: 'ipn:3.1',
+};
+
+function buildEidByNode(plan: DualContactPlan): Record<string, string> {
+  const eidByNode: Record<string, string> = {};
+  for (const n of plan.nodes) {
+    const eid = n.eid ?? DEFAULT_EID_BY_NODE[n.name];
+    if (eid) eidByNode[n.name] = eid;
+  }
+  return eidByNode;
+}
+
 export interface RelayRuntimeConfig {
   nodeId: string;
+  eid: string;
+  eidByNode: Record<string, string>;
   port: number;
   peerUrl: string;
   peers: Record<string, string>;
@@ -77,8 +94,15 @@ export function loadRelayConfig(): RelayRuntimeConfig {
   }
   const port = Number(process.env.PORT ?? node.port);
   const peerUrl = process.env.PEER_URL ?? node.peerUrl;
+  const eidByNode = buildEidByNode(plan);
+  const eid = eidByNode[nodeId];
+  if (!eid) {
+    throw new Error(`No EID configured for NODE_ID=${nodeId} in contact plan ${planPath}`);
+  }
   return {
     nodeId,
+    eid,
+    eidByNode,
     port,
     peerUrl,
     peers: node.peers ?? {},
