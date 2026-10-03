@@ -25,6 +25,7 @@ import { ContactService } from '../contact/contact.service';
 import type { RelayRuntimeConfig } from '../config';
 import { RELAY_CONFIG } from '../relay.tokens';
 import { GraphService, type JoinRemote } from '../graph/graph.service';
+import { localRegion, localTier } from '../graph/region-policy';
 import type { GraphSummary } from '../graph/graph.types';
 import { PeerService } from '../peer/peer.service';
 import { ContactPlanReloadService } from '../contact/contact-plan-reload.service';
@@ -170,6 +171,8 @@ export class RelayController {
       y: this.cfg.y,
       peerUrl: this.cfg.peerUrl || `http://127.0.0.1:${this.cfg.port}`,
       role: this.cfg.role,
+      region: localRegion() ?? undefined,
+      tier: localTier(process.env, this.cfg.role),
     });
     if (result.ok !== true) {
       throw new BadRequestException({

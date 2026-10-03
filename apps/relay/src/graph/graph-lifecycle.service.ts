@@ -4,6 +4,7 @@ import type { RelayRuntimeConfig } from '../config';
 import { RELAY_CONFIG } from '../relay.tokens';
 import { PeerService } from '../peer/peer.service';
 import { GraphService, GOSSIP_INTERVAL_MS, GOSSIP_THROTTLE_MS } from './graph.service';
+import { localRegion, localTier } from './region-policy';
 
 @Injectable()
 export class GraphLifecycleService implements OnModuleInit, OnModuleDestroy {
@@ -41,6 +42,8 @@ export class GraphLifecycleService implements OnModuleInit, OnModuleDestroy {
       y: this.cfg.y,
       peerUrl: this.cfg.peerUrl,
       role: this.cfg.role,
+      region: localRegion() ?? undefined,
+      tier: localTier(process.env, this.cfg.role),
     });
     if (result.ok !== true) {
       const err = 'error' in result ? result.error : 'unknown';

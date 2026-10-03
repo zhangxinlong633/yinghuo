@@ -8,8 +8,9 @@ import type { RelayRuntimeConfig } from '../config';
 import { ContactService } from '../contact/contact.service';
 import { PeerService } from '../peer/peer.service';
 import { RelayController } from '../relay/relay.controller';
+import { GraphLifecycleService } from './graph-lifecycle.service';
 import { edgeKey } from './graph-merge';
-import { GraphService } from './graph.service';
+import { GraphService, type JoinRemote } from './graph.service';
 
 function cfg(partial: Partial<RelayRuntimeConfig> = {}): RelayRuntimeConfig {
   return {
@@ -180,6 +181,52 @@ test('peerJoin returns 403 REGION_MISMATCH before recording a foreign edge', () 
     else process.env.DTN_TIER = prev.DTN_TIER;
     if (prev.DTN_REGION_PEERS === undefined) delete process.env.DTN_REGION_PEERS;
     else process.env.DTN_REGION_PEERS = prev.DTN_REGION_PEERS;
+  }
+});
+
+test('bootstrap and graph join bodies include region and tier', async () => {
+  const prev = {
+    DTN_REGION: process.env.DTN_REGION,
+    DTN_TIER: process.env.DTN_TIER,
+  };
+  process.env.DTN_REGION = 'earth';
+  process.env.DTN_TIER = 'backbone';
+  const captured: JoinRemote[] = [];
+  const postJoin = async (_url: string, body: JoinRemote) => {
+    captured.push(body);
+    return { ok: false as const, error: 'stop' };
+  };
+  try {
+    const runtime = cfg({
+      role: 'orbiter',
+      bootstrapUrl: 'http://127.0.0.1:3199',
+      peerUrl: 'http://127.0.0.1:3101',
+    });
+    const graph = new GraphService(runtime);
+    const contacts = new ContactService(runtime, graph);
+    const life = new GraphLifecycleService(runtime, graph, contacts, { postJoin } as unknown as PeerService);
+    life.onModuleInit();
+    life.onModuleDestroy();
+
+    const api = new RelayController(
+      {} as BundleService,
+      contacts,
+      runtime,
+      graph,
+      { postJoin } as unknown as PeerService,
+    );
+    await assert.rejects(api.graphJoin({ url: 'http://127.0.0.1:3202' }));
+
+    assert.equal(captured.length, 2);
+    for (const body of captured) {
+      assert.equal(body.region, 'earth');
+      assert.equal(body.tier, 'backbone');
+    }
+  } finally {
+    if (prev.DTN_REGION === undefined) delete process.env.DTN_REGION;
+    else process.env.DTN_REGION = prev.DTN_REGION;
+    if (prev.DTN_TIER === undefined) delete process.env.DTN_TIER;
+    else process.env.DTN_TIER = prev.DTN_TIER;
   }
 });
 

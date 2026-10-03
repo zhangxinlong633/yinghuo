@@ -87,6 +87,8 @@ export type JoinResponse = {
 export class GraphService {
   private graph: LocalGraph = emptyGraph();
   private readonly gateways = new Map<string, RegionGateway>();
+  /** Foreign peer id to dial when this node is the in-region door for that region. */
+  private readonly foreignHops = new Map<string, string>();
   private readonly peers = new Map<string, string>();
   private readonly unhealthyUntil = new Map<string, number>();
   readonly unhealthyMs: number;
@@ -169,24 +171,21 @@ export class GraphService {
   }
 
   applyJoin(remote: JoinRemote): void {
-    this.cfg.eidByNode[remote.nodeId] = remote.eid;
     const role = remote.role ? parseRole(remote.role) : undefined;
     if (role) this.cfg.roleByNode[remote.nodeId] = role;
     const region = remote.region ?? localRegion() ?? undefined;
     const tier = parseTier(remote.tier, remote.role);
+    const mine = localRegion();
     this.upsertDirectPeer(
       remote.nodeId,
       remote.peerUrl,
       { id: remote.nodeId, eid: remote.eid, x: remote.x, y: remote.y, role, region, tier },
       DEFAULT_JOIN_SCHEDULE,
     );
-    const mine = localRegion();
-    if (remote.region && remote.region !== mine) {
-      this.gateways.set(remote.region, {
-        region: remote.region,
-        nodeId: remote.nodeId,
-        eid: remote.eid,
-      });
+    if (mine && remote.region && remote.region !== mine) {
+      this.recordDoor(remote.region, remote.nodeId);
+      this.graph.nodes.delete(remote.nodeId);
+      delete this.cfg.eidByNode[remote.nodeId];
     }
   }
 
@@ -198,16 +197,25 @@ export class GraphService {
     const id = response.summary.from;
     const found = response.summary.nodes.find((n) => n.id === id);
     const role = found?.role ?? this.cfg.roleByNode[id];
+    const url = bootstrapUrl.replace(/\/$/, '');
+    const mine = localRegion();
+    const remoteRegion = found?.region;
+    if (role) this.cfg.roleByNode[id] = role;
     const node: GraphNode = {
       id,
       eid: found?.eid || response.localEid,
       x: found?.x ?? 0,
       y: found?.y ?? 0,
       role,
+      region: remoteRegion,
+      tier: found?.tier,
     };
-    this.cfg.eidByNode[id] = node.eid;
-    if (role) this.cfg.roleByNode[id] = role;
-    this.upsertDirectPeer(id, bootstrapUrl.replace(/\/$/, ''), node, DEFAULT_JOIN_SCHEDULE);
+    this.upsertDirectPeer(id, url, node, DEFAULT_JOIN_SCHEDULE);
+    if (mine && remoteRegion && remoteRegion !== mine) {
+      this.recordDoor(remoteRegion, id);
+      this.graph.nodes.delete(id);
+      delete this.cfg.eidByNode[id];
+    }
     this.ingestSummary(response.summary);
   }
 
@@ -242,7 +250,17 @@ export class GraphService {
     for (const edge of directs) {
       this.graph.edges.set(edgeKey(edge.a, edge.b), edge);
     }
+    if (localRegion()) {
+      for (const [key, edge] of this.graph.edges) {
+        if (!this.graph.nodes.has(edge.a) || !this.graph.nodes.has(edge.b)) {
+          this.graph.edges.delete(key);
+        }
+      }
+    }
+    const mine = localRegion();
     for (const gateway of summary.gateways ?? []) {
+      if (mine && gateway.region === mine) continue;
+      if (this.foreignHops.has(gateway.region)) continue;
       this.gateways.set(gateway.region, gateway);
     }
     for (const node of this.graph.nodes.values()) {
@@ -267,6 +285,8 @@ export class GraphService {
       nodes = nodes.filter((node) => keep.has(node.id));
       edges = edges.filter((edge) => edge.direct === true && (edge.a === me || edge.b === me));
     }
+    const nodeIds = new Set(nodes.map((node) => node.id));
+    edges = edges.filter((edge) => nodeIds.has(edge.a) && nodeIds.has(edge.b));
     const summary: GraphSummary = {
       from: this.cfg.nodeId,
       nodes: nodes.map((node) => ({
@@ -296,6 +316,7 @@ export class GraphService {
       partitioning: regionEnabled(),
       meTier: localTier(process.env, this.cfg.role),
       gateways: this.listGateways(),
+      regionHops: [...this.foreignHops.entries()].map(([region, nodeId]) => ({ region, nodeId })),
       dstRegion,
     });
   }
@@ -335,6 +356,15 @@ export class GraphService {
     };
     this.graph.edges.set(edgeKey(a, b), edge);
     this.rememberSelf();
+  }
+
+  private recordDoor(region: string, foreignId: string): void {
+    this.gateways.set(region, {
+      region,
+      nodeId: this.cfg.nodeId,
+      eid: this.cfg.eid,
+    });
+    this.foreignHops.set(region, foreignId);
   }
 
   private pruneUnhealthy(now: number): void {

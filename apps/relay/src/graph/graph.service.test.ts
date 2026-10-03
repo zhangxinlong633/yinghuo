@@ -333,6 +333,51 @@ test('edge exportSummary omits heard edges', () => {
   }
 });
 
+test('listed backbone mutual join records each side as its own door', () => {
+  const prev = {
+    DTN_REGION: process.env.DTN_REGION,
+    DTN_TIER: process.env.DTN_TIER,
+    DTN_REGION_PEERS: process.env.DTN_REGION_PEERS,
+  };
+  process.env.DTN_REGION = 'earth';
+  process.env.DTN_TIER = 'backbone';
+  process.env.DTN_REGION_PEERS = 'mars=http://127.0.0.1:3202';
+  try {
+    const earth = new GraphService(cfg({ nodeId: 'Earth', eid: 'ipn:1.1', role: 'orbiter' }));
+    earth.applyJoin({
+      nodeId: 'MarsGw', eid: 'ipn:3.1', port: 3202, x: 30, y: 0,
+      peerUrl: 'http://127.0.0.1:3202', role: 'orbiter', region: 'mars', tier: 'backbone',
+    });
+    const response = earth.buildJoinResponse();
+    assert.deepEqual(earth.listGateways(), [
+      { region: 'mars', nodeId: 'Earth', eid: 'ipn:1.1' },
+    ]);
+    assert.equal(earth.listKnownNodeIds().includes('MarsGw'), false);
+    assert.equal(earth.peerUrl('MarsGw'), 'http://127.0.0.1:3202');
+
+    process.env.DTN_REGION = 'mars';
+    process.env.DTN_REGION_PEERS = 'earth=http://127.0.0.1:3101';
+    const mars = new GraphService(cfg({
+      nodeId: 'MarsGw', eid: 'ipn:3.1', role: 'orbiter', port: 3202,
+      peerUrl: 'http://127.0.0.1:3202',
+    }));
+    mars.acceptBootstrap('http://127.0.0.1:3101', response);
+    assert.deepEqual(mars.listGateways(), [
+      { region: 'earth', nodeId: 'MarsGw', eid: 'ipn:3.1' },
+    ]);
+    assert.equal(mars.listKnownNodeIds().includes('Earth'), false);
+    assert.equal(mars.peerUrl('Earth'), 'http://127.0.0.1:3101');
+
+    process.env.DTN_REGION = 'earth';
+    const camp = new GraphService(cfg({ nodeId: 'Camp', eid: 'ipn:2.1', role: 'orbiter', x: 4, y: 0 }));
+    camp.acceptBootstrap('http://127.0.0.1:3101', response);
+    const hop = camp.decide('Phobos', 1_000, 'mars');
+    assert.equal(hop.nextHop, 'Earth');
+  } finally {
+    restoreRegionEnv(prev);
+  }
+});
+
 test('backbone exportSummary lists foreign gateways and skips foreign eids', () => {
   const prev = {
     DTN_REGION: process.env.DTN_REGION,
@@ -356,8 +401,11 @@ test('backbone exportSummary lists foreign gateways and skips foreign eids', () 
       gateways: [{ region: 'venus', nodeId: 'VenusGw', eid: 'ipn:4.1' }],
     });
     assert.equal(runtime.eidByNode.Phobos, undefined);
+    assert.equal(runtime.eidByNode.MarsGw, undefined);
+    assert.equal(graph.listKnownNodeIds().includes('MarsGw'), false);
+    assert.equal(graph.peerUrl('MarsGw'), 'http://127.0.0.1:3202');
     assert.deepEqual(graph.listGateways(), [
-      { region: 'mars', nodeId: 'MarsGw', eid: 'ipn:3.1' },
+      { region: 'mars', nodeId: 'Earth', eid: 'ipn:1.1' },
       { region: 'venus', nodeId: 'VenusGw', eid: 'ipn:4.1' },
     ]);
     const sum = graph.exportSummary();

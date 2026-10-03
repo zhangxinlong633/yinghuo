@@ -242,6 +242,75 @@ describe('region replica', { concurrency: 1 }, () => {
       },
     );
   });
+
+  test('ingest after foreign gateway join does not replica-target that peer', async () => {
+    await withEnv(
+      {
+        DTN_REGION: 'earth',
+        DTN_TIER: 'backbone',
+        DTN_REPLICA_N: '2',
+        DTN_REGION_PEERS: 'mars=http://127.0.0.1:9',
+      },
+      async () => {
+        loadBpCodec();
+        const { graph, peer, bundles } = harness();
+        graph.upsertDirectPeer(
+          'LocalBb',
+          'http://127.0.0.1:7',
+          { id: 'LocalBb', eid: 'ipn:2.3', x: 5, y: 0, role: 'orbiter', region: 'earth', tier: 'backbone' },
+          DEFAULT_JOIN_SCHEDULE,
+        );
+        graph.upsertDirectPeer(
+          'Spare',
+          'http://127.0.0.1:6',
+          { id: 'Spare', eid: 'ipn:2.4', x: 1, y: 0, role: 'orbiter', region: 'earth', tier: 'backbone' },
+          DEFAULT_JOIN_SCHEDULE,
+        );
+        graph.applyJoin({
+          nodeId: 'MarsGw',
+          eid: 'ipn:3.1',
+          port: 9,
+          x: 40,
+          y: 0,
+          peerUrl: 'http://127.0.0.1:9',
+          role: 'orbiter',
+          region: 'mars',
+          tier: 'backbone',
+        });
+        graph.ingestSummary({
+          from: 'LocalBb',
+          nodes: [
+            { id: 'LocalBb', eid: 'ipn:2.3', x: 5, y: 0, role: 'orbiter', region: 'earth', tier: 'backbone' },
+            { id: 'Camp', eid: 'ipn:8.1', x: 20, y: 0, role: 'lander', region: 'earth', tier: 'edge' },
+          ],
+          edges: [{
+            a: 'LocalBb',
+            b: 'Camp',
+            delayMs: 1,
+            schedule: DEFAULT_JOIN_SCHEDULE,
+            originatedAt: Date.now(),
+            hopCount: 0,
+          }],
+        });
+        peer.forwardTo = async (_url, bundle, extraHeaders) => {
+          if (extraHeaders?.['x-dtn-replica'] === '1') {
+            return { ok: true, wireBase64: bundle.wire };
+          }
+          return { ok: false, error: 'down', wireBase64: bundle.wire };
+        };
+
+        const bundle = await bundles.send('Camp', 'hi');
+        assert.equal(graph.peerUrl('MarsGw'), 'http://127.0.0.1:9');
+        assert.equal(graph.listKnownNodeIds().includes('MarsGw'), false);
+        assert.equal(
+          graph.snapshot().edges.some((e) => e.a === 'MarsGw' || e.b === 'MarsGw'),
+          false,
+        );
+        assert.equal((bundle.replicas ?? []).includes('MarsGw'), false);
+        assert.equal((bundle.replicas ?? []).includes('Spare'), true);
+      },
+    );
+  });
 });
 
 test('forwardTo sends x-dtn-dst-region when the bundle has one', async () => {

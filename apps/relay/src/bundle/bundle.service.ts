@@ -607,8 +607,11 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       const delayMs = edge?.delayMs ?? contact?.delayMs ?? Number.POSITIVE_INFINITY;
       const role = node?.role ?? this.cfg.roleByNode[id] ?? 'lander';
       if (regionEnabled()) {
-        if (parseTier(node?.tier, role) !== 'backbone') return [];
-        if ((node?.region ?? localRegion()) !== localRegion()) return [];
+        const gatewayIds = new Set((this.graph?.listGateways() ?? []).map((g) => g.nodeId));
+        if (gatewayIds.has(id)) return [];
+        if (!node) return [];
+        if (parseTier(node.tier, role) !== 'backbone') return [];
+        if ((node.region ?? localRegion()) !== localRegion()) return [];
       }
       return [{
         id,

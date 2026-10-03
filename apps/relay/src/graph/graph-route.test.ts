@@ -132,6 +132,63 @@ test('unknown dst with dstRegion uses gateway nextHop', () => {
   assert.equal(d.nextHop, 'MarsGw');
 });
 
+test('unhealthy foreign gateway hop is not selected', () => {
+  const graph = emptyGraph();
+  upsertNode(graph, { id: 'EarthGw', eid: 'ipn:1.1', x: 0, y: 0, role: 'orbiter', region: 'earth' });
+  const d = decideNextHop({
+    me: 'EarthGw',
+    dst: 'PhobosCam',
+    graph,
+    peerIds: ['MarsPeer'],
+    unhealthy: new Set(['MarsPeer']),
+    now: 0,
+    meRole: 'orbiter',
+    partitioning: true,
+    meTier: 'backbone',
+    dstRegion: 'mars',
+    gateways: [{ region: 'mars', nodeId: 'MarsPeer', eid: 'ipn:3.1' }],
+  });
+  assert.equal(d.nextHop, null);
+  assert.equal(d.reason, 'region gateway unhealthy');
+});
+
+test('door uses healthy foreign peer when advertised gateway is self', () => {
+  const graph = emptyGraph();
+  upsertNode(graph, { id: 'EarthGw', eid: 'ipn:1.1', x: 0, y: 0, role: 'orbiter', region: 'earth' });
+  const healthy = decideNextHop({
+    me: 'EarthGw',
+    dst: 'PhobosCam',
+    graph,
+    peerIds: ['MarsPeer'],
+    unhealthy: new Set(),
+    now: 0,
+    meRole: 'orbiter',
+    partitioning: true,
+    meTier: 'backbone',
+    dstRegion: 'mars',
+    gateways: [{ region: 'mars', nodeId: 'EarthGw', eid: 'ipn:1.1' }],
+    regionHops: [{ region: 'mars', nodeId: 'MarsPeer' }],
+  });
+  assert.equal(healthy.nextHop, 'MarsPeer');
+
+  const down = decideNextHop({
+    me: 'EarthGw',
+    dst: 'PhobosCam',
+    graph,
+    peerIds: ['MarsPeer'],
+    unhealthy: new Set(['MarsPeer']),
+    now: 0,
+    meRole: 'orbiter',
+    partitioning: true,
+    meTier: 'backbone',
+    dstRegion: 'mars',
+    gateways: [{ region: 'mars', nodeId: 'EarthGw', eid: 'ipn:1.1' }],
+    regionHops: [{ region: 'mars', nodeId: 'MarsPeer' }],
+  });
+  assert.equal(down.nextHop, null);
+  assert.equal(down.reason, 'region gateway unhealthy');
+});
+
 test('unknown dst with dstRegion and no gateway', () => {
   const graph = emptyGraph();
   upsertNode(graph, { id: 'EarthGw', eid: 'ipn:1.1', x: 0, y: 0, role: 'orbiter' });

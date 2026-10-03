@@ -46,6 +46,8 @@ export function decideNextHop(input: {
   meTier?: NodeTier;
   partitioning?: boolean;
   gateways?: RegionGateway[];
+  /** Foreign peer to use when this node is the advertised door for that region. */
+  regionHops?: Array<{ region: string; nodeId: string }>;
 }): RouteDecision {
   const { me, graph, peerIds, unhealthy, now } = input;
   let dst = input.dst;
@@ -73,8 +75,20 @@ export function decideNextHop(input: {
         algo: 'cgr',
       };
     }
+    if (gateway.nodeId === me) {
+      return foreignDoorHop(input.regionHops, input.dstRegion, unhealthy);
+    }
     const gatewayNode = graph.nodes.get(gateway.nodeId);
     if (gatewayNode === undefined && peerIds.includes(gateway.nodeId)) {
+      if (unhealthy.has(gateway.nodeId)) {
+        return {
+          nextHop: null,
+          reason: 'region gateway unhealthy',
+          candidates: [],
+          culled: [],
+          algo: 'cgr',
+        };
+      }
       return {
         nextHop: gateway.nodeId,
         reason: `region gateway ${gateway.nodeId}`,
@@ -193,6 +207,30 @@ export function decideNextHop(input: {
     candidates,
     culled,
     algo: 'sabr-lite',
+  };
+}
+
+function foreignDoorHop(
+  regionHops: Array<{ region: string; nodeId: string }> | undefined,
+  dstRegion: string,
+  unhealthy: Set<string>,
+): RouteDecision {
+  const hop = regionHops?.find((row) => row.region === dstRegion)?.nodeId;
+  if (!hop || unhealthy.has(hop)) {
+    return {
+      nextHop: null,
+      reason: 'region gateway unhealthy',
+      candidates: [],
+      culled: [],
+      algo: 'cgr',
+    };
+  }
+  return {
+    nextHop: hop,
+    reason: `region gateway ${hop}`,
+    candidates: [],
+    culled: [],
+    algo: 'cgr',
   };
 }
 
