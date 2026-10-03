@@ -9,3 +9,4 @@ apps/api/data/
 data/
 native/third_party/
 native/bp-codec/build/
+.worktrees/
