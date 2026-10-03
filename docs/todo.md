@@ -68,7 +68,7 @@
 
 对齐完整深空互操作与生产级协议栈；有近中成果后再评估。
 
-- [x] 局部 SABR-lite（等窗+时延+角色罚分）；**完整 CGR 仍开放**
+- [x] 多跳 CGR（最早到达）+ SABR-lite 回退；**ION 级 coped／完整 SABR 仍开放**
 - [x] BPSec **演示头** `x-dtn-bpsec: integrity`（`DTN_BPSEC=1`）；**非** CCSDS BPSec／分片／ION
 - [x] 星历弧适配器作为 DSN／任务管线的输入侧钩子；**不对接真实 DSN**
 - [ ] 跨厂商、跨机构规模化互通与认证体系

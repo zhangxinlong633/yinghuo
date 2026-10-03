@@ -28,9 +28,9 @@ import { ContactService } from '../contact/contact.service';
 import type { RelayRuntimeConfig } from '../config';
 import { GraphService } from '../graph/graph.service';
 import type { RouteDecision } from '../graph/graph-route';
+import { contactGraphRoute, localGraphFromPlan } from '../graph/graph-cgr';
 import { describeMissionClock } from '../clock/mission-clock';
 import { roleCapabilities } from '../role/role-policy';
-import { describeMissionClock } from '../clock/mission-clock';
 import { LevelStore } from '../store/level-store';
 import { PeerService } from '../peer/peer.service';
 import { RELAY_CONFIG } from '../relay.tokens';
@@ -74,6 +74,9 @@ function fromTracked(tracked: TrackedBundle, delivered: boolean, wire?: string):
 }
 
 function routeNote(decision: RouteDecision): string {
+  if (decision.algo === 'cgr' && decision.path && decision.path.length > 0) {
+    return `selected ${decision.nextHop} via CGR ${decision.path.join('→')}`;
+  }
   const culled = decision.culled.map((candidate) => candidate.neighbor).join(', ');
   return culled.length > 0
     ? `selected ${decision.nextHop}; culled ${culled}`
@@ -486,14 +489,37 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** Static table outside graph mode. Graph mode asks the local contact graph. */
+  /** Static table, else CGR over the plan contacts, else dst itself. */
   private pickNext(dst: string, now: number): { next: string | null; routeMsg: string | null } {
-    if (!this.cfg.graphMode || !this.graph) {
-      return { next: this.cfg.nextHop[dst] ?? dst, routeMsg: null };
+    if (this.cfg.graphMode && this.graph) {
+      const decision = this.graph.decide(dst, now);
+      if (!decision.nextHop) return { next: null, routeMsg: decision.reason };
+      return { next: decision.nextHop, routeMsg: routeNote(decision) };
     }
-    const decision = this.graph.decide(dst, now);
-    if (!decision.nextHop) return { next: null, routeMsg: decision.reason };
-    return { next: decision.nextHop, routeMsg: routeNote(decision) };
+    const table = this.cfg.nextHop[dst];
+    if (process.env.DTN_CGR !== '0' && process.env.DTN_CGR !== 'false') {
+      const planGraph = localGraphFromPlan(this.cfg.plan);
+      const peerIds = [
+        ...new Set(
+          this.cfg.plan.contacts
+            .filter((c) => c.a === this.cfg.nodeId || c.b === this.cfg.nodeId)
+            .map((c) => (c.a === this.cfg.nodeId ? c.b : c.a)),
+        ),
+      ];
+      const cgr = contactGraphRoute({
+        me: this.cfg.nodeId,
+        dst,
+        graph: planGraph,
+        peerIds,
+        unhealthy: new Set(),
+        now,
+        meRole: this.cfg.role,
+      });
+      if (cgr.nextHop) {
+        return { next: cgr.nextHop, routeMsg: cgr.reason };
+      }
+    }
+    return { next: table ?? dst, routeMsg: null };
   }
 
   /** Persist a ROUTE line once per distinct reason. A null next hop parks WAITING. */
