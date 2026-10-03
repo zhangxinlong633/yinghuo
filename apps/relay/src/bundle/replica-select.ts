@@ -1,3 +1,5 @@
+import type { NodeTier } from '../graph/region-policy';
+
 export type ReplicaStrategy = 'nearest' | 'quality' | 'far';
 
 export type ReplicaCandidate = {
@@ -10,9 +12,15 @@ export type ReplicaCandidate = {
   rolePenalty: number;
 };
 
-export function replicaCount(env: Record<string, string | undefined> = process.env): number {
+export function replicaCount(
+  env: Record<string, string | undefined> = process.env,
+  opts?: { partitioning?: boolean; tier?: NodeTier },
+): number {
   const raw = env.DTN_REPLICA_N;
-  if (raw === undefined || raw === '') return 2;
+  if (raw === undefined || raw === '') {
+    if (opts?.partitioning && opts.tier === 'edge') return 0;
+    return 2;
+  }
   const n = Number(raw);
   if (!Number.isFinite(n) || n < 0) return 2;
   return Math.floor(n);

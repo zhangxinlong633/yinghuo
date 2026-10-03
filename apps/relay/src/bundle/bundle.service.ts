@@ -35,6 +35,7 @@ import { peerUrlFor, type RelayRuntimeConfig } from '../config';
 import { GraphService } from '../graph/graph.service';
 import type { RouteDecision } from '../graph/graph-route';
 import { contactGraphRoute, localGraphFromPlan } from '../graph/graph-cgr';
+import { localRegion, localTier, parseTier, regionEnabled } from '../graph/region-policy';
 import { describeMissionClock } from '../clock/mission-clock';
 import { roleCapabilities, roleRoutePenalty } from '../role/role-policy';
 import { LevelStore } from '../store/level-store';
@@ -87,6 +88,7 @@ function fromTracked(
     ...(orig?.replicaOf ? { replicaOf: orig.replicaOf } : {}),
     ...(orig?.replicas ? { replicas: orig.replicas } : {}),
     ...(orig?.payloadSha256 ? { payloadSha256: orig.payloadSha256 } : {}),
+    ...(orig?.dstRegion ? { dstRegion: orig.dstRegion } : {}),
   };
 }
 
@@ -185,8 +187,13 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     this.pushEvent(event, msg);
   }
 
-  async send(dst: string, payload: string, ttlMs = 120000): Promise<RelayBundle> {
-    const staged = await this.enqueue(() => this.stageSend(dst, payload, ttlMs));
+  async send(
+    dst: string,
+    payload: string,
+    ttlMs = 120000,
+    dstRegion?: string,
+  ): Promise<RelayBundle> {
+    const staged = await this.enqueue(() => this.stageSend(dst, payload, ttlMs, dstRegion));
     if (staged.job) await this.finishForward(staged.job);
     await this.replicate(staged.bundle.id, [
       ...(staged.job?.next ? [staged.job.next] : []),
@@ -198,14 +205,15 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
   private async stageSend(
     dst: string,
     payload: string,
-    ttlMs: number
+    ttlMs: number,
+    dstRegion?: string,
   ): Promise<{ bundle: RelayBundle; job: ForwardJob | null }> {
     if (!roleCapabilities(this.cfg.role).canInject) {
       throw new Error(`role=${this.cfg.role} cannot inject application traffic`);
     }
     const now = Date.now();
     const id = newBundleId(this.cfg.nodeId);
-    const picked = this.pickNext(dst, now);
+    const picked = this.pickNext(dst, now, dstRegion);
     const contactOpen = picked.next !== null && this.contacts.isOpenTo(picked.next, now);
     const draft: RelayBundle = {
       id,
@@ -231,6 +239,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     const bundle = fromTracked(tracked, false, wire);
     bundle.replicaRole = 'primary';
     bundle.payloadSha256 = payloadSha256(payload);
+    if (dstRegion?.trim()) bundle.dstRegion = dstRegion.trim();
     bundle.replicas = [];
     await this.store.putBundle(bundle);
     await this.store.putCustody({
@@ -506,7 +515,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
     if (this.encodeRejected(bundle)) return null;
 
-    const picked = this.pickNext(bundle.dst, now);
+    const picked = this.pickNext(bundle.dst, now, bundle.dstRegion);
     if (picked.next === null) {
       await this.recordRoute(bundle, now, picked.routeMsg ?? 'no next hop', true);
       if (custody.waitingAck) {
@@ -582,7 +591,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     const sx = selfNode?.x ?? this.cfg.x;
     const sy = selfNode?.y ?? this.cfg.y;
     const unhealthy = new Set(this.graph?.listUnhealthy() ?? []);
-    return this.replicaPeerIds().map((id) => {
+    return this.replicaPeerIds().flatMap((id) => {
       const node = snap?.nodes.find((n) => n.id === id);
       const planNode = this.cfg.plan.nodes.find((n) => n.name === id);
       const x = node?.x ?? planNode?.x ?? 0;
@@ -597,19 +606,26 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       );
       const delayMs = edge?.delayMs ?? contact?.delayMs ?? Number.POSITIVE_INFINITY;
       const role = node?.role ?? this.cfg.roleByNode[id] ?? 'lander';
-      return {
+      if (regionEnabled()) {
+        if (parseTier(node?.tier, role) !== 'backbone') return [];
+        if ((node?.region ?? localRegion()) !== localRegion()) return [];
+      }
+      return [{
         id,
         dist: Math.hypot(x - sx, y - sy),
         delayMs,
         unhealthy: unhealthy.has(id),
         rolePenalty: roleRoutePenalty(this.cfg.role, role),
-      };
+      }];
     });
   }
 
   /** Copy the bundle to up to DTN_REPLICA_N (default 2) other nodes. Replicas do not take custody. */
   async replicate(bundleId: string, exclude: string[] = []): Promise<void> {
-    const n = replicaCount();
+    const n = replicaCount(process.env, {
+      partitioning: regionEnabled(),
+      tier: localTier(process.env, this.cfg.role),
+    });
     if (n <= 0 || !this.peer) return;
     const strategy = replicaStrategy();
     const bundle = await this.enqueue(async () => this.store.getBundle(bundleId));
@@ -673,9 +689,13 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Static table, else CGR over the plan contacts, else dst itself. */
-  private pickNext(dst: string, now: number): { next: string | null; routeMsg: string | null } {
+  private pickNext(
+    dst: string,
+    now: number,
+    dstRegion?: string,
+  ): { next: string | null; routeMsg: string | null } {
     if (this.cfg.graphMode && this.graph) {
-      const decision = this.graph.decide(dst, now);
+      const decision = this.graph.decide(dst, now, dstRegion);
       if (!decision.nextHop) return { next: null, routeMsg: decision.reason };
       return { next: decision.nextHop, routeMsg: routeNote(decision) };
     }
@@ -1060,7 +1080,10 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       recentEvents: this.events.slice(-40),
       clock: describeMissionClock(),
       replica: {
-        n: replicaCount(),
+        n: replicaCount(process.env, {
+          partitioning: regionEnabled(),
+          tier: localTier(process.env, this.cfg.role),
+        }),
         strategy: replicaStrategy(),
         promote: replicaPromoteEnabled(),
       },

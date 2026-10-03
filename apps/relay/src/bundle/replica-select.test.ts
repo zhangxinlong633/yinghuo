@@ -40,6 +40,14 @@ test('default replica count is 2', () => {
   assert.equal(replicaCount({ DTN_REPLICA_N: '1' }), 1);
 });
 
+test('edge default replica n is 0 only when partitioning', () => {
+  assert.equal(replicaCount({}, { partitioning: true, tier: 'edge' }), 0);
+  assert.equal(replicaCount({ DTN_REPLICA_N: '2' }, { partitioning: true, tier: 'edge' }), 2);
+  assert.equal(replicaCount({}, { partitioning: false, tier: 'edge' }), 2);
+  assert.equal(replicaCount({}, { partitioning: true, tier: 'backbone' }), 2);
+  assert.equal(replicaCount({}, { tier: 'edge' }), 2);
+});
+
 test('replica strategy env: nearest, quality, far', () => {
   assert.equal(replicaStrategy({}), 'quality');
   assert.equal(replicaStrategy({ DTN_REPLICA_STRATEGY: 'nearest' }), 'nearest');

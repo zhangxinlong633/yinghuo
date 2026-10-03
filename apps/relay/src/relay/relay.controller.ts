@@ -47,6 +47,17 @@ function stampPayloadSha256(
   return { ...bundle, payloadSha256: hex };
 }
 
+/** Transit region is the header the sender declared. Never infer it from the payload. */
+function stampDstRegion(
+  bundle: RelayBundle | undefined,
+  header?: string,
+): RelayBundle | undefined {
+  if (!bundle) return bundle;
+  const region = header?.trim();
+  if (!region) return bundle;
+  return { ...bundle, dstRegion: region };
+}
+
 async function readRawBody(req: Request): Promise<Buffer> {
   if (Buffer.isBuffer(req.body)) return req.body;
   const chunks: Buffer[] = [];
@@ -222,13 +233,18 @@ export class RelayController {
 
   @Post('send')
   async send(
-    @Body() body: { dst: string; payload: string; ttlMs?: number }
+    @Body() body: { dst: string; payload: string; ttlMs?: number; dstRegion?: string }
   ) {
     if (!body?.dst || body.payload == null) {
       return { ok: false, error: 'dst and payload required' };
     }
     try {
-      const bundle = await this.bundles.send(body.dst, String(body.payload), body.ttlMs);
+      const bundle = await this.bundles.send(
+        body.dst,
+        String(body.payload),
+        body.ttlMs,
+        body.dstRegion,
+      );
       return { ok: true, ...toBusinessSendFields(bundle) };
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -265,6 +281,7 @@ export class RelayController {
     @Headers('x-dtn-bpsec') bpsecHeader?: string,
     @Headers('x-dtn-replica') replicaHeader?: string,
     @Headers('x-dtn-payload-sha256') payloadSha256Header?: string,
+    @Headers('x-dtn-dst-region') dstRegionHeader?: string,
   ) {
     if (!bpsecIngestOk(bpsecHeader)) {
       throw new BadRequestException({
@@ -287,7 +304,7 @@ export class RelayController {
       }
       const body = req.body as { bundle?: RelayBundle; from?: string };
       return this.acceptPeerBundle(
-        stampPayloadSha256(body?.bundle, payloadSha256Header),
+        stampDstRegion(stampPayloadSha256(body?.bundle, payloadSha256Header), dstRegionHeader),
         body?.from,
         replica ? '1' : force,
         replica,
@@ -340,9 +357,12 @@ export class RelayController {
       });
     }
 
-    const bundle = stampPayloadSha256(
-      { ...mapped.bundle, wire: raw.toString('base64') },
-      payloadSha256Header,
+    const bundle = stampDstRegion(
+      stampPayloadSha256(
+        { ...mapped.bundle, wire: raw.toString('base64') },
+        payloadSha256Header,
+      ),
+      dstRegionHeader,
     );
     return this.acceptPeerBundle(bundle, fromHeader, '1', replica);
   }

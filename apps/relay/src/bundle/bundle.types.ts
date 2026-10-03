@@ -9,6 +9,8 @@ export interface RelayBundle {
   payload: string;
   /** Hex SHA-256 of payload. Absent on legacy bundles; those skip verification. */
   payloadSha256?: string;
+  /** Destination region for cross-region gateway routing. Header-sourced in transit. */
+  dstRegion?: string;
   createdAt: number;
   ttlMs: number;
   hops: Array<{ from: string; to: string; at: number }>;

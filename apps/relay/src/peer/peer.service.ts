@@ -122,6 +122,7 @@ export class PeerService {
           ...(bundle.payloadSha256
             ? { 'x-dtn-payload-sha256': bundle.payloadSha256.toLowerCase() }
             : {}),
+          ...(bundle.dstRegion ? { 'x-dtn-dst-region': bundle.dstRegion } : {}),
         },
         body: wire,
         signal: AbortSignal.timeout(3000),
