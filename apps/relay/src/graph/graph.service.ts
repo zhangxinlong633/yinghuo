@@ -282,7 +282,7 @@ export class GraphService {
     return summary;
   }
 
-  decide(dst: string, now: number): RouteDecision {
+  decide(dst: string, now: number, dstRegion?: string): RouteDecision {
     this.pruneUnhealthy(now);
     const unhealthy = new Set(this.unhealthyUntil.keys());
     return decideNextHop({
@@ -293,6 +293,10 @@ export class GraphService {
       unhealthy,
       now,
       meRole: this.cfg.role,
+      partitioning: regionEnabled(),
+      meTier: localTier(process.env, this.cfg.role),
+      gateways: this.listGateways(),
+      dstRegion,
     });
   }
 

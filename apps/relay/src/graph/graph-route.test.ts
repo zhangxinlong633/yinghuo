@@ -108,3 +108,68 @@ test('destination not in local graph', () => {
   assert.deepEqual(decision.candidates, []);
   assert.deepEqual(decision.culled, []);
 });
+
+test('unknown dst with dstRegion uses gateway nextHop', () => {
+  const graph = emptyGraph();
+  upsertNode(graph, { id: 'EarthGw', eid: 'ipn:1.1', x: 0, y: 0, role: 'orbiter', region: 'earth' });
+  upsertNode(graph, { id: 'MarsGw', eid: 'ipn:3.1', x: 10, y: 0, role: 'orbiter', region: 'earth' });
+  upsertEdge(graph, {
+    a: 'EarthGw', b: 'MarsGw', delayMs: 5, schedule: openNow, originatedAt: 1, hopCount: 0, direct: true,
+  });
+  const d = decideNextHop({
+    me: 'EarthGw',
+    dst: 'PhobosCam',
+    graph,
+    peerIds: ['MarsGw'],
+    unhealthy: new Set(),
+    now: 0,
+    meRole: 'orbiter',
+    partitioning: true,
+    meTier: 'backbone',
+    dstRegion: 'mars',
+    gateways: [{ region: 'mars', nodeId: 'MarsGw', eid: 'ipn:3.1' }],
+  });
+  assert.equal(d.nextHop, 'MarsGw');
+});
+
+test('unknown dst with dstRegion and no gateway', () => {
+  const graph = emptyGraph();
+  upsertNode(graph, { id: 'EarthGw', eid: 'ipn:1.1', x: 0, y: 0, role: 'orbiter' });
+  const d = decideNextHop({
+    me: 'EarthGw',
+    dst: 'PhobosCam',
+    graph,
+    peerIds: [],
+    unhealthy: new Set(),
+    now: 0,
+    partitioning: true,
+    meTier: 'backbone',
+    dstRegion: 'mars',
+    gateways: [],
+  });
+  assert.equal(d.nextHop, null);
+  assert.equal(d.reason, 'no region gateway');
+});
+
+test('edge skips CGR and picks backbone peer', () => {
+  const graph = emptyGraph();
+  upsertNode(graph, { id: 'Phone', eid: 'ipn:4.1', x: 0, y: 0, role: 'lander', tier: 'edge' });
+  upsertNode(graph, { id: 'Relay', eid: 'ipn:2.1', x: 1, y: 0, role: 'orbiter', tier: 'backbone' });
+  upsertNode(graph, { id: 'Mars', eid: 'ipn:3.1', x: 50, y: 0, role: 'lander' });
+  upsertEdge(graph, {
+    a: 'Phone', b: 'Relay', delayMs: 1, schedule: openNow, originatedAt: 1, hopCount: 0, direct: true,
+  });
+  const d = decideNextHop({
+    me: 'Phone',
+    dst: 'Mars',
+    graph,
+    peerIds: ['Relay'],
+    unhealthy: new Set(),
+    now: 0,
+    meRole: 'lander',
+    partitioning: true,
+    meTier: 'edge',
+  });
+  assert.equal(d.nextHop, 'Relay');
+  assert.equal(d.algo, 'edge-uplink');
+});

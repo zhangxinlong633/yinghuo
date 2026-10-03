@@ -1,8 +1,9 @@
 import { msUntilOpen } from '../contact/contact-window';
 import { edgeKey } from './graph-merge';
-import type { LocalGraph } from './graph.types';
+import type { LocalGraph, RegionGateway } from './graph.types';
 import { contactGraphRoute } from './graph-cgr';
 import { roleRoutePenalty, type NodeRole } from '../role/role-policy';
+import { parseTier, type NodeTier } from './region-policy';
 
 export type RouteCandidate = {
   neighbor: string;
@@ -21,7 +22,7 @@ export type RouteDecision = {
   reason: string;
   candidates: RouteCandidate[];
   culled: RouteCandidate[];
-  algo?: 'cgr' | 'sabr-lite';
+  algo?: 'cgr' | 'sabr-lite' | 'edge-uplink';
   path?: string[];
   arrivalMs?: number | null;
 };
@@ -41,25 +42,56 @@ export function decideNextHop(input: {
   unhealthy: Set<string>;
   now: number;
   meRole?: NodeRole | string;
+  dstRegion?: string;
+  meTier?: NodeTier;
+  partitioning?: boolean;
+  gateways?: RegionGateway[];
 }): RouteDecision {
-  const { me, dst, graph, peerIds, unhealthy, now } = input;
+  const { me, graph, peerIds, unhealthy, now } = input;
+  let dst = input.dst;
   const meRole = input.meRole ?? graph.nodes.get(me)?.role ?? 'endpoint';
   const cgrOff = process.env.DTN_CGR === '0' || process.env.DTN_CGR === 'false';
 
   const meNode = graph.nodes.get(me);
-  const dstNode = graph.nodes.get(dst);
+
+  if (input.partitioning && input.meTier === 'edge') {
+    return edgeUplink({ me, graph, peerIds, unhealthy, now, meRole });
+  }
+
+  let dstNode = graph.nodes.get(dst);
   if (dstNode === undefined) {
-    return {
-      nextHop: null,
-      reason: 'destination not in local graph',
-      candidates: [],
-      culled: [],
-      algo: 'cgr',
-    };
+    if (!input.dstRegion) {
+      return unknownDestination();
+    }
+    const gateway = (input.gateways ?? []).find((g) => g.region === input.dstRegion);
+    if (!gateway) {
+      return {
+        nextHop: null,
+        reason: 'no region gateway',
+        candidates: [],
+        culled: [],
+        algo: 'cgr',
+      };
+    }
+    const gatewayNode = graph.nodes.get(gateway.nodeId);
+    if (gatewayNode === undefined && peerIds.includes(gateway.nodeId)) {
+      return {
+        nextHop: gateway.nodeId,
+        reason: `region gateway ${gateway.nodeId}`,
+        candidates: [],
+        culled: [],
+        algo: 'cgr',
+      };
+    }
+    dst = gateway.nodeId;
+    dstNode = gatewayNode;
+    if (dstNode === undefined) {
+      return unknownDestination();
+    }
   }
 
   if (!cgrOff) {
-    const cgr = contactGraphRoute(input);
+    const cgr = contactGraphRoute({ ...input, dst });
     if (cgr.nextHop) {
       return {
         nextHop: cgr.nextHop,
@@ -161,5 +193,79 @@ export function decideNextHop(input: {
     candidates,
     culled,
     algo: 'sabr-lite',
+  };
+}
+
+function unknownDestination(): RouteDecision {
+  return {
+    nextHop: null,
+    reason: 'destination not in local graph',
+    candidates: [],
+    culled: [],
+    algo: 'cgr',
+  };
+}
+
+/** Edge always hands the bundle to the cheapest healthy backbone neighbor. */
+function edgeUplink(input: {
+  me: string;
+  graph: LocalGraph;
+  peerIds: string[];
+  unhealthy: Set<string>;
+  now: number;
+  meRole: NodeRole | string;
+}): RouteDecision {
+  const { me, graph, peerIds, unhealthy, now, meRole } = input;
+  const candidates: RouteCandidate[] = [];
+
+  for (const neighbor of peerIds) {
+    if (unhealthy.has(neighbor)) continue;
+    const nbNode = graph.nodes.get(neighbor);
+    if (nbNode === undefined) continue;
+    if (parseTier(nbNode.tier, nbNode.role) !== 'backbone') continue;
+    const edge = graph.edges.get(edgeKey(me, neighbor));
+    if (edge === undefined) continue;
+
+    const waitMs = msUntilOpen(now, edge.schedule);
+    const delayMs = edge.delayMs;
+    const nbRole = nbNode.role ?? 'endpoint';
+    const rolePenaltyMs = roleRoutePenalty(meRole, nbRole);
+    candidates.push({
+      neighbor,
+      distMe: 0,
+      distNb: 0,
+      waitMs,
+      delayMs,
+      rolePenaltyMs,
+      costMs: waitMs + delayMs + rolePenaltyMs,
+      closer: true,
+      neighborRole: nbRole,
+    });
+  }
+
+  if (candidates.length === 0) {
+    return {
+      nextHop: null,
+      reason: 'no backbone uplink',
+      candidates: [],
+      culled: [],
+      algo: 'edge-uplink',
+    };
+  }
+
+  let best = candidates[0]!;
+  for (let i = 1; i < candidates.length; i++) {
+    const c = candidates[i]!;
+    if (c.costMs < best.costMs || (c.costMs === best.costMs && c.neighbor < best.neighbor)) {
+      best = c;
+    }
+  }
+
+  return {
+    nextHop: best.neighbor,
+    reason: `edge uplink ${best.neighbor} (cost ${best.costMs}ms)`,
+    candidates,
+    culled: [],
+    algo: 'edge-uplink',
   };
 }
