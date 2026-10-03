@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { CyclicSchedule } from '../bundle/bundle.types';
 import type { RelayRuntimeConfig } from '../config';
+import { ContactService } from '../contact/contact.service';
 import { edgeKey } from './graph-merge';
 import { GraphService } from './graph.service';
 
@@ -373,6 +374,41 @@ test('listed backbone mutual join records each side as its own door', () => {
     camp.acceptBootstrap('http://127.0.0.1:3101', response);
     const hop = camp.decide('Phobos', 1_000, 'mars');
     assert.equal(hop.nextHop, 'Earth');
+  } finally {
+    restoreRegionEnv(prev);
+  }
+});
+
+test('foreign backbone join stays open to contact after ingestSummary', () => {
+  const prev = {
+    DTN_REGION: process.env.DTN_REGION,
+    DTN_TIER: process.env.DTN_TIER,
+    DTN_REGION_PEERS: process.env.DTN_REGION_PEERS,
+  };
+  process.env.DTN_REGION = 'earth';
+  process.env.DTN_TIER = 'backbone';
+  process.env.DTN_REGION_PEERS = 'mars=http://127.0.0.1:3202';
+  try {
+    const runtime = cfg({ role: 'orbiter' });
+    const graph = new GraphService(runtime);
+    const contacts = new ContactService(runtime, graph);
+    graph.applyJoin({
+      nodeId: 'MarsGw', eid: 'ipn:3.1', port: 3202, x: 3, y: 0,
+      peerUrl: 'http://127.0.0.1:3202', role: 'orbiter', region: 'mars', tier: 'backbone',
+    });
+    graph.ingestSummary({
+      from: 'MarsGw',
+      nodes: [{ id: 'Phobos', eid: 'ipn:9.1', x: 9, y: 0, region: 'mars' }],
+      edges: [],
+    });
+    assert.equal(graph.listKnownNodeIds().includes('MarsGw'), false);
+    assert.equal(contacts.isOpenTo('MarsGw', 15_000), true);
+    const snap = graph.snapshot();
+    assert.equal(snap.nodes.some((n) => n.id === 'MarsGw'), false);
+    assert.equal(
+      snap.edges.some((e) => e.direct && (e.a === 'MarsGw' || e.b === 'MarsGw')),
+      true,
+    );
   } finally {
     restoreRegionEnv(prev);
   }

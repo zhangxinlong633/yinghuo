@@ -303,8 +303,8 @@ describe('region replica', { concurrency: 1 }, () => {
         assert.equal(graph.peerUrl('MarsGw'), 'http://127.0.0.1:9');
         assert.equal(graph.listKnownNodeIds().includes('MarsGw'), false);
         assert.equal(
-          graph.snapshot().edges.some((e) => e.a === 'MarsGw' || e.b === 'MarsGw'),
-          false,
+          graph.snapshot().edges.some((e) => e.direct && (e.a === 'MarsGw' || e.b === 'MarsGw')),
+          true,
         );
         assert.equal((bundle.replicas ?? []).includes('MarsGw'), false);
         assert.equal((bundle.replicas ?? []).includes('Spare'), true);

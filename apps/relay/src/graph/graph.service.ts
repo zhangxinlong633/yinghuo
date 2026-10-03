@@ -251,8 +251,15 @@ export class GraphService {
       this.graph.edges.set(edgeKey(edge.a, edge.b), edge);
     }
     if (localRegion()) {
+      const me = this.cfg.nodeId;
+      const foreignPeerIds = new Set(this.foreignHops.values());
       for (const [key, edge] of this.graph.edges) {
         if (!this.graph.nodes.has(edge.a) || !this.graph.nodes.has(edge.b)) {
+          const keepForeignJoin =
+            edge.direct &&
+            ((edge.a === me && foreignPeerIds.has(edge.b)) ||
+              (edge.b === me && foreignPeerIds.has(edge.a)));
+          if (keepForeignJoin) continue;
           this.graph.edges.delete(key);
         }
       }
