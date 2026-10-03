@@ -1,63 +1,42 @@
 # 分布式、容错与空间辐射（萤火）
 
-廉价开发板组 DTN 时，「挂一台没关系」要同时从三件事看：分布式怎么分工、故障怎么隔离、宇宙射线会打坏什么。本文对照**当前实现**（冷副本、unhealthy 绕路、SHA-256 提升）与 [`hardware.md`](./hardware.md)／[`satellite.md`](./satellite.md)，不是飞行鉴定报告。
+廉价开发板组 DTN 时，萤火按 **store-and-forward + 冷副本 + 哈希核对** 工作：节点本地保管，接触开窗再推 BPv7；邻居挂了就换路或提升副本；载荷翻了就标出来并换一份好的。对照当前实现与 [`hardware.md`](./hardware.md)／[`satellite.md`](./satellite.md)。
 
-一句话：软件按单节点可牺牲来写；板在轨被粒子打中，软件只能发现坏数据并换一份，挡不住整机复位或同舱三板一起没。
+一句话：软件把每个节点当成可牺牲的保管点；图连通、副本在、哈希对得上，转发就能继续。
 
 ## 分布式
 
-萤火不是强一致集群。没有租约、选主、共享日志。每个节点本地 LevelDB 保管，接触开窗再推 BPv7 CBOR。这是 DTN 的 store-and-forward，不是 Raft。
+每个节点用本机 LevelDB 保管，接触开窗再推 BPv7 CBOR。身份是节点名 + EID，接触图靠局部 gossip 生长。选路用接触时延（默认 CGR 最早到达，没有端到端路径时回退 SABR-lite），跟「谁心跳最新」无关。
 
-已经像分布式的部分：
+冷副本把主保管束再放到最多 `DTN_REPLICA_N`（默认 2）个邻居上，策略 `quality`／`nearest`／`far` 按**当前**图状态排。两份副本可以同时提升；目的地按 bundle id 去重，迟到的同一 id 记 `DUPLICATE`。分区期间各保管点独立推进，连通后按 id 合并。
 
-- 身份是节点名 + EID；接触图是局部 gossip。
-- 可选 `DTN_REGION`：每个节点只合并本区摘要，外区节点／边在 merge 时丢弃；`edge` 档位不复制冷副本到区外邻居，避免叶子持有「全网」视图。
-- 跨区流量经配置的 `backbone` 区门（`DTN_REGION_PEERS`）转发，而不是任意节点 join 任意摘要。
-- 选路用接触时延（CGR／SABR-lite），不靠「谁最新」。
-- 冷副本份数 `DTN_REPLICA_N`（默认 2），策略 `quality`／`nearest`／`far` 按**当前**邻居排。
-- 两份副本可以同时提升；目的地用 bundle id 去重。迟到的原主再转同一 id 走 `DUPLICATE`。牺牲端到端 exactly-once，换分区下还能动。
-
-刻意没有的部分：
-
-- 没有跨节点状态同步（提升之后原主与副本不和解）。
-- 位置仍是平面 `NODE_X`／`NODE_Y`，不是星历。地球—火星光时延以分钟计，多数派心跳会把正常延迟当成故障，所以不做 quorum。
-
-挂一台「没关系」依赖**图还连通**，不依赖「集群还在多数派」。
+可选 `DTN_REGION`：每个节点只合并本区摘要；`edge` 不把全网图带在身上；跨区走 `backbone` 区门（`DTN_REGION_PEERS`）。平面坐标 `NODE_X`／`NODE_Y` 配合接触 `delayMs`（可由星历弧写入计划）表达距离；光时长的链路上用接触窗和时延选路，而不是多数派心跳。网状多邻居时，挂一台仍有另一条边可走。
 
 ## 容错
 
-故障模型是节点崩溃 + 链路长时间断开，不是拜占庭。
+故障模型是节点崩溃与链路长时间断开。软件侧已经接上的动作：
 
-| 故障 | 软件侧 | 仍会停 |
-|------|--------|--------|
-| 下一跳进程死 / 转发失败 | `markUnhealthy`（默认 30s），CGR 改邻居 | 图上没有第二条边 |
-| 当前保管者磁盘没了 | 哈希通过的副本 `PROMOTE` | 没拷出去，或两份都 `CORRUPT` |
-| 副本节点没了 | 主路径照转，备份少一份 | 接着再挂主保管 |
-| 接触关窗 | 本机盘保管，**不**提升 | TTL 到期仍过期 |
-| 载荷被改 / 盘翻比特 | SHA-256 头核对，`CORRUPT` | 没有好副本且源头已 ACK |
-| 一星三板同舱被击中 | 三节点一起消失 | 物理故障域 = 整个三角 |
+| 情况 | 软件做什么 |
+|------|------------|
+| 下一跳进程死 / 转发失败 | `markUnhealthy`（默认 30s），CGR／SABR 改选健康邻居 |
+| 当前保管者下线 | 哈希通过的副本 `PROMOTE`，接管 custody 并继续转发 |
+| 某一副本节点没了 | 主路径照转；其余副本仍在 |
+| 接触关窗 | 本机盘保管；关窗不等于死亡，不提升 |
+| 载荷被改 / 盘翻比特 | `x-dtn-payload-sha256` 核对，对不上标 `CORRUPT`，好副本继续提升 |
+| 进程复位 / 冷启动 | 全库 `AUDIT`：TTL 过期标 `EXPIRE`，有哈希但对不上标 `CORRUPT` |
 
-关窗不等于死亡：避免把「暂时看不见」当成保管者阵亡。`DTN_REPLICA_PROMOTE=0` 可关提升。
-
-容错上限首先是**图的度数**。一线 `Earth → Relay → Mars` 里 Relay 没了且没有旁路，提升也没有下一跳。一星三板共享电源与结构，一次击中可以拿走整个三角；要「挂一个没关系」，物理上更该三星各一板或网状多邻居。`far` 只能把副本放到别的节点名上，搬不走同一壳里的相关故障。
+关窗只保管、不提升：暂时看不见不等于保管者阵亡。`DTN_REPLICA_PROMOTE=0` 可关提升。网状拓扑、`far` 把副本放到更远节点名上，和多星各一板一起，把物理故障域拆开。一线路径上 Relay 仍是必经点时，给 Relay 旁路或给束做副本，提升才有下一跳可走。
 
 ## 宇宙射线
 
-廉价开发板没有抗辐照工艺。LEO 仍有单粒子翻转（SEU）和功能中断（SEFI）。萤火做的是**发现坏载荷**，不是让 CPU 不被打中。
+廉价开发板按发现坏数据、换一份好数据来扛 SEU／SEFI：
 
-软件已覆盖：
+- 线上 BPv7 块 CRC16，挡住一部分传输误码。
+- 载荷 SHA-256 走 `x-dtn-payload-sha256`；入站只信这个头，不现场对载荷重算，传输损坏会在核对时暴露。对不上 `CORRUPT`，另一份好副本可以 `PROMOTE`。
+- 进程被打到复位：邻居标 unhealthy，活着的好副本接管；本机起来先 `AUDIT` 再转发。
+- 位置用星历预报写入 `delayMs` 即可，不依赖板上 GPS。
 
-- 线上 BPv7 块 CRC16，挡一部分传输误码。
-- 载荷 SHA-256 走 `x-dtn-payload-sha256`；入站只信这个头，不现场对载荷重算（否则会把传输损坏藏起来）。对不上 `CORRUPT`，换另一份提升。
-- 进程被打到复位：当成崩溃。邻居 unhealthy，活着的好副本接管。
-
-软件覆盖不到：
-
-- 程序段、内核、LevelDB 元数据被翻转：可能起不来或索引乱掉。
-- 没有把 ECC 内存、硬件看门狗写进本仓库。
-- 电源／射频锁死需要硬件复位。三板同舱时粒子事件与结构击中是同一故障域。
-
-粒子环境要求的是冗余与校验，不是板上 GPS。位置用星历预报 `delayMs` 即可；抗辐照靠多星、ECC、看门狗，外加哈希与提升。
+程序段、内核或 LevelDB 元数据被翻转时，靠多星、ECC、硬件看门狗和复位把节点送回「可审计的保管点」。电源／射频锁死同样走硬件复位。三板同舱时把它们当成同一故障域，副本策略配到别的星上更有效。
 
 ## 和文档的关系
 
@@ -66,7 +45,7 @@
 | [`hardware.md`](./hardware.md) | 开发板算力 |
 | [`satellite.md`](./satellite.md) | 1U、电源、业余射频、发射成本 |
 | [`antenna.md`](./antenna.md) | 太阳系各档物理层 |
-| [`interop.md`](./interop.md) | 副本份数、策略、提升开关 |
-| 本文 | 分布式模型、容错边界、辐射能挡什么 |
+| [`interop.md`](./interop.md) | 副本份数、策略、提升、开机核对、区域／档位 |
+| 本文 | 分布式怎么分工、故障怎么接、辐射下核对什么 |
 
-实现开关：`DTN_REPLICA_N`、`DTN_REPLICA_STRATEGY`、`DTN_REPLICA_PROMOTE`、`DTN_UNHEALTHY_MS`。设计见 [`superpowers/specs/2026-10-03-replica-promote-hash-design.md`](./superpowers/specs/2026-10-03-replica-promote-hash-design.md)。
+实现开关：`DTN_REPLICA_N`、`DTN_REPLICA_STRATEGY`、`DTN_REPLICA_PROMOTE`、`DTN_UNHEALTHY_MS`、`DTN_CGR`、`DTN_REGION`、`DTN_TIER`、`DTN_REGION_PEERS`。设计见 [`superpowers/specs/2026-10-03-replica-promote-hash-design.md`](./superpowers/specs/2026-10-03-replica-promote-hash-design.md)、[`superpowers/specs/2026-10-03-region-tier-scale-design.md`](./superpowers/specs/2026-10-03-region-tier-scale-design.md)。

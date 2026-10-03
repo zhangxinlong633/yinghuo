@@ -2,13 +2,13 @@
 
 **DTN Yinghuo Bundle Delivery Fabric** 面向延迟与中断容忍场景下的报文投递：节点之间链路可能长时间断开、传播时延可达秒级乃至更久，系统在接触窗口关闭时本地保管，窗口打开后再逐跳转发，直到目的端投递完成。
 
-默认部署 Earth → Relay → Mars 三跳路径，也可切换为接触图模式，由节点动态加入、交换局部拓扑，并按距离、时延与角色偏置选择下一跳。线上报文采用 BPv7 CBOR。调用入口分层：
+默认部署 Earth → Relay → Mars 三跳路径，也可切换为接触图模式：节点动态加入、交换局部拓扑，默认用 CGR（最早到达）选路，没有端到端接触路径时回退 SABR-lite。主保管束可冷复制到邻居；保管者 unhealthy 且载荷 SHA-256 核对通过时副本可提升。进程启动会全库核对 TTL 与哈希。线上报文采用 BPv7 CBOR。调用入口分层：
 
 - **Agent**：`@yinghuo/mcp`（stdio MCP）
 - **人／脚本**：HTTP API、CLI、SDK
 - **监督**：萤火控制台（审批、看板、审计、例外）
 
-远期愿景见 [`docs/vision.md`](./docs/vision.md)。现状与愿景差距台账见 [`docs/todo.md`](./docs/todo.md)（近程已交付；当前主战场为中期）。Linux 常驻部署见 [`docs/deploy.md`](./docs/deploy.md)。历元／星历／BPSec 钩子见 [`docs/interop.md`](./docs/interop.md)。硬件与卫星规模见 [`docs/hardware.md`](./docs/hardware.md)、[`docs/satellite.md`](./docs/satellite.md)。太阳系链路与天线见 [`docs/antenna.md`](./docs/antenna.md)。分布式／容错／辐射边界见 [`docs/fault-tolerance.md`](./docs/fault-tolerance.md)。
+远期愿景见 [`docs/vision.md`](./docs/vision.md)。现状与愿景差距台账见 [`docs/todo.md`](./docs/todo.md)（近程已交付；当前主战场为中期）。Linux 常驻部署见 [`docs/deploy.md`](./docs/deploy.md)。历元／星历／BPSec 钩子见 [`docs/interop.md`](./docs/interop.md)。硬件与卫星规模见 [`docs/hardware.md`](./docs/hardware.md)、[`docs/satellite.md`](./docs/satellite.md)。太阳系链路与天线见 [`docs/antenna.md`](./docs/antenna.md)。分布式／容错／辐射下的核对与提升见 [`docs/fault-tolerance.md`](./docs/fault-tolerance.md)。
 
 ## 控制台截图
 
@@ -51,9 +51,12 @@
 | BPv7 线上编解码 | NASA bplib + QCBOR（`koffi` FFI）；节点间 `Content-Type: application/cbor`；共享库缺失时启动失败 |
 | 业务／网络／运维分层 | 发送与收件箱仅暴露节点名与载荷；连接页展示 EID／窗口；束详情含主块摘要与时间线 |
 | 可配置 EID | 接触计划或环境变量映射节点名 ↔ `ipn:…` |
-| 接触图模式 | `DTN_GRAPH_MODE=1`：引导加入、摘要 gossip；选路先裁更远邻居，再选等待开窗 + 时延 + 角色偏置最小者 |
-| 区域／档位切片 | `DTN_REGION` 开启区内图与 join 过滤；`backbone` 经 `DTN_REGION_PEERS` 做跨区门；`edge` 不持全网摘要。设计见 [`docs/superpowers/specs/2026-10-03-region-tier-scale-design.md`](./docs/superpowers/specs/2026-10-03-region-tier-scale-design.md) |
-| 冷副本 | 默认复制到 2 个邻居（`DTN_REPLICA_N`）；`DTN_REPLICA_STRATEGY=quality\|nearest\|far`；不接管 custody、不投递 |
+| 接触图模式 | `DTN_GRAPH_MODE=1`：引导加入、摘要 gossip；默认 CGR 最早到达，无路径时 SABR-lite（裁更远邻居后再比等待开窗 + 时延 + 角色） |
+| 区域／档位 | `DTN_REGION` 开启区内图与 join 过滤；`backbone` 经 `DTN_REGION_PEERS` 做跨区门；`edge` 不持全网摘要。设计见 [`docs/superpowers/specs/2026-10-03-region-tier-scale-design.md`](./docs/superpowers/specs/2026-10-03-region-tier-scale-design.md) |
+| 冷副本 | 默认复制到 2 个邻居（`DTN_REPLICA_N`）；`DTN_REPLICA_STRATEGY=quality\|nearest\|far`；副本不投递、默认不接管 custody |
+| 副本提升 | `DTN_REPLICA_PROMOTE` 默认开：`replicaOf` unhealthy 且 `payloadSha256` 通过则 `PROMOTE` 接管 custody |
+| 载荷完整性 | 发送时算 SHA-256，经 `x-dtn-payload-sha256` 传递；入站只信该头；对不上 `CORRUPT` |
+| 开机核对 | 启动扫一遍本地库（`AUDIT`）：TTL → `EXPIRE`；有哈希但对不上 → `CORRUPT` |
 | 计划热更新 | `POST /api/plan/reload`＋文件监视；`GET /api/plan` 看版本／错误；校验失败不覆盖生效计划 |
 | MCP（Agent） | `@yinghuo/mcp` stdio；HTTP：`npm run mcp:http`（Bearer + 只读模式 + 审计） |
 | 动态加入／多岛 | `join`／`graph`／`graph/join`；`join-cluster.sh`／`dual-island.sh`／`unhealthy-retry.sh` |
@@ -72,7 +75,7 @@ yinghuo/
 ├── docs/todo.md                 # 相对愿景的近／中／远差距台账
 ├── docs/hardware.md             # 目标：开发板级三机规格
 ├── docs/satellite.md            # 目标：1U + 开发板 + 电源 + 天线
-├── docs/fault-tolerance.md      # 分布式、容错、空间辐射边界
+├── docs/fault-tolerance.md      # 分布式、容错、辐射下的核对与提升
 ├── docs/antenna.md              # 太阳系链路与天线（近地／地火／边缘）
 ├── docs/deploy.md               # Linux 常驻：依赖、systemd、Tailscale、三机 URL
 ├── docs/interop.md              # 历元／星历适配器／join token／BPSec 演示头
@@ -201,7 +204,7 @@ Cursor `mcpServers` 示例（把 `cwd` 换成仓库根路径）：
 | `ACKED` | 保管释放确认 |
 | `EXPIRED` | TTL 到期（含收件箱过期清理） |
 
-时间线事件（STORED / FORWARD / RETRY / ARRIVED / ACKED / …）可在控制台「束」页或 `GET /api/bundles/:id` 查看。
+时间线事件（STORED / FORWARD / RETRY / ARRIVED / ACKED / REPLICA / REPLICA_STORE / PROMOTE / CORRUPT / AUDIT / EXPIRE / …）可在控制台「束」页或 `GET /api/bundles/:id` 查看。
 
 ### 接触图模式（动态加入）
 
@@ -210,7 +213,7 @@ Cursor `mcpServers` 示例（把 `cwd` 换成仓库根路径）：
 1. 引导节点：不设置 `BOOTSTRAP_URL`。
 2. 加入节点：设置 `BOOTSTRAP_URL`、本机 `PEER_URL`、`EID`、`NODE_X`／`NODE_Y` 与独立 `PORT`；启动时调用 `POST /api/peer/join`。
 3. 摘要交换：约每 2s 在已打开的直连边上通过 `POST /api/peer/graph` 交换接触摘要（节点坐标、边、窗口、时延、hopCount）。
-4. 选路：仅考虑直连且健康的邻居；先剔除距目的更远者，再在剩余候选中选择「等待开窗 + delayMs + 角色偏置」最小者；转发失败将邻居标记为 unhealthy 后重试。
+4. 选路：仅考虑直连且健康的邻居。默认 **CGR**（接触图上最早到达 Dijkstra，第一跳可加角色罚分）；没有端到端接触路径时回退 **SABR-lite**（先剔除距目的更远者，再选「等待开窗 + delayMs + 角色偏置」最小者）。`DTN_CGR=0` 只走 SABR-lite。转发失败将邻居标记为 unhealthy 后重试。
 
 运维接口：`GET /api/graph` 返回局部图；`GET /api/graph/route?dst=` 返回裁剪结果、时延候选与下一跳（控制台「连接」「操作」页同步展示）。
 
@@ -229,7 +232,7 @@ JOIN_KEEP=1 BRIDGE=1 bash apps/relay/scripts/dual-island.sh
 DTN_LIVE_DUAL=1 DTN_LIVE_DUAL_BRIDGE=1 npm test -w @yinghuo/relay -- src/live-dual-island.test.ts
 ```
 
-未设置 `DTN_LIVE_GRAPH=1`／`DTN_LIVE_DUAL=1` 时对应测试跳过。在当前星型拓扑下终止 `node1`–`node8` 中的进程，不会改变 `node0 → node9` 的直连路径；若需观察绕路，拓扑须为网状或短链（至少存在两个更近且可继续前传的邻居）。`GET /api/graph` 含 `stats.componentCount` 与节点 `componentId`（弱连通簇）；控制台按簇描边着色。
+未设置 `DTN_LIVE_GRAPH=1`／`DTN_LIVE_DUAL=1` 时对应测试跳过。在当前星型拓扑下终止 `node1`–`node8` 中的进程，不会改变 `node0 → node9` 的直连路径；若需观察绕路，拓扑须为网状或短链（至少存在两个更近且可继续前传的邻居）。`GET /api/graph` 含 `stats.componentCount` 与节点 `componentId`（弱连通簇）；控制台按簇描边着色。副本、提升与开机核对见下节与 [`docs/fault-tolerance.md`](./docs/fault-tolerance.md)。
 
 #### 故障邻居与摘要年龄
 
@@ -240,6 +243,18 @@ bash apps/relay/scripts/unhealthy-retry.sh
 # 默认 DTN_UNHEALTHY_MS=15000；alt/near 以 ROLE=relay 中继；杀 alt → 改走 near → 投递 dst → 窗口过后清除 unhealthy
 ```
 
+### 冷副本、提升与开机核对
+
+主路径 `send`／非副本 ingest 成功后，把同一束复制到最多 `DTN_REPLICA_N` 个直连邻居（排除下一跳和目的地）。副本走 `x-dtn-replica: 1` + `x-dtn-force: 1`，只落盘，不 ACK、不进收件箱。
+
+载荷 SHA-256 在源端写入 `payloadSha256`，转发时带 `x-dtn-payload-sha256`；对端**不**对载荷现场重算期望值，只核对该头。对不上记 `CORRUPT`，不提升、不投递。没有该字段的旧束跳过校验，也不提升。
+
+`DTN_REPLICA_PROMOTE` 默认开：tick 里若 `replicaOf` 已在 unhealthy 名单且哈希通过，先写 custody 再把 `replicaRole` 改成 `primary`（事件 `PROMOTE`）。关窗不等于死亡，接触关闭不会触发提升。
+
+进程 `onModuleInit` 在 `BOOT` 之后扫一遍 `listBundleIds`：TTL 过期 → `EXPIRE` 并放保管、清收件箱；有哈希但对不上 → `CORRUPT`（已投递的从 inbox 拿掉）。扫完记 `AUDIT store corrupt=… expired=…`。
+
+`GET /api/status` 的 `replica` 字段含 `{ n, strategy, promote }`。开关与故障域说明见 [`docs/interop.md`](./docs/interop.md)、[`docs/fault-tolerance.md`](./docs/fault-tolerance.md)。
+
 ### BPv7 编解码（bplib）
 
 | 变量 | 说明 |
@@ -247,9 +262,10 @@ bash apps/relay/scripts/unhealthy-retry.sh
 | （默认） | `native/bp-codec/build/libdtn_bp_codec.dylib`（Darwin）或对应 `.so`（Linux） |
 | `DTN_BP_CODEC_LIB` | 覆盖共享库路径；缺失时进程启动失败 |
 | `DTN_ALLOW_JSON_INGEST=1` | 允许 `POST /api/peer/ingest` 额外接受旧版 JSON（回归用）；默认关闭，出口仍为 CBOR |
-| `DTN_REPLICA_N` | 冷副本目标数，默认 `2`；`0` 关闭。副本不接管 custody |
+| `DTN_CGR` | 图／计划接触上的最早到达选路，默认开；`0`／`false` 关闭，回退 SABR-lite |
+| `DTN_REPLICA_N` | 冷副本目标数，默认 `2`；`0` 关闭。副本默认不接管 custody、不投递 |
 | `DTN_REPLICA_STRATEGY` | `quality`（默认，低时延+角色）／`nearest`／`far`；也可用 `质量`／`最近`／`远` |
-| `DTN_REPLICA_PROMOTE` | 主保管 unhealthy 时副本是否可提升接管 custody，默认开；`0`／`false`／`no` 关闭 |
+| `DTN_REPLICA_PROMOTE` | 主保管 unhealthy 且哈希通过时副本提升接管 custody，默认开；`0`／`false`／`no` 关闭 |
 | `DTN_REGION` | 本节点所属区域 id；未设时与旧版一致（全网一张图、`GET /api/status` 的 `region` 为 `null`） |
 | `DTN_TIER` | `backbone`／`edge`（或 `骨干`／`叶子`）；未设时由 `ROLE` 推断；`GET /api/status` 的 `tier` 始终可回显 |
 | `DTN_REGION_PEERS` | 跨区门：`mars=FarPeer,moon=NearPeer`；仅 `backbone`↔`backbone` 且对端在名单内可 join 外区摘要 |

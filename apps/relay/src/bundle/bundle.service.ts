@@ -164,11 +164,18 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     @Optional() @Inject(GraphService) private readonly graph?: GraphService,
   ) {}
 
-  onModuleInit(): void {
+  async onModuleInit(): Promise<void> {
     this.timer = setInterval(() => {
       this.tick();
     }, 500);
     this.pushEvent('BOOT', `relay ${this.cfg.nodeId} ready peer=${this.cfg.peerUrl}`);
+    try {
+      const result = await this.enqueue(() => this.auditStoredBundles());
+      this.pushEvent('AUDIT', `store corrupt=${result.corrupt} expired=${result.expired}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      this.pushEvent('AUDIT_FAIL', msg);
+    }
   }
 
   onModuleDestroy(): void {
@@ -863,6 +870,51 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     }
     await this.expireDeliveredInbox(now);
     return { acks, forwards };
+  }
+
+  /**
+   * Cold start: every persisted bundle, not just current custody.
+   * TTL → EXPIRE; SHA-256 mismatch → CORRUPT (legacy missing hash skipped).
+   */
+  private async auditStoredBundles(): Promise<{ corrupt: number; expired: number }> {
+    const now = Date.now();
+    let corrupt = 0;
+    let expired = 0;
+    const ids = await this.store.listBundleIds();
+    for (const id of ids) {
+      const bundle = await this.store.getBundle(id);
+      if (!bundle) continue;
+      if (bundle.state === 'EXPIRED' || bundle.state === 'ACKED') continue;
+      if (now - bundle.createdAt >= bundle.ttlMs) {
+        const expiredTracked = markExpired(toTracked(bundle), now, this.cfg.nodeId);
+        await this.store.putBundle(
+          fromTracked(expiredTracked, bundle.delivered, bundle.wire, bundle),
+        );
+        await this.store.releaseCustody(id);
+        this.store.dropInbox(id);
+        this.lastForwardAttempt.delete(id);
+        this.rememberBundle(id);
+        this.pushEvent('EXPIRE', `${id} TTL exceeded — boot`);
+        expired++;
+        continue;
+      }
+      if (!bundle.payloadSha256 || payloadHashOk(bundle.payload, bundle.payloadSha256)) {
+        continue;
+      }
+      if (!(bundle.events ?? []).some((e) => e.kind === 'CORRUPT')) {
+        await this.store.putBundle({
+          ...bundle,
+          events: [
+            ...(bundle.events ?? []),
+            { t: now, node: this.cfg.nodeId, kind: 'CORRUPT', msg: 'payload sha256 mismatch' },
+          ],
+        });
+        this.pushEvent('CORRUPT', `${id} payload mismatch`);
+        corrupt++;
+      }
+      if (bundle.delivered) this.store.dropInbox(id);
+    }
+    return { corrupt, expired };
   }
 
   private async promoteReplicas(): Promise<void> {

@@ -43,7 +43,7 @@
 
 副本节点挂掉不影响主路径；主节点挂掉后的状态同步尚未做。`GET /api/status` 的 `replica` 字段回显 `n`、`strategy` 与 `promote`。
 
-`DTN_REPLICA_PROMOTE` 默认开：当 `replicaOf` 在 unhealthy 名单且 `payloadSha256` 核对通过时，副本接管 custody（事件 `PROMOTE`）。哈希对不上记 `CORRUPT`，不提升。旧束无哈希字段不提升。`0` 关闭提升。
+`DTN_REPLICA_PROMOTE` 默认开：当 `replicaOf` 在 unhealthy 名单且 `payloadSha256` 核对通过时，副本接管 custody（事件 `PROMOTE`）。哈希对不上记 `CORRUPT`，不提升。旧束无哈希字段不提升。`0` 关闭提升。进程启动会扫一遍本地库（`AUDIT`）：过期 `EXPIRE`，载荷哈希失败 `CORRUPT`。
 
 ## 区域／档位／区门（E）
 
