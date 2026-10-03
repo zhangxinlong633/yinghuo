@@ -1056,6 +1056,8 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     return {
       nodeId: this.cfg.nodeId,
       role: this.cfg.role,
+      region: localRegion(),
+      tier: localTier(process.env, this.cfg.role),
       missionRole: caps.mission,
       capabilities: {
         canInject: caps.canInject,

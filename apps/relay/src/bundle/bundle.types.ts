@@ -1,4 +1,5 @@
 import type { NodeRole } from '../role/role-policy';
+import type { NodeTier } from '../graph/region-policy';
 import type { BpInspect } from '../bp/bp-codec';
 
 /** Educational Bundle (simplified BP primary block) for relay daemons. */
@@ -131,6 +132,10 @@ export interface PlanStatus {
 export interface RelayStatus {
   nodeId: string;
   role: NodeRole;
+  /** Set when `DTN_REGION` is configured; otherwise null (legacy single-graph mode). */
+  region: string | null;
+  /** Backbone vs edge; from `DTN_TIER` or inferred from mission role. */
+  tier: NodeTier;
   /** Canonical mission role after alias resolve. */
   missionRole: string;
   capabilities: {

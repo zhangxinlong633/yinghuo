@@ -11,6 +11,8 @@
 已经像分布式的部分：
 
 - 身份是节点名 + EID；接触图是局部 gossip。
+- 可选 `DTN_REGION`：每个节点只合并本区摘要，外区节点／边在 merge 时丢弃；`edge` 档位不复制冷副本到区外邻居，避免叶子持有「全网」视图。
+- 跨区流量经配置的 `backbone` 区门（`DTN_REGION_PEERS`）转发，而不是任意节点 join 任意摘要。
 - 选路用接触时延（CGR／SABR-lite），不靠「谁最新」。
 - 冷副本份数 `DTN_REPLICA_N`（默认 2），策略 `quality`／`nearest`／`far` 按**当前**邻居排。
 - 两份副本可以同时提升；目的地用 bundle id 去重。迟到的原主再转同一 id 走 `DUPLICATE`。牺牲端到端 exactly-once，换分区下还能动。

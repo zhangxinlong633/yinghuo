@@ -45,6 +45,18 @@
 
 `DTN_REPLICA_PROMOTE` 默认开：当 `replicaOf` 在 unhealthy 名单且 `payloadSha256` 核对通过时，副本接管 custody（事件 `PROMOTE`）。哈希对不上记 `CORRUPT`，不提升。旧束无哈希字段不提升。`0` 关闭提升。
 
+## 区域／档位／区门（E）
+
+可选水平切片，不替代跨任务 PKI 或机构级认证。
+
+| 环境变量 | 含义 |
+|----------|------|
+| `DTN_REGION` | 本节点区域 id。设后 gossip merge 丢弃外区节点／边；未设时行为与旧版单图兼容。 |
+| `DTN_TIER` | `backbone` 或 `edge`；未设时由 `ROLE`（任务角色）推断。 |
+| `DTN_REGION_PEERS` | 逗号分隔 `外区id=直连peer节点名`，声明跨区门邻居。 |
+
+`GET /api/status` 回显 `region`（未分区为 `null`）与 `tier`。跨区 bundle 可带 HTTP 头 `x-dtn-dst-region`；区内选路与副本策略见 [`superpowers/specs/2026-10-03-region-tier-scale-design.md`](./superpowers/specs/2026-10-03-region-tier-scale-design.md)。
+
 ## K8s（D）
 
 `k8s/nodes.yaml` stub 容器环境变量与 daemon 对齐：`NODE_ID`／`PORT`／`CONTACT_PLAN`。镜像仍是 sleep 占位，可 `kubectl apply -k k8s/` 看 CRD／ConfigMap。

@@ -52,6 +52,7 @@
 | 业务／网络／运维分层 | 发送与收件箱仅暴露节点名与载荷；连接页展示 EID／窗口；束详情含主块摘要与时间线 |
 | 可配置 EID | 接触计划或环境变量映射节点名 ↔ `ipn:…` |
 | 接触图模式 | `DTN_GRAPH_MODE=1`：引导加入、摘要 gossip；选路先裁更远邻居，再选等待开窗 + 时延 + 角色偏置最小者 |
+| 区域／档位切片 | `DTN_REGION` 开启区内图与 join 过滤；`backbone` 经 `DTN_REGION_PEERS` 做跨区门；`edge` 不持全网摘要。设计见 [`docs/superpowers/specs/2026-10-03-region-tier-scale-design.md`](./docs/superpowers/specs/2026-10-03-region-tier-scale-design.md) |
 | 冷副本 | 默认复制到 2 个邻居（`DTN_REPLICA_N`）；`DTN_REPLICA_STRATEGY=quality\|nearest\|far`；不接管 custody、不投递 |
 | 计划热更新 | `POST /api/plan/reload`＋文件监视；`GET /api/plan` 看版本／错误；校验失败不覆盖生效计划 |
 | MCP（Agent） | `@yinghuo/mcp` stdio；HTTP：`npm run mcp:http`（Bearer + 只读模式 + 审计） |
@@ -249,6 +250,11 @@ bash apps/relay/scripts/unhealthy-retry.sh
 | `DTN_REPLICA_N` | 冷副本目标数，默认 `2`；`0` 关闭。副本不接管 custody |
 | `DTN_REPLICA_STRATEGY` | `quality`（默认，低时延+角色）／`nearest`／`far`；也可用 `质量`／`最近`／`远` |
 | `DTN_REPLICA_PROMOTE` | 主保管 unhealthy 时副本是否可提升接管 custody，默认开；`0`／`false`／`no` 关闭 |
+| `DTN_REGION` | 本节点所属区域 id；未设时与旧版一致（全网一张图、`GET /api/status` 的 `region` 为 `null`） |
+| `DTN_TIER` | `backbone`／`edge`（或 `骨干`／`叶子`）；未设时由 `ROLE` 推断；`GET /api/status` 的 `tier` 始终可回显 |
+| `DTN_REGION_PEERS` | 跨区门：`mars=FarPeer,moon=NearPeer`；仅 `backbone`↔`backbone` 且对端在名单内可 join 外区摘要 |
+
+跨区转发可在 ingest／send 侧用 HTTP 头 `x-dtn-dst-region` 标注目的区域。细节见 [`docs/interop.md`](./docs/interop.md) 与区域档位 spec。
 
 导出接口：`dtn_bp_encode`／`dtn_bp_decode`／`dtn_bp_inspect`。构建说明见 [`native/bp-codec/README.md`](./native/bp-codec/README.md)。
 
