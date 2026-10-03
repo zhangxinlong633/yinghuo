@@ -35,3 +35,40 @@ test('keeps newer originatedAt and drops hopCount above max', () => {
   );
   assert.equal(tooFar.edges.has(edgeKey('Y', 'Z')), false);
 });
+
+test('drops nodes and edges outside localRegion when set', () => {
+  const local = emptyGraph();
+  local.nodes.set('Earth', { id: 'Earth', eid: 'ipn:1.1', x: 0, y: 0, region: 'earth' });
+  const merged = mergeSummary(
+    local,
+    {
+      from: 'Relay',
+      nodes: [
+        { id: 'Near', eid: 'ipn:2.1', x: 1, y: 0, region: 'earth' },
+        { id: 'Phobos', eid: 'ipn:9.1', x: 9, y: 0, region: 'mars' },
+      ],
+      edges: [
+        { a: 'Relay', b: 'Near', delayMs: 1, schedule: sched, originatedAt: 1, hopCount: 0 },
+        { a: 'Relay', b: 'Phobos', delayMs: 1, schedule: sched, originatedAt: 1, hopCount: 0 },
+      ],
+    },
+    { maxHop: 3, now: 100, localRegion: 'earth' },
+  );
+  assert.equal(merged.nodes.has('Near'), true);
+  assert.equal(merged.nodes.has('Phobos'), false);
+  assert.equal(merged.edges.has(edgeKey('Relay', 'Near')), true);
+  assert.equal(merged.edges.has(edgeKey('Relay', 'Phobos')), false);
+});
+
+test('keeps foreign nodes when localRegion unset', () => {
+  const merged = mergeSummary(
+    emptyGraph(),
+    {
+      from: 'A',
+      nodes: [{ id: 'Phobos', eid: 'ipn:9.1', x: 9, y: 0, region: 'mars' }],
+      edges: [],
+    },
+    { maxHop: 3, now: 100 },
+  );
+  assert.equal(merged.nodes.has('Phobos'), true);
+});
