@@ -9,6 +9,8 @@ import {
   type JoinResponse,
 } from '../graph/graph.service';
 import type { GraphSummary } from '../graph/graph.types';
+import { joinTokenHeaders } from '../trust/join-token';
+import { bpsecForwardHeaders } from '../bpsec/bpsec';
 
 export interface PeerIngestResult {
   accepted: boolean;
@@ -46,7 +48,7 @@ export class PeerService {
     try {
       const res = await fetch(`${root}/api/peer/join`, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...joinTokenHeaders() },
         body: JSON.stringify(body),
         signal: AbortSignal.timeout(3000),
       });
@@ -114,6 +116,7 @@ export class PeerService {
           'content-type': 'application/cbor',
           'x-dtn-from': this.cfg.nodeId,
           'x-dtn-bundle-id': bundle.id,
+          ...bpsecForwardHeaders(),
         },
         body: wire,
         signal: AbortSignal.timeout(3000),

@@ -96,5 +96,5 @@ async function reconcile(contact: DTNContact) {
 ## 6. 建议阅读顺序
 
 1. 本地：`npm run demo`（核心 CLI）→ `npm run api` + `npm run web`（可视化）
-2. 清单：`kubectl apply --dry-run=client -k k8s/`（若已安装 kubectl）
+2. 清单：`kubectl apply --dry-run=client -k k8s/`（若已安装 kubectl）。stub Deployment 环境变量与 daemon 一致：`NODE_ID`／`PORT`／`CONTACT_PLAN`。
 3. 对照本文映射表理解「为何不能当成 ClusterIP」

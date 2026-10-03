@@ -7,6 +7,7 @@ import {
   planWatchEnabled,
   type RelayRuntimeConfig,
 } from '../config';
+import { interpolateEnv } from '../config/env-interpolate';
 import { RELAY_CONFIG } from '../relay.tokens';
 import { ContactService } from './contact.service';
 
@@ -56,7 +57,7 @@ export class ContactPlanReloadService implements OnModuleInit, OnModuleDestroy {
   reloadFromDisk(source: 'watch' | 'http' = 'http'): PlanReloadResult {
     let rawText: string;
     try {
-      rawText = fs.readFileSync(this.cfg.planPath, 'utf8');
+      rawText = interpolateEnv(fs.readFileSync(this.cfg.planPath, 'utf8'));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       const errors = [`failed to read ${this.cfg.planPath}: ${msg}`];

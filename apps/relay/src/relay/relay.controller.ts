@@ -11,6 +11,7 @@ import {
   Query,
   Req,
   ServiceUnavailableException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { decodeBundle, type BpDecoded } from '../bp/bp-codec';
@@ -26,6 +27,9 @@ import { GraphService, type JoinRemote } from '../graph/graph.service';
 import type { GraphSummary } from '../graph/graph.types';
 import { PeerService } from '../peer/peer.service';
 import { ContactPlanReloadService } from '../contact/contact-plan-reload.service';
+import { missionNow, describeMissionClock } from '../clock/mission-clock';
+import { joinTokenOk } from '../trust/join-token';
+import { bpsecIngestOk } from '../bpsec/bpsec';
 
 function mediaType(contentType?: string): string {
   return (contentType ?? '').split(';')[0].trim().toLowerCase();
@@ -59,6 +63,11 @@ export class RelayController {
   @Get('status')
   async status() {
     return this.bundles.status();
+  }
+
+  @Get('clock')
+  clock() {
+    return describeMissionClock();
   }
 
   @Get('contacts')
@@ -111,7 +120,7 @@ export class RelayController {
     if (!dst) {
       throw new BadRequestException({ ok: false, error: 'dst required' });
     }
-    return this.requireGraph().decide(dst, Date.now());
+    return this.requireGraph().decide(dst, missionNow());
   }
 
   /**
@@ -119,7 +128,8 @@ export class RelayController {
    * Same body shape as startup BOOTSTRAP_URL join.
    */
   @Post('graph/join')
-  async graphJoin(@Body() body: { url?: string }) {
+  async graphJoin(@Body() body: { url?: string }, @Headers('x-yinghuo-join-token') joinTok?: string) {
+    this.assertJoinToken(joinTok);
     const url = body?.url?.trim();
     if (!url) {
       throw new BadRequestException({ ok: false, error: 'url required' });
@@ -153,7 +163,8 @@ export class RelayController {
    * this node's summary. The caller records the reverse edge via postJoin.
    */
   @Post('peer/join')
-  peerJoin(@Body() body: JoinRemote) {
+  peerJoin(@Body() body: JoinRemote, @Headers('x-yinghuo-join-token') joinTok?: string) {
+    this.assertJoinToken(joinTok);
     if (
       !body?.nodeId ||
       !body.eid ||
@@ -234,8 +245,17 @@ export class RelayController {
     @Headers('content-type') contentType?: string,
     @Headers('x-dtn-from') fromHeader?: string,
     @Headers('x-dtn-bundle-id') bundleIdHeader?: string,
-    @Headers('x-dtn-force') force?: string
+    @Headers('x-dtn-force') force?: string,
+    @Headers('x-dtn-bpsec') bpsecHeader?: string
   ) {
+    if (!bpsecIngestOk(bpsecHeader)) {
+      throw new BadRequestException({
+        accepted: false,
+        delivered: false,
+        event: 'BPSEC_REQUIRED',
+        msg: 'DTN_BPSEC=1 requires x-dtn-bpsec: integrity (demo marker, not CCSDS BPSec)',
+      });
+    }
     const type = mediaType(contentType);
     if (type === 'application/json') {
       if (process.env.DTN_ALLOW_JSON_INGEST !== '1') {
@@ -319,17 +339,17 @@ export class RelayController {
     return this.bundles.ingestFromPeer(bundle, from);
   }
 
-  /**
-   * Gate on the arrival contact (`from`), which is the sender's next hop.
-   * Do not use the single first-contact `isOpen()`: when this node is the
-   * destination, a different closed segment must not 503. A relay likewise
-   * stores while its own outgoing hop is still closed.
-   */
   private requireGraph(): GraphService {
     if (!this.graph) {
       throw new ServiceUnavailableException({ ok: false, error: 'graph unavailable' });
     }
     return this.graph;
+  }
+
+  private assertJoinToken(header?: string): void {
+    if (!joinTokenOk(header)) {
+      throw new UnauthorizedException({ ok: false, error: 'join token required' });
+    }
   }
 
   private ingestContactOpen(bundle: RelayBundle, from: string): boolean {

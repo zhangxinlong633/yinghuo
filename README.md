@@ -8,7 +8,7 @@
 - **人／脚本**：HTTP API、CLI、SDK
 - **监督**：萤火控制台（审批、看板、审计、例外）
 
-远期愿景见 [`docs/vision.md`](./docs/vision.md)。现状与愿景差距台账见 [`docs/todo.md`](./docs/todo.md)（近程已交付；当前主战场为中期）。硬件与卫星规模见 [`docs/hardware.md`](./docs/hardware.md)、[`docs/satellite.md`](./docs/satellite.md)。太阳系链路与天线见 [`docs/antenna.md`](./docs/antenna.md)。
+远期愿景见 [`docs/vision.md`](./docs/vision.md)。现状与愿景差距台账见 [`docs/todo.md`](./docs/todo.md)（近程已交付；当前主战场为中期）。Linux 常驻部署见 [`docs/deploy.md`](./docs/deploy.md)。历元／星历／BPSec 钩子见 [`docs/interop.md`](./docs/interop.md)。硬件与卫星规模见 [`docs/hardware.md`](./docs/hardware.md)、[`docs/satellite.md`](./docs/satellite.md)。太阳系链路与天线见 [`docs/antenna.md`](./docs/antenna.md)。
 
 ## 控制台截图
 
@@ -54,7 +54,7 @@
 | 接触图模式 | `DTN_GRAPH_MODE=1`：引导加入、摘要 gossip；选路先裁更远邻居，再选等待开窗 + 时延 + 角色偏置最小者 |
 | 节点角色 | `ground`／`orbiter`／`lander`／`cruise`（旧名兼容）；影响可发／中继／保管文案／选路偏好 |
 | 计划热更新 | `POST /api/plan/reload`＋文件监视；`GET /api/plan` 看版本／错误；校验失败不覆盖生效计划 |
-| MCP（Agent） | `@yinghuo/mcp` stdio：本地 Agent 调 status／contacts／graph／send／inbox／plan_reload |
+| MCP（Agent） | `@yinghuo/mcp` stdio；HTTP：`npm run mcp:http`（Bearer + 只读模式 + 审计） |
 | 动态加入／多岛 | `join`／`graph`／`graph/join`；`join-cluster.sh`／`dual-island.sh`／`unhealthy-retry.sh` |
 | 萤火控制台 | 各节点 `/`：概览、存储、连接、操作、束、日志（人类监督面） |
 | CLI／SDK | `status`／`send`／`recv`／`wait`；`@yinghuo/sdk` 订阅投递 |
@@ -72,6 +72,9 @@ yinghuo/
 ├── docs/hardware.md             # 目标：开发板级三机规格
 ├── docs/satellite.md            # 目标：1U + 开发板 + 电源 + 天线
 ├── docs/antenna.md              # 太阳系链路与天线（近地／地火／边缘）
+├── docs/deploy.md               # Linux 常驻：依赖、systemd、Tailscale、三机 URL
+├── docs/interop.md              # 历元／星历适配器／join token／BPSec 演示头
+├── deploy/systemd/              # yinghuo-earth／relay／mars／mcp-http unit
 ├── docs/relay-daemon-design.md
 ├── docs/superpowers/specs/      # 三节点 / bplib / 接触图 / MCP 设计
 ├── docs/superpowers/plans/      # 对应实现计划

@@ -148,5 +148,11 @@ export interface RelayStatus {
     nextChangeAt: number;
     phase: string;
   };
-  recentEvents: Array<{ t: number; event: string; msg: string }>;
+      recentEvents: Array<{ t: number; event: string; msg: string }>;
+  clock: {
+    wallMs: number;
+    missionMs: number;
+    epochMs: number | null;
+    offsetMs: number;
+  };
 }

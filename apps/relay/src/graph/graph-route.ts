@@ -28,6 +28,7 @@ export function distance(ax: number, ay: number, bx: number, by: number): number
   return Math.hypot(dx, dy);
 }
 
+/** SABR-lite: closer neighbors only; cost = wait-to-open + delay + rolePenalty. Not full CGR. */
 export function decideNextHop(input: {
   me: string;
   dst: string;

@@ -28,7 +28,9 @@ import { ContactService } from '../contact/contact.service';
 import type { RelayRuntimeConfig } from '../config';
 import { GraphService } from '../graph/graph.service';
 import type { RouteDecision } from '../graph/graph-route';
+import { describeMissionClock } from '../clock/mission-clock';
 import { roleCapabilities } from '../role/role-policy';
+import { describeMissionClock } from '../clock/mission-clock';
 import { LevelStore } from '../store/level-store';
 import { PeerService } from '../peer/peer.service';
 import { RELAY_CONFIG } from '../relay.tokens';
@@ -792,6 +794,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
         phase: contact.phase,
       },
       recentEvents: this.events.slice(-40),
+      clock: describeMissionClock(),
     };
   }
 }

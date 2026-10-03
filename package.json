@@ -22,6 +22,7 @@
     "relay:mars:abs": "npm run start:mars:abs -w @yinghuo/relay",
     "cli": "npm run start -w @yinghuo/cli --",
     "mcp": "npm run start -w @yinghuo/mcp",
+    "mcp:http": "npm run start:http -w @yinghuo/mcp",
     "api": "npm run start -w @yinghuo/api",
     "api:dev": "npm run start:dev -w @yinghuo/api",
     "web": "npm run dev -w @yinghuo/web",

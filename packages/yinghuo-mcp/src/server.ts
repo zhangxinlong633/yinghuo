@@ -1,16 +1,39 @@
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
+import { formatAuditLine } from './audit.js';
 import { formatToolError, type RelayHttpClient } from './relay-client.js';
+import { assertToolAllowed, mcpMode } from './tool-policy.js';
+import * as fs from 'fs';
 
 function textResult(data: unknown, isError = false) {
   const text = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
   return { content: [{ type: 'text' as const, text }], isError };
 }
 
-async function runTool(fn: () => Promise<unknown>) {
+function writeAudit(ev: { t: number; tool: string; ok: boolean; mode: string; error?: string }): void {
+  const path = process.env.YINGHUO_MCP_AUDIT;
+  if (!path) return;
   try {
-    return textResult(await fn());
+    fs.appendFileSync(path, `${formatAuditLine(ev)}\n`);
+  } catch {
+    /* ignore audit IO */
+  }
+}
+
+async function runTool(name: string, args: Record<string, unknown>, fn: () => Promise<unknown>) {
+  try {
+    assertToolAllowed(name, args);
+    const data = await fn();
+    writeAudit({ t: Date.now(), tool: name, ok: true, mode: mcpMode() });
+    return textResult(data);
   } catch (err: unknown) {
+    writeAudit({
+      t: Date.now(),
+      tool: name,
+      ok: false,
+      mode: mcpMode(),
+      error: formatToolError(err),
+    });
     return textResult(formatToolError(err), true);
   }
 }
@@ -32,7 +55,7 @@ export function createYinghuoServer(client: RelayHttpClient): McpServer {
         'Read-only. GET /api/status — node role/capabilities, plan metadata, contact phase, store depths.',
       inputSchema: {},
     },
-    async () => runTool(() => client.getJson('/api/status')),
+    async () => runTool('yinghuo_status', {}, () => client.getJson('/api/status')),
   );
 
   server.registerTool(
@@ -43,7 +66,7 @@ export function createYinghuoServer(client: RelayHttpClient): McpServer {
         'Read-only. GET /api/contacts — open/closed windows, links, schedule, embedded plan metadata.',
       inputSchema: {},
     },
-    async () => runTool(() => client.getJson('/api/contacts')),
+    async () => runTool('yinghuo_contacts', {}, () => client.getJson('/api/contacts')),
   );
 
   server.registerTool(
@@ -54,7 +77,7 @@ export function createYinghuoServer(client: RelayHttpClient): McpServer {
         'Read-only. GET /api/plan — plan version hash, source (boot|watch|http), ok/lastError.',
       inputSchema: {},
     },
-    async () => runTool(() => client.getJson('/api/plan')),
+    async () => runTool('yinghuo_plan', {}, () => client.getJson('/api/plan')),
   );
 
   server.registerTool(
@@ -71,7 +94,7 @@ export function createYinghuoServer(client: RelayHttpClient): McpServer {
       },
     },
     async ({ body }) =>
-      runTool(() =>
+      runTool('yinghuo_plan_reload', { body: body ?? {} }, () =>
         body && Object.keys(body).length > 0
           ? client.postJson('/api/plan/reload', body)
           : client.postJson('/api/plan/reload', {}),
@@ -86,7 +109,7 @@ export function createYinghuoServer(client: RelayHttpClient): McpServer {
         'Read-only. GET /api/graph — nodes (componentId), edges, unhealthy peers, componentCount. Graph mode only.',
       inputSchema: {},
     },
-    async () => runTool(() => client.getJson('/api/graph')),
+    async () => runTool('yinghuo_graph', {}, () => client.getJson('/api/graph')),
   );
 
   server.registerTool(
@@ -99,7 +122,7 @@ export function createYinghuoServer(client: RelayHttpClient): McpServer {
         dst: z.string().min(1).describe('Destination node id, e.g. Mars or node9'),
       },
     },
-    async ({ dst }) => runTool(() => client.getJson('/api/graph/route', { dst })),
+    async ({ dst }) => runTool('yinghuo_graph_route', { dst }, () => client.getJson('/api/graph/route', { dst })),
   );
 
   server.registerTool(
@@ -115,7 +138,7 @@ export function createYinghuoServer(client: RelayHttpClient): McpServer {
       },
     },
     async ({ dst, payload, ttlMs }) =>
-      runTool(() =>
+      runTool('yinghuo_send', { dst, payload, ttlMs }, () =>
         client.postJson('/api/send', {
           dst,
           payload,
@@ -138,7 +161,7 @@ export function createYinghuoServer(client: RelayHttpClient): McpServer {
       },
     },
     async ({ clear }) =>
-      runTool(() =>
+      runTool('yinghuo_inbox', { clear: clear === true }, () =>
         clear
           ? client.getJson('/api/recv', { clear: '1' })
           : client.getJson('/api/inbox'),

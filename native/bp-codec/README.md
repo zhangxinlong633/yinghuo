@@ -20,4 +20,4 @@ cmake --build build
 ./build/dtn_bp_codec_smoke
 ```
 
-macOS 产物：`build/libdtn_bp_codec.dylib`。
+macOS 产物：`build/libdtn_bp_codec.dylib`。Linux：`build/libdtn_bp_codec.so`（需 `libsqlite3-dev`，CMake 链 `libm`）。常驻部署见 [`docs/deploy.md`](../../docs/deploy.md)。

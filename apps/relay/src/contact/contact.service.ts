@@ -1,5 +1,6 @@
 import { Inject, Injectable, Optional } from '@nestjs/common';
 import type { ContactSchedule, DualContact } from '../bundle/bundle.types';
+import { missionNow } from '../clock/mission-clock';
 import { RELAY_CONFIG } from '../relay.tokens';
 import type { RelayRuntimeConfig } from '../config';
 import { GraphService } from '../graph/graph.service';
@@ -86,7 +87,7 @@ export class ContactService {
     return this.peerOf(this.primaryContact());
   }
 
-  isOpen(now = Date.now()): boolean {
+  isOpen(now = missionNow()): boolean {
     return isContactOpen(now, this.primaryContact().schedule);
   }
 
@@ -94,7 +95,7 @@ export class ContactService {
     return this.primaryContact().delayMs;
   }
 
-  listLinks(now = Date.now()): ContactLinkState[] {
+  listLinks(now = missionNow()): ContactLinkState[] {
     return this.mergedContacts().map((c) => {
       const timing = this.windowTiming(c.schedule, now);
       const link: ContactLinkState = {
@@ -116,7 +117,7 @@ export class ContactService {
     });
   }
 
-  isOpenTo(nextHopName: string, now = Date.now()): boolean {
+  isOpenTo(nextHopName: string, now = missionNow()): boolean {
     const link = this.listLinks(now).find((l) => l.local && l.peer === nextHopName);
     return link ? link.open : false;
   }
@@ -129,7 +130,7 @@ export class ContactService {
     return link ? link.delayMs : 0;
   }
 
-  getState(now = Date.now()): ContactState {
+  getState(now = missionNow()): ContactState {
     const contact = this.primaryContact();
     const timing = this.windowTiming(contact.schedule, now);
     return {
@@ -147,7 +148,7 @@ export class ContactService {
   }
 
   /** Network view for GET /api/contacts: windows plus local/peer EIDs and CBOR. */
-  snapshot(now = Date.now()): ContactSnapshot {
+  snapshot(now = missionNow()): ContactSnapshot {
     return {
       ...this.getState(now),
       links: this.listLinks(now),

@@ -1,0 +1,16 @@
+[Unit]
+Description=Yinghuo DTN Mars node
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/yinghuo
+Environment=PATH=/usr/bin:/bin
+Environment=HOME=/root
+ExecStart=/usr/bin/npm run start:mars -w @yinghuo/relay
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

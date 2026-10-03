@@ -4,6 +4,7 @@ import * as path from 'path';
 import type { DualContactPlan, PlanStatus } from './bundle/bundle.types';
 import { normalizeContactPlan } from './contact/contact-plan-normalize';
 import { validateContactPlan } from './contact/contact-plan-validate';
+import { interpolateEnv } from './config/env-interpolate';
 import { parseRole, type NodeRole } from './role/role-policy';
 
 /** Monorepo root: apps/relay/src|dist → ../../.. */
@@ -217,7 +218,7 @@ export function loadRelayConfig(): RelayRuntimeConfig {
   const startedAt = Date.now();
   let rawText: string;
   try {
-    rawText = fs.readFileSync(planPath, 'utf8');
+    rawText = interpolateEnv(fs.readFileSync(planPath, 'utf8'));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new Error(`failed to read contact plan ${planPath}: ${msg}`);

@@ -75,8 +75,12 @@ spec:
               mountPath: /etc/dtn
               readOnly: true
           env:
-            - name: DTN_NODE_ID
+            - name: NODE_ID
               value: Earth
+            - name: PORT
+              value: "3101"
+            - name: CONTACT_PLAN
+              value: /etc/dtn/contact-plan.json
       volumes:
         - name: store
           emptyDir: {}
@@ -114,8 +118,12 @@ spec:
               mountPath: /etc/dtn
               readOnly: true
           env:
-            - name: DTN_NODE_ID
+            - name: NODE_ID
               value: Relay
+            - name: PORT
+              value: "3103"
+            - name: CONTACT_PLAN
+              value: /etc/dtn/contact-plan.json
       volumes:
         - name: store
           emptyDir: {}
@@ -153,8 +161,12 @@ spec:
               mountPath: /etc/dtn
               readOnly: true
           env:
-            - name: DTN_NODE_ID
+            - name: NODE_ID
               value: Mars
+            - name: PORT
+              value: "3102"
+            - name: CONTACT_PLAN
+              value: /etc/dtn/contact-plan.json
       volumes:
         - name: store
           emptyDir: {}

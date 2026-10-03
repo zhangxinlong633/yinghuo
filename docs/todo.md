@@ -27,8 +27,8 @@
 
 ### Agent 入口补强
 
-- [ ] 远程 HTTP／SSE MCP 与鉴权（常驻运维 Agent；本机 stdio 已交付）
-- [ ] MCP 工具审计日志／细粒度只读·写权限声明（产品化）
+- [x] 远程 HTTP MCP 工具网关与 Bearer 鉴权（`npm run mcp:http`；非完整 SSE MCP）
+- [x] MCP 只读／写（`YINGHUO_MCP_MODE`）+ JSONL 审计（`YINGHUO_MCP_AUDIT`）
 
 ### 体验与验收
 
@@ -43,8 +43,8 @@
 
 ### 时间与外生输入
 
-- [ ] 引入任务时钟／历元模型（不只是本机 wall-clock 取模）
-- [ ] 星历或外生接触源适配器接口（输入轨道／遮挡 → 输出接触弧）
+- [x] 任务时钟／历元（`MISSION_EPOCH_MS`／`GET /api/clock`；接触窗走 missionNow）
+- [x] 星历弧 → 接触计划适配器（`ephemeris-adapter.ts`；不算轨道力学）
 
 ### 资源与排队
 
@@ -54,12 +54,13 @@
 ### 身份与多任务边界
 
 - [ ] 任务／机构作用域（节点集不必全网一张图）
-- [ ] 基础信任与数据策略钩子（谁可 join、谁可投递何种业务；可与远程 MCP 鉴权合流）
+- [x] Join token（`DTN_JOIN_TOKEN`）+ 远程 MCP Bearer；业务级「谁可投递何种载荷」仍开放
 
 ### 部署形态
 
-- [ ] 多主机常驻部署指南与配置（非仅本机多进程）
-- [ ] 充实 `k8s/` 至可 dry-run／可叙述的接触感知调度，并与 daemon 配置对齐
+- [x] 多主机常驻部署指南与配置 — `docs/deploy.md` + `deploy/systemd/`
+- [x] 三机计划模板 `contact-plan.tri-hosts.json`（`${EARTH_URL}` 等）
+- [x] `k8s/nodes.yaml` 环境变量与 daemon 对齐（`NODE_ID`／`PORT`／`CONTACT_PLAN`）；接触感知 controller 仍为教学 stub
 
 ---
 
@@ -67,9 +68,9 @@
 
 对齐完整深空互操作与生产级协议栈；有近中成果后再评估。
 
-- [ ] 完整接触图路由（CGR／SABR 等），而非当前启发式局部选路
-- [ ] BPSec、分片、完整 Bundle Protocol／ION 级兼容目标（若需要）
-- [ ] 与真实 DSN／任务管线对接
+- [x] 局部 SABR-lite（等窗+时延+角色罚分）；**完整 CGR 仍开放**
+- [x] BPSec **演示头** `x-dtn-bpsec: integrity`（`DTN_BPSEC=1`）；**非** CCSDS BPSec／分片／ION
+- [x] 星历弧适配器作为 DSN／任务管线的输入侧钩子；**不对接真实 DSN**
 - [ ] 跨厂商、跨机构规模化互通与认证体系
 - [ ] 太阳系尺度下的容量规划、故障域与长期归档
 
@@ -78,9 +79,9 @@
 ## 建议落地顺序（摘要）
 
 1. ~~近：长时延 · 多岛 · 角色 · 计划热更 · 本机 MCP~~ **（已完成）**
-2. **中：任务时钟／历元 + 带宽真正限速** — 向真实任务体感靠拢  
-3. **中：身份／信任 + 远程 MCP 鉴权** — Agent／多任务边界  
-4. **中：多主机／k8s 叙述与配置对齐** — 可常驻部署  
-5. **远：CGR／BPSec／DSN 互操作** — 单独立项  
+2. ~~中：同机常驻 + 远程 MCP HTTP／历元／三机模板／互操作钩子~~ **（带宽限速仍暂缓；完整 CGR／DSN 仍远）**  
+3. **中：任务／机构作用域 + 保管排队**  
+4. **中：`bandwidthBps` 真实限速**  
+5. **远：完整 CGR／CCSDS BPSec／真实 DSN**  
 
 具体实现仍按单轮切片开 spec／plan；本文只作差距与待办台账，不替代设计文档。

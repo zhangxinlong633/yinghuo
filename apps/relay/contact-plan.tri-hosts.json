@@ -1,0 +1,59 @@
+{
+  "description": "Three-host Earth–Relay–Mars. Substitute ${EARTH_URL} ${RELAY_URL} ${MARS_URL} (e.g. http://100.x.x.x:3101).",
+  "mode": "tri",
+  "nodes": [
+    {
+      "name": "Earth",
+      "eid": "ipn:1.1",
+      "role": "ground",
+      "port": 3101,
+      "peerUrl": "${RELAY_URL}",
+      "peers": { "Relay": "${RELAY_URL}" },
+      "nextHop": { "Mars": "Relay", "Relay": "Relay" }
+    },
+    {
+      "name": "Relay",
+      "eid": "ipn:2.1",
+      "role": "orbiter",
+      "port": 3103,
+      "peerUrl": "${MARS_URL}",
+      "peers": { "Earth": "${EARTH_URL}", "Mars": "${MARS_URL}" },
+      "nextHop": { "Mars": "Mars", "Earth": "Earth" }
+    },
+    {
+      "name": "Mars",
+      "eid": "ipn:3.1",
+      "role": "lander",
+      "port": 3102,
+      "peerUrl": "${RELAY_URL}",
+      "peers": { "Relay": "${RELAY_URL}" },
+      "nextHop": { "Earth": "Relay", "Relay": "Relay" }
+    }
+  ],
+  "contacts": [
+    {
+      "a": "Earth",
+      "b": "Relay",
+      "delayMs": 200,
+      "bandwidthBps": 1000000,
+      "schedule": {
+        "type": "cyclic",
+        "periodMs": 30000,
+        "openOffsetMs": 0,
+        "openDurationMs": 10000
+      }
+    },
+    {
+      "a": "Relay",
+      "b": "Mars",
+      "delayMs": 200,
+      "bandwidthBps": 1000000,
+      "schedule": {
+        "type": "cyclic",
+        "periodMs": 30000,
+        "openOffsetMs": 15000,
+        "openDurationMs": 10000
+      }
+    }
+  ]
+}

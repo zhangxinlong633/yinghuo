@@ -71,7 +71,7 @@ target_include_directories(dtn_bp_codec
 )
 target_compile_definitions(dtn_bp_codec PRIVATE BPLIB_MEM_STD_IMPL)
 target_compile_options(dtn_bp_codec PRIVATE -fvisibility=hidden)
-target_link_libraries(dtn_bp_codec PRIVATE qcbor)
+target_link_libraries(dtn_bp_codec PRIVATE qcbor m)
 
 set_target_properties(dtn_bp_codec PROPERTIES
   LIBRARY_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
