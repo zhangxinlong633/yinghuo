@@ -8,7 +8,7 @@
 - **人／脚本**：HTTP API、CLI、SDK
 - **监督**：萤火控制台（审批、看板、审计、例外）
 
-远期愿景见 [`docs/vision.md`](./docs/vision.md)。现状与愿景差距台账见 [`docs/todo.md`](./docs/todo.md)（近程已交付；当前主战场为中期）。Linux 常驻部署见 [`docs/deploy.md`](./docs/deploy.md)。历元／星历／BPSec 钩子见 [`docs/interop.md`](./docs/interop.md)。硬件与卫星规模见 [`docs/hardware.md`](./docs/hardware.md)、[`docs/satellite.md`](./docs/satellite.md)。太阳系链路与天线见 [`docs/antenna.md`](./docs/antenna.md)。分布式／容错／辐射下的核对与提升见 [`docs/fault-tolerance.md`](./docs/fault-tolerance.md)。
+远期愿景见 [`docs/vision.md`](./docs/vision.md)。补位商业（中继即利润单元、按跳结算）见 [`docs/market.md`](./docs/market.md)。现状与愿景差距台账见 [`docs/todo.md`](./docs/todo.md)（近程已交付；当前主战场为中期）。Linux 常驻部署见 [`docs/deploy.md`](./docs/deploy.md)。历元／星历／BPSec 钩子见 [`docs/interop.md`](./docs/interop.md)。硬件与卫星规模见 [`docs/hardware.md`](./docs/hardware.md)、[`docs/satellite.md`](./docs/satellite.md)。太阳系链路与天线见 [`docs/antenna.md`](./docs/antenna.md)。分布式／容错／辐射下的核对与提升见 [`docs/fault-tolerance.md`](./docs/fault-tolerance.md)。
 
 ## 控制台截图
 
@@ -72,6 +72,7 @@ yinghuo/
 ├── README.md
 ├── docs/screenshots/            # 控制台截图（中／英）
 ├── docs/vision.md               # 愿景：太阳系上的束递网
+├── docs/market.md               # 补位商业：中继即利润单元
 ├── docs/todo.md                 # 相对愿景的近／中／远差距台账
 ├── docs/hardware.md             # 目标：开发板级三机规格
 ├── docs/satellite.md            # 目标：1U + 开发板 + 电源 + 天线
