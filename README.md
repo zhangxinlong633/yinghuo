@@ -8,7 +8,7 @@
 - **人／脚本**：HTTP API、CLI、SDK
 - **监督**：萤火控制台（审批、看板、审计、例外）
 
-远期愿景见 [`docs/vision.md`](./docs/vision.md)。现状与愿景差距台账见 [`docs/todo.md`](./docs/todo.md)（近程已交付；当前主战场为中期）。Linux 常驻部署见 [`docs/deploy.md`](./docs/deploy.md)。历元／星历／BPSec 钩子见 [`docs/interop.md`](./docs/interop.md)。硬件与卫星规模见 [`docs/hardware.md`](./docs/hardware.md)、[`docs/satellite.md`](./docs/satellite.md)。太阳系链路与天线见 [`docs/antenna.md`](./docs/antenna.md)。
+远期愿景见 [`docs/vision.md`](./docs/vision.md)。现状与愿景差距台账见 [`docs/todo.md`](./docs/todo.md)（近程已交付；当前主战场为中期）。Linux 常驻部署见 [`docs/deploy.md`](./docs/deploy.md)。历元／星历／BPSec 钩子见 [`docs/interop.md`](./docs/interop.md)。硬件与卫星规模见 [`docs/hardware.md`](./docs/hardware.md)、[`docs/satellite.md`](./docs/satellite.md)。太阳系链路与天线见 [`docs/antenna.md`](./docs/antenna.md)。分布式／容错／辐射边界见 [`docs/fault-tolerance.md`](./docs/fault-tolerance.md)。
 
 ## 控制台截图
 
@@ -52,7 +52,7 @@
 | 业务／网络／运维分层 | 发送与收件箱仅暴露节点名与载荷；连接页展示 EID／窗口；束详情含主块摘要与时间线 |
 | 可配置 EID | 接触计划或环境变量映射节点名 ↔ `ipn:…` |
 | 接触图模式 | `DTN_GRAPH_MODE=1`：引导加入、摘要 gossip；选路先裁更远邻居，再选等待开窗 + 时延 + 角色偏置最小者 |
-| 节点角色 | `ground`／`orbiter`／`lander`／`cruise`（旧名兼容）；影响可发／中继／保管文案／选路偏好 |
+| 冷副本 | 默认复制到 2 个邻居（`DTN_REPLICA_N`）；`DTN_REPLICA_STRATEGY=quality\|nearest\|far`；不接管 custody、不投递 |
 | 计划热更新 | `POST /api/plan/reload`＋文件监视；`GET /api/plan` 看版本／错误；校验失败不覆盖生效计划 |
 | MCP（Agent） | `@yinghuo/mcp` stdio；HTTP：`npm run mcp:http`（Bearer + 只读模式 + 审计） |
 | 动态加入／多岛 | `join`／`graph`／`graph/join`；`join-cluster.sh`／`dual-island.sh`／`unhealthy-retry.sh` |
@@ -71,6 +71,7 @@ yinghuo/
 ├── docs/todo.md                 # 相对愿景的近／中／远差距台账
 ├── docs/hardware.md             # 目标：开发板级三机规格
 ├── docs/satellite.md            # 目标：1U + 开发板 + 电源 + 天线
+├── docs/fault-tolerance.md      # 分布式、容错、空间辐射边界
 ├── docs/antenna.md              # 太阳系链路与天线（近地／地火／边缘）
 ├── docs/deploy.md               # Linux 常驻：依赖、systemd、Tailscale、三机 URL
 ├── docs/interop.md              # 历元／星历适配器／join token／BPSec 演示头
@@ -245,6 +246,9 @@ bash apps/relay/scripts/unhealthy-retry.sh
 | （默认） | `native/bp-codec/build/libdtn_bp_codec.dylib`（Darwin）或对应 `.so`（Linux） |
 | `DTN_BP_CODEC_LIB` | 覆盖共享库路径；缺失时进程启动失败 |
 | `DTN_ALLOW_JSON_INGEST=1` | 允许 `POST /api/peer/ingest` 额外接受旧版 JSON（回归用）；默认关闭，出口仍为 CBOR |
+| `DTN_REPLICA_N` | 冷副本目标数，默认 `2`；`0` 关闭。副本不接管 custody |
+| `DTN_REPLICA_STRATEGY` | `quality`（默认，低时延+角色）／`nearest`／`far`；也可用 `质量`／`最近`／`远` |
+| `DTN_REPLICA_PROMOTE` | 主保管 unhealthy 时副本是否可提升接管 custody，默认开；`0`／`false`／`no` 关闭 |
 
 导出接口：`dtn_bp_encode`／`dtn_bp_decode`／`dtn_bp_inspect`。构建说明见 [`native/bp-codec/README.md`](./native/bp-codec/README.md)。
 

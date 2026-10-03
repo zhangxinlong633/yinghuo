@@ -25,15 +25,23 @@ import {
   type TrackedBundle,
 } from './bundle-machine';
 import { ContactService } from '../contact/contact.service';
-import type { RelayRuntimeConfig } from '../config';
+import {
+  pickReplicaTargets,
+  replicaCount,
+  replicaStrategy,
+  type ReplicaCandidate,
+} from './replica-select';
+import { peerUrlFor, type RelayRuntimeConfig } from '../config';
 import { GraphService } from '../graph/graph.service';
 import type { RouteDecision } from '../graph/graph-route';
 import { contactGraphRoute, localGraphFromPlan } from '../graph/graph-cgr';
 import { describeMissionClock } from '../clock/mission-clock';
-import { roleCapabilities } from '../role/role-policy';
+import { roleCapabilities, roleRoutePenalty } from '../role/role-policy';
 import { LevelStore } from '../store/level-store';
 import { PeerService } from '../peer/peer.service';
 import { RELAY_CONFIG } from '../relay.tokens';
+import { payloadHashOk, payloadSha256 } from './payload-hash';
+import { canPromoteReplica, replicaPromoteEnabled } from './replica-promote';
 
 let seq = 0;
 
@@ -56,7 +64,12 @@ function toTracked(bundle: RelayBundle): TrackedBundle {
   };
 }
 
-function fromTracked(tracked: TrackedBundle, delivered: boolean, wire?: string): RelayBundle {
+function fromTracked(
+  tracked: TrackedBundle,
+  delivered: boolean,
+  wire?: string,
+  orig?: RelayBundle,
+): RelayBundle {
   return {
     id: tracked.id,
     src: tracked.src,
@@ -69,7 +82,11 @@ function fromTracked(tracked: TrackedBundle, delivered: boolean, wire?: string):
     state: tracked.state,
     custodian: tracked.custodian,
     events: tracked.events,
-    ...(wire !== undefined ? { wire } : {}),
+    ...(wire !== undefined ? { wire } : orig?.wire ? { wire: orig.wire } : {}),
+    ...(orig?.replicaRole ? { replicaRole: orig.replicaRole } : {}),
+    ...(orig?.replicaOf ? { replicaOf: orig.replicaOf } : {}),
+    ...(orig?.replicas ? { replicas: orig.replicas } : {}),
+    ...(orig?.payloadSha256 ? { payloadSha256: orig.payloadSha256 } : {}),
   };
 }
 
@@ -171,6 +188,10 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
   async send(dst: string, payload: string, ttlMs = 120000): Promise<RelayBundle> {
     const staged = await this.enqueue(() => this.stageSend(dst, payload, ttlMs));
     if (staged.job) await this.finishForward(staged.job);
+    await this.replicate(staged.bundle.id, [
+      ...(staged.job?.next ? [staged.job.next] : []),
+      staged.bundle.dst,
+    ]);
     return this.enqueue(async () => (await this.store.getBundle(staged.bundle.id)) ?? staged.bundle);
   }
 
@@ -208,6 +229,9 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       contactOpen,
     });
     const bundle = fromTracked(tracked, false, wire);
+    bundle.replicaRole = 'primary';
+    bundle.payloadSha256 = payloadSha256(payload);
+    bundle.replicas = [];
     await this.store.putBundle(bundle);
     await this.store.putCustody({
       bundleId: bundle.id,
@@ -225,7 +249,8 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
   /** Peer CLA ingest — called when the arrival contact is open and a peer pushes a bundle. */
   async ingestFromPeer(
     bundle: RelayBundle,
-    from: string
+    from: string,
+    replica = false,
   ): Promise<{
     accepted: boolean;
     delivered: boolean;
@@ -233,12 +258,17 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     event: string;
     msg: string;
   }> {
-    return this.enqueue(() => this.ingestFromPeerExclusive(bundle, from));
+    const result = await this.enqueue(() => this.ingestFromPeerExclusive(bundle, from, replica));
+    if (!replica && result.accepted && !result.duplicate) {
+      await this.replicate(bundle.id, [from, bundle.dst]);
+    }
+    return result;
   }
 
   private async ingestFromPeerExclusive(
     bundle: RelayBundle,
-    from: string
+    from: string,
+    replica = false,
   ): Promise<{
     accepted: boolean;
     delivered: boolean;
@@ -249,7 +279,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     this.rememberBundle(bundle.id);
     const existing = await this.store.getBundle(bundle.id);
     if (existing) {
-      this.queuePendingAck(existing.id, from, existing.events ?? []);
+      if (!replica) this.queuePendingAck(existing.id, from, existing.events ?? []);
       return {
         accepted: true,
         delivered: existing.delivered,
@@ -261,9 +291,75 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
     const now = Date.now();
 
+    if (replica) {
+      if (bundle.payloadSha256 && !payloadHashOk(bundle.payload, bundle.payloadSha256)) {
+        const stored: RelayBundle = {
+          ...bundle,
+          replicaRole: 'replica',
+          replicaOf: from,
+          custodian: from,
+          replicas: [],
+          delivered: false,
+          state: 'WAITING',
+          events: [
+            ...(bundle.events ?? []),
+            { t: now, node: this.cfg.nodeId, kind: 'CORRUPT', msg: 'payload sha256 mismatch' },
+          ],
+        };
+        await this.store.putBundle(stored);
+        this.pushEvent('CORRUPT', `${stored.id} replica payload mismatch`);
+        return {
+          accepted: true,
+          delivered: false,
+          event: 'CORRUPT',
+          msg: `${stored.id} corrupt replica`,
+        };
+      }
+      const stored: RelayBundle = {
+        ...bundle,
+        replicaRole: 'replica',
+        replicaOf: from,
+        custodian: from,
+        replicas: [],
+        delivered: false,
+        state: 'WAITING',
+        events: [
+          ...(bundle.events ?? []),
+          { t: now, node: this.cfg.nodeId, kind: 'REPLICA_STORE', msg: `replica of ${from}` },
+        ],
+      };
+      await this.store.putBundle(stored);
+      this.pushEvent('REPLICA_STORE', `${stored.id} from=${from}`);
+      return {
+        accepted: true,
+        delivered: false,
+        event: 'REPLICA_STORE',
+        msg: `${stored.id} replica stored`,
+      };
+    }
+
     if (bundle.dst === this.cfg.nodeId) {
+      if (bundle.payloadSha256 && !payloadHashOk(bundle.payload, bundle.payloadSha256)) {
+        const stored: RelayBundle = {
+          ...bundle,
+          delivered: false,
+          state: 'WAITING',
+          events: [
+            ...(bundle.events ?? []),
+            { t: now, node: this.cfg.nodeId, kind: 'CORRUPT', msg: 'payload sha256 mismatch' },
+          ],
+        };
+        await this.store.putBundle(stored);
+        this.pushEvent('CORRUPT', `${stored.id} payload mismatch`);
+        return {
+          accepted: true,
+          delivered: false,
+          event: 'CORRUPT',
+          msg: `${stored.id} corrupt payload`,
+        };
+      }
       const accepted = acceptIngest(undefined, toTracked(bundle), now, this.cfg.nodeId, true);
-      const stored = fromTracked(accepted, true, bundle.wire);
+      const stored = fromTracked(accepted, true, bundle.wire, bundle);
       await this.store.putBundle(stored);
       const msg: DeliveredMessage = {
         id: stored.id,
@@ -298,7 +394,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     }
 
     const accepted = acceptIngest(undefined, toTracked(bundle), now, this.cfg.nodeId, false);
-    const stored = fromTracked(accepted, false, bundle.wire);
+    const stored = fromTracked(accepted, false, bundle.wire, bundle);
     await this.store.putBundle(stored);
     await this.store.putCustody({
       bundleId: stored.id,
@@ -332,7 +428,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     const custody = await this.store.getCustody(bundleId);
     const upstream = custody?.from ?? null;
     const acked = applyAck(toTracked(bundle), now, this.cfg.nodeId, from, downstreamEvents);
-    await this.store.putBundle(fromTracked(acked, bundle.delivered, bundle.wire));
+    await this.store.putBundle(fromTracked(acked, bundle.delivered, bundle.wire, bundle));
     this.pushEvent('ACK', `${bundleId} acked by ${from} — release custody`);
     this.lastForwardAttempt.delete(bundleId);
     if (custody) await this.store.releaseCustody(bundleId);
@@ -386,11 +482,25 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     if (now - bundle.createdAt >= bundle.ttlMs) {
       const expired = markExpired(toTracked(bundle), now, this.cfg.nodeId);
       this.rememberBundle(bundleId);
-      await this.store.putBundle(fromTracked(expired, bundle.delivered, bundle.wire));
+      await this.store.putBundle(fromTracked(expired, bundle.delivered, bundle.wire, bundle));
       await this.store.releaseCustody(bundleId);
       this.store.dropInbox(bundleId);
       this.lastForwardAttempt.delete(bundleId);
       this.pushEvent('EXPIRE', `${bundleId} TTL exceeded — drop`);
+      return null;
+    }
+
+    if (bundle.payloadSha256 && !payloadHashOk(bundle.payload, bundle.payloadSha256)) {
+      if (!(bundle.events ?? []).some((e) => e.kind === 'CORRUPT')) {
+        await this.store.putBundle({
+          ...bundle,
+          events: [
+            ...(bundle.events ?? []),
+            { t: now, node: this.cfg.nodeId, kind: 'CORRUPT', msg: 'payload sha256 mismatch' },
+          ],
+        });
+        this.pushEvent('CORRUPT', `${bundleId} payload mismatch`);
+      }
       return null;
     }
 
@@ -457,6 +567,79 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     this.forwardsInFlight.add(bundleId);
     this.pushEvent('FORWARD', `${bundleId} → ${next} (contact open)`);
     return { bundleId, next, bundle: forwarding };
+  }
+
+  private replicaPeerIds(): string[] {
+    const ids = new Set(Object.keys(this.cfg.peers));
+    for (const id of this.graph?.listDirectPeerIds() ?? []) ids.add(id);
+    return [...ids];
+  }
+
+  private replicaCandidates(): ReplicaCandidate[] {
+    const me = this.cfg.nodeId;
+    const snap = this.graph?.snapshot();
+    const selfNode = snap?.nodes.find((n) => n.id === me);
+    const sx = selfNode?.x ?? this.cfg.x;
+    const sy = selfNode?.y ?? this.cfg.y;
+    const unhealthy = new Set(this.graph?.listUnhealthy() ?? []);
+    return this.replicaPeerIds().map((id) => {
+      const node = snap?.nodes.find((n) => n.id === id);
+      const planNode = this.cfg.plan.nodes.find((n) => n.name === id);
+      const x = node?.x ?? planNode?.x ?? 0;
+      const y = node?.y ?? planNode?.y ?? 0;
+      const edge = snap?.edges.find(
+        (e) =>
+          e.direct &&
+          ((e.a === me && e.b === id) || (e.b === me && e.a === id)),
+      );
+      const contact = this.cfg.plan.contacts.find(
+        (c) => (c.a === me && c.b === id) || (c.b === me && c.a === id),
+      );
+      const delayMs = edge?.delayMs ?? contact?.delayMs ?? Number.POSITIVE_INFINITY;
+      const role = node?.role ?? this.cfg.roleByNode[id] ?? 'lander';
+      return {
+        id,
+        dist: Math.hypot(x - sx, y - sy),
+        delayMs,
+        unhealthy: unhealthy.has(id),
+        rolePenalty: roleRoutePenalty(this.cfg.role, role),
+      };
+    });
+  }
+
+  /** Copy the bundle to up to DTN_REPLICA_N (default 2) other nodes. Replicas do not take custody. */
+  async replicate(bundleId: string, exclude: string[] = []): Promise<void> {
+    const n = replicaCount();
+    if (n <= 0 || !this.peer) return;
+    const strategy = replicaStrategy();
+    const bundle = await this.enqueue(async () => this.store.getBundle(bundleId));
+    if (!bundle || bundle.replicaRole === 'replica') return;
+    const targets = pickReplicaTargets({
+      self: this.cfg.nodeId,
+      peers: this.replicaCandidates(),
+      exclude,
+      n,
+      strategy,
+    });
+    for (const hop of targets) {
+      const url = peerUrlFor(this.cfg, hop, this.graph);
+      if (!url) continue;
+      const result = await this.peer.forwardTo(url, bundle, {
+        'x-dtn-replica': '1',
+        'x-dtn-force': '1',
+      });
+      await this.enqueue(async () => {
+        const current = await this.store.getBundle(bundleId);
+        if (!current) return;
+        if (result.ok) {
+          const replicas = [...new Set([...(current.replicas ?? []), hop])];
+          await this.store.putBundle({ ...current, replicas });
+          this.pushEvent('REPLICA', `${bundleId} → ${hop} (${strategy})`);
+        } else {
+          this.pushEvent('REPLICA_FAIL', `${bundleId} → ${hop} ${result.error ?? ''}`.trim());
+        }
+      });
+    }
   }
 
   /** Peer HTTP. Must run while the bundle mutex is not held. */
@@ -605,7 +788,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
     const reason = error ?? 'forward failed';
     const failed = noteForwardFailed(toTracked(stored), Date.now(), this.cfg.nodeId, reason);
-    await this.store.putBundle(fromTracked(failed, stored.delivered, stored.wire));
+    await this.store.putBundle(fromTracked(failed, stored.delivered, stored.wire, stored));
     custody.waitingAck = false;
     await this.store.putCustody(custody);
     this.pushEvent('RETRY', `${bundleId} forward failed: ${reason}`);
@@ -643,6 +826,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     }
     const now = Date.now();
     const acks = this.takeSendableAcks(now);
+    await this.promoteReplicas();
     const ids = await this.store.listPendingBundleIds();
     const forwards: ForwardJob[] = [];
     for (const id of ids) {
@@ -656,6 +840,60 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
     }
     await this.expireDeliveredInbox(now);
     return { acks, forwards };
+  }
+
+  private async promoteReplicas(): Promise<void> {
+    const promoteEnabled = replicaPromoteEnabled();
+    const unhealthyIds = this.graph?.listUnhealthy() ?? [];
+    const ids = await this.store.listBundleIds();
+    for (const id of ids) {
+      const bundle = await this.store.getBundle(id);
+      if (!bundle) continue;
+      const decision = canPromoteReplica({
+        replicaRole: bundle.replicaRole,
+        replicaOf: bundle.replicaOf,
+        payload: bundle.payload,
+        payloadSha256: bundle.payloadSha256,
+        unhealthyIds,
+        promoteEnabled,
+      });
+      if (!decision.ok) {
+        if (
+          decision.reason === 'corrupt' &&
+          !(bundle.events ?? []).some((e) => e.kind === 'CORRUPT')
+        ) {
+          const now = Date.now();
+          await this.store.putBundle({
+            ...bundle,
+            events: [
+              ...(bundle.events ?? []),
+              { t: now, node: this.cfg.nodeId, kind: 'CORRUPT', msg: 'payload sha256 mismatch' },
+            ],
+          });
+          this.pushEvent('CORRUPT', `${bundle.id} payload mismatch`);
+        }
+        continue;
+      }
+      const now = Date.now();
+      await this.store.putCustody({
+        bundleId: bundle.id,
+        waitingAck: false,
+        from: null,
+        heldAt: now,
+      });
+      const promoted: RelayBundle = {
+        ...bundle,
+        replicaRole: 'primary',
+        custodian: this.cfg.nodeId,
+        events: [
+          ...(bundle.events ?? []),
+          { t: now, node: this.cfg.nodeId, kind: 'PROMOTE', msg: `custody from ${bundle.replicaOf}` },
+        ],
+      };
+      await this.store.putBundle(promoted);
+      this.rememberBundle(promoted.id);
+      this.pushEvent('PROMOTE', `${promoted.id} was ${bundle.replicaOf}`);
+    }
   }
 
   /**
@@ -680,7 +918,7 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
 
       if (bundle && bundle.state !== 'EXPIRED') {
         const expired = markExpired(toTracked(bundle), now, this.cfg.nodeId);
-        await this.store.putBundle(fromTracked(expired, bundle.delivered, bundle.wire));
+        await this.store.putBundle(fromTracked(expired, bundle.delivered, bundle.wire, bundle));
       }
       this.store.dropInbox(msg.id);
       this.rememberBundle(msg.id);
@@ -821,6 +1059,11 @@ export class BundleService implements OnModuleInit, OnModuleDestroy {
       },
       recentEvents: this.events.slice(-40),
       clock: describeMissionClock(),
+      replica: {
+        n: replicaCount(),
+        strategy: replicaStrategy(),
+        promote: replicaPromoteEnabled(),
+      },
     };
   }
 }

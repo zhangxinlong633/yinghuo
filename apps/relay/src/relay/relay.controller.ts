@@ -35,6 +35,17 @@ function mediaType(contentType?: string): string {
   return (contentType ?? '').split(';')[0].trim().toLowerCase();
 }
 
+/** Transit hash is the header the sender declared. Never recompute from payload bytes. */
+function stampPayloadSha256(
+  bundle: RelayBundle | undefined,
+  header?: string,
+): RelayBundle | undefined {
+  if (!bundle) return bundle;
+  const hex = header?.trim().toLowerCase();
+  if (!hex) return bundle;
+  return { ...bundle, payloadSha256: hex };
+}
+
 async function readRawBody(req: Request): Promise<Buffer> {
   if (Buffer.isBuffer(req.body)) return req.body;
   const chunks: Buffer[] = [];
@@ -246,7 +257,9 @@ export class RelayController {
     @Headers('x-dtn-from') fromHeader?: string,
     @Headers('x-dtn-bundle-id') bundleIdHeader?: string,
     @Headers('x-dtn-force') force?: string,
-    @Headers('x-dtn-bpsec') bpsecHeader?: string
+    @Headers('x-dtn-bpsec') bpsecHeader?: string,
+    @Headers('x-dtn-replica') replicaHeader?: string,
+    @Headers('x-dtn-payload-sha256') payloadSha256Header?: string,
   ) {
     if (!bpsecIngestOk(bpsecHeader)) {
       throw new BadRequestException({
@@ -256,6 +269,7 @@ export class RelayController {
         msg: 'DTN_BPSEC=1 requires x-dtn-bpsec: integrity (demo marker, not CCSDS BPSec)',
       });
     }
+    const replica = replicaHeader === '1';
     const type = mediaType(contentType);
     if (type === 'application/json') {
       if (process.env.DTN_ALLOW_JSON_INGEST !== '1') {
@@ -267,7 +281,12 @@ export class RelayController {
         });
       }
       const body = req.body as { bundle?: RelayBundle; from?: string };
-      return this.acceptPeerBundle(body?.bundle, body?.from, force);
+      return this.acceptPeerBundle(
+        stampPayloadSha256(body?.bundle, payloadSha256Header),
+        body?.from,
+        replica ? '1' : force,
+        replica,
+      );
     }
 
     if (type !== 'application/cbor') {
@@ -282,7 +301,7 @@ export class RelayController {
     if (!fromHeader) {
       return { accepted: false, delivered: false, event: 'ERROR', msg: 'bundle+from required' };
     }
-    if (force !== '1' && !this.contacts.isOpenTo(fromHeader)) {
+    if (force !== '1' && !replica && !this.contacts.isOpenTo(fromHeader)) {
       throw new ServiceUnavailableException({
         accepted: false,
         delivered: false,
@@ -316,14 +335,18 @@ export class RelayController {
       });
     }
 
-    const bundle: RelayBundle = { ...mapped.bundle, wire: raw.toString('base64') };
-    return this.acceptPeerBundle(bundle, fromHeader, '1');
+    const bundle = stampPayloadSha256(
+      { ...mapped.bundle, wire: raw.toString('base64') },
+      payloadSha256Header,
+    );
+    return this.acceptPeerBundle(bundle, fromHeader, '1', replica);
   }
 
   private acceptPeerBundle(
     bundle: RelayBundle | undefined,
     from: string | undefined,
-    force?: string
+    force?: string,
+    replica = false,
   ) {
     if (!bundle || !from) {
       return { accepted: false, delivered: false, event: 'ERROR', msg: 'bundle+from required' };
@@ -336,7 +359,7 @@ export class RelayController {
         msg: 'contact window closed — peer should store-and-forward later',
       });
     }
-    return this.bundles.ingestFromPeer(bundle, from);
+    return this.bundles.ingestFromPeer(bundle, from, replica);
   }
 
   private requireGraph(): GraphService {

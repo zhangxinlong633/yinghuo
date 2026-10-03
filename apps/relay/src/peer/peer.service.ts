@@ -91,7 +91,8 @@ export class PeerService {
   /** Push bundle to a specific next-hop relay over HTTP (CLA-ish). */
   async forwardTo(
     url: string,
-    bundle: RelayBundle
+    bundle: RelayBundle,
+    extraHeaders: Record<string, string> = {},
   ): Promise<{
     ok: boolean;
     body?: PeerIngestResult;
@@ -117,6 +118,10 @@ export class PeerService {
           'x-dtn-from': this.cfg.nodeId,
           'x-dtn-bundle-id': bundle.id,
           ...bpsecForwardHeaders(),
+          ...extraHeaders,
+          ...(bundle.payloadSha256
+            ? { 'x-dtn-payload-sha256': bundle.payloadSha256.toLowerCase() }
+            : {}),
         },
         body: wire,
         signal: AbortSignal.timeout(3000),

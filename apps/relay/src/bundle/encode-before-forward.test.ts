@@ -39,6 +39,10 @@ class MemoryStore {
     return [...this.custody.keys()];
   }
 
+  async listBundleIds(): Promise<string[]> {
+    return [...this.bundles.keys()];
+  }
+
   dropInbox(): void {}
 
   peekInbox(): [] {
@@ -99,7 +103,10 @@ function harness(eidByNode: Record<string, string>) {
   const peer = new PeerService(runtime);
   let forwards = 0;
   const forwardTo = peer.forwardTo.bind(peer);
-  peer.forwardTo = async (url, bundle) => {
+  peer.forwardTo = async (url, bundle, extraHeaders) => {
+    if (extraHeaders?.['x-dtn-replica'] === '1') {
+      return { ok: true, wireBase64: bundle.wire };
+    }
     forwards += 1;
     return forwardTo(url, bundle);
   };

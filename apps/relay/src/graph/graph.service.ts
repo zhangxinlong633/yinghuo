@@ -243,6 +243,10 @@ export class GraphService {
     return this.peers.get(id);
   }
 
+  listDirectPeerIds(): string[] {
+    return [...this.peers.keys()].sort();
+  }
+
   listKnownNodeIds(): string[] {
     return [...this.graph.nodes.keys()];
   }

@@ -29,6 +29,22 @@
 
 这仍不是 ION 级 CGR（无 coped 容量、无联系排除表、无多副本）。
 
+## 冷副本（节点挂掉）
+
+默认把主保管束再复制到最多 **2** 个直连节点（`DTN_REPLICA_N`，`0` 关闭）。副本走 `x-dtn-replica: 1` + `x-dtn-force: 1`，**不接管 custody、不 ACK、不投递收件箱**；下一跳和目的地不会被选为副本。
+
+选谁由 `DTN_REPLICA_STRATEGY` 决定（默认 `quality`），按**当前**图状态动态排：
+
+| 值 | 含义 |
+|----|------|
+| `quality` / `质量` | 先避开 unhealthy，再选时延+角色罚分更低的 |
+| `nearest` / `最近` | 先避开 unhealthy，再选坐标更近的 |
+| `far` / `远` | 先避开 unhealthy，再选坐标更远的（故障域分散） |
+
+副本节点挂掉不影响主路径；主节点挂掉后的状态同步尚未做。`GET /api/status` 的 `replica` 字段回显 `n`、`strategy` 与 `promote`。
+
+`DTN_REPLICA_PROMOTE` 默认开：当 `replicaOf` 在 unhealthy 名单且 `payloadSha256` 核对通过时，副本接管 custody（事件 `PROMOTE`）。哈希对不上记 `CORRUPT`，不提升。旧束无哈希字段不提升。`0` 关闭提升。
+
 ## K8s（D）
 
 `k8s/nodes.yaml` stub 容器环境变量与 daemon 对齐：`NODE_ID`／`PORT`／`CONTACT_PLAN`。镜像仍是 sleep 占位，可 `kubectl apply -k k8s/` 看 CRD／ConfigMap。

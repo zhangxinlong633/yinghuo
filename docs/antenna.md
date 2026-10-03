@@ -63,6 +63,7 @@ DTN（束递）**不规定物理线**：Bundle Protocol 跑在会聚层（CLA）
 |------|------|
 | [`hardware.md`](./hardware.md) | 开发板算力 |
 | [`satellite.md`](./satellite.md) | 1U + 壳贴太阳能 + 业余天线／发射成本 |
+| [`fault-tolerance.md`](./fault-tolerance.md) | 分布式、容错、宇宙射线 |
 | **本文** | 太阳系各档物理层与天线；地火／边缘干线 |
 
 一句话：**近地业余小天线；行星附近 UHF；跨行星 X／Ka（+ 光）；边缘必须地面大站 + 星上 HGA。**

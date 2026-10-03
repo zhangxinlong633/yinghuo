@@ -1039,6 +1039,7 @@ export function buildConsoleHtml(opts: {
       clear: '清空视图', loading: '加载中…', noEvents: '（无事件）', cleared: '（已清空，新事件会显示在这里）',
       eventsWord: '条事件', open: '开启', closed: '关闭',
       bundlesTitle: '束', colId: 'id', colSrc: '源', colDst: '目的', colState: '状态', colWhere: '当前节点', colUpdated: '更新时间',
+      replicaRole: '副本角色', replicaOf: '主保管', replicas: '副本节点',
       timeline: '时间线', notFound: '未找到', openBundle: '查看束', notDirect: '本机不直连',
       upstream: '上游', downstream: '下游',
       primaryVersion: '版本', primarySrcEid: '源 EID', primaryDstEid: '目的 EID',
@@ -1089,6 +1090,7 @@ export function buildConsoleHtml(opts: {
       clear: 'Clear view', loading: 'Loading…', noEvents: '(no events)', cleared: '(cleared — new events will appear)',
       eventsWord: 'events', open: 'OPEN', closed: 'CLOSED',
       bundlesTitle: 'Bundles', colId: 'id', colSrc: 'Source', colDst: 'Dest', colState: 'State', colWhere: 'Current node', colUpdated: 'Updated',
+      replicaRole: 'Replica role', replicaOf: 'Primary', replicas: 'Replicas',
       timeline: 'Timeline', notFound: 'Not found', openBundle: 'Open bundle', notDirect: 'not a direct link',
       upstream: 'upstream', downstream: 'downstream',
       primaryVersion: 'Version', primarySrcEid: 'Source EID', primaryDstEid: 'Dest EID',
@@ -1491,6 +1493,16 @@ export function buildConsoleHtml(opts: {
       t('colWhere') + ': ' + (bundle.custodian || '—'),
       t('colUpdated') + ': ' + updated,
     ];
+    if (bundle.replicaRole) {
+      lines.push(t('replicaRole') + ': ' + bundle.replicaRole);
+    }
+    if (bundle.replicaOf) lines.push(t('replicaOf') + ': ' + bundle.replicaOf);
+    if (Array.isArray(bundle.replicas) && bundle.replicas.length) {
+      lines.push(t('replicas') + ': ' + bundle.replicas.join(', '));
+    }
+    if (bundle.payloadSha256) {
+      lines.push('sha256: ' + String(bundle.payloadSha256).slice(0, 12));
+    }
     const primary = bundle.primary;
     if (primary) {
       lines.push(

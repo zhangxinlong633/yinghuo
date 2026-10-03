@@ -13,4 +13,4 @@
 
 省电选 ARM；要更大并发／盘余量选 x86。体积都是板卡级。上星前在目标板实测。ARM 需 ARM 版 `bp-codec`。
 
-卫星舱位与堆叠见 [`satellite.md`](./satellite.md)。
+卫星舱位与堆叠见 [`satellite.md`](./satellite.md)。单节点可牺牲的边界见 [`fault-tolerance.md`](./fault-tolerance.md)。

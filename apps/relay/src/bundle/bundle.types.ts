@@ -7,6 +7,8 @@ export interface RelayBundle {
   src: string;
   dst: string;
   payload: string;
+  /** Hex SHA-256 of payload. Absent on legacy bundles; those skip verification. */
+  payloadSha256?: string;
   createdAt: number;
   ttlMs: number;
   hops: Array<{ from: string; to: string; at: number }>;
@@ -16,6 +18,12 @@ export interface RelayBundle {
   events?: Array<{ t: number; node: string; kind: string; msg: string }>;
   /** Base64 BPv7 CBOR captured at forward or ingest. Task 6 may refine this. */
   wire?: string;
+  /** Primary keeps custody; replica is a cold copy on another node. */
+  replicaRole?: 'primary' | 'replica';
+  /** Primary custodian that requested this replica. */
+  replicaOf?: string;
+  /** Node ids that accepted a replica copy. */
+  replicas?: string[];
 }
 
 export interface CustodyRecord {
@@ -154,5 +162,10 @@ export interface RelayStatus {
     missionMs: number;
     epochMs: number | null;
     offsetMs: number;
+  };
+  replica: {
+    n: number;
+    strategy: 'nearest' | 'quality' | 'far';
+    promote: boolean;
   };
 }

@@ -206,6 +206,10 @@ bash apps/relay/scripts/unhealthy-retry.sh
 
 脚本：`dst` 引导；`alt`／`near` 加入；`src` 先 join `alt` 再 `/api/graph/join` → `near`。杀 `alt` 后 `src→dst` 改走 `near`，inbox 投递成功，再等 unhealthy 窗口清除。
 
+## 10b. 冷副本
+
+`DTN_REPLICA_N`（默认 2）把主保管束复制到其他直连节点。`DTN_REPLICA_STRATEGY`：`quality`（默认）／`nearest`／`far`，按当前坐标、接触时延、角色罚分和 unhealthy 动态选点。ingest 头 `x-dtn-replica: 1`：只落盘、不 custody、不 ACK、不进收件箱。下一跳与目的地不作为副本目标。`DTN_REPLICA_PROMOTE`（默认开）下，当 `replicaOf` 在 `graph.listUnhealthy()` 且 `payloadSha256` 校验通过时，`planTick` 将副本提升为 primary 并写入 custody（`PROMOTE` 事件）；哈希不符记 `CORRUPT`；无哈希的旧束不提升。`GET /api/status` → `replica.promote` 回显开关。
+
 ## 11. 包与脚本
 
 | 包 | 角色 |

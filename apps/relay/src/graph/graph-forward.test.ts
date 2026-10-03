@@ -39,6 +39,10 @@ class MemoryStore {
     return [...this.custody.keys()];
   }
 
+  async listBundleIds(): Promise<string[]> {
+    return [...this.bundles.keys()];
+  }
+
   dropInbox(): void {}
 
   peekInbox(): [] {
@@ -119,7 +123,12 @@ function harness(graphMode: boolean) {
     forwards += 1;
     return { ok: false, error: 'down', wireBase64: bundle.wire };
   };
-  peer.forwardTo = (url, bundle) => forwardImpl(url, bundle);
+  peer.forwardTo = (url, bundle, extraHeaders) => {
+    if (extraHeaders?.['x-dtn-replica'] === '1') {
+      return Promise.resolve({ ok: true, wireBase64: bundle.wire });
+    }
+    return forwardImpl(url, bundle);
+  };
   const bundles = new BundleService(
     cfg,
     store as unknown as LevelStore,
@@ -217,7 +226,10 @@ test('join-only peer URL is used when it is absent from cfg.peers', async () => 
   const contacts = new ContactService(cfg, graph);
   const peer = new PeerService(cfg, graph);
   let url = '';
-  peer.forwardTo = async (hopUrl, bundle) => {
+  peer.forwardTo = async (hopUrl, bundle, extraHeaders) => {
+    if (extraHeaders?.['x-dtn-replica'] === '1') {
+      return { ok: true, wireBase64: bundle.wire };
+    }
     url = hopUrl;
     return { ok: true, wireBase64: bundle.wire };
   };
