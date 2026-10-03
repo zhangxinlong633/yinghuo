@@ -6,7 +6,15 @@ import { parseRole } from '../role/role-policy';
 import { labelNodesWithComponents, weakComponents } from './graph-components';
 import { edgeKey, emptyGraph, mergeSummary } from './graph-merge';
 import { decideNextHop, type RouteDecision } from './graph-route';
-import type { GraphEdge, GraphNode, GraphSummary, LocalGraph } from './graph.types';
+import {
+  joinAllowed,
+  localRegion,
+  localTier,
+  parseRegionPeers,
+  parseTier,
+  regionEnabled,
+} from './region-policy';
+import type { GraphEdge, GraphNode, GraphSummary, LocalGraph, RegionGateway } from './graph.types';
 
 export const GRAPH_MAX_HOP = 3;
 /** Join-created direct edges; gossip must not age them out. */
@@ -42,6 +50,8 @@ export type JoinRemote = {
   y: number;
   peerUrl: string;
   role?: string;
+  region?: string;
+  tier?: string;
 };
 
 export type UnhealthyPeer = {
@@ -76,6 +86,7 @@ export type JoinResponse = {
 @Injectable()
 export class GraphService {
   private graph: LocalGraph = emptyGraph();
+  private readonly gateways = new Map<string, RegionGateway>();
   private readonly peers = new Map<string, string>();
   private readonly unhealthyUntil = new Map<string, number>();
   readonly unhealthyMs: number;
@@ -139,16 +150,44 @@ export class GraphService {
     return [...this.unhealthyUntil.keys()].sort();
   }
 
+  evaluateJoin(remote: JoinRemote): ReturnType<typeof joinAllowed> {
+    const partitioning = regionEnabled();
+    const mine = localRegion() ?? '';
+    const remoteTier = parseTier(remote.tier, remote.role);
+    return joinAllowed({
+      partitioning,
+      localRegion: mine,
+      remoteRegion: remote.region,
+      localTier: localTier(process.env, this.cfg.role),
+      remoteTier,
+      regionPeerKeys: Object.keys(parseRegionPeers(process.env.DTN_REGION_PEERS)),
+    });
+  }
+
+  listGateways(): RegionGateway[] {
+    return [...this.gateways.values()];
+  }
+
   applyJoin(remote: JoinRemote): void {
     this.cfg.eidByNode[remote.nodeId] = remote.eid;
     const role = remote.role ? parseRole(remote.role) : undefined;
     if (role) this.cfg.roleByNode[remote.nodeId] = role;
+    const region = remote.region ?? localRegion() ?? undefined;
+    const tier = parseTier(remote.tier, remote.role);
     this.upsertDirectPeer(
       remote.nodeId,
       remote.peerUrl,
-      { id: remote.nodeId, eid: remote.eid, x: remote.x, y: remote.y, role },
+      { id: remote.nodeId, eid: remote.eid, x: remote.x, y: remote.y, role, region, tier },
       DEFAULT_JOIN_SCHEDULE,
     );
+    const mine = localRegion();
+    if (remote.region && remote.region !== mine) {
+      this.gateways.set(remote.region, {
+        region: remote.region,
+        nodeId: remote.nodeId,
+        eid: remote.eid,
+      });
+    }
   }
 
   /**
@@ -195,13 +234,16 @@ export class GraphService {
 
   ingestSummary(summary: GraphSummary, now = Date.now()): void {
     const directs = [...this.graph.edges.values()].filter((edge) => edge.direct);
-    this.graph = mergeSummary(this.graph, summary, { maxHop: GRAPH_MAX_HOP, now });
+    this.graph = mergeSummary(this.graph, summary, {
+      maxHop: GRAPH_MAX_HOP,
+      now,
+      localRegion: localRegion(),
+    });
     for (const edge of directs) {
       this.graph.edges.set(edgeKey(edge.a, edge.b), edge);
     }
-    for (const node of summary.nodes) {
-      if (node.eid) this.cfg.eidByNode[node.id] = node.eid;
-      if (node.role) this.cfg.roleByNode[node.id] = parseRole(node.role);
+    for (const gateway of summary.gateways ?? []) {
+      this.gateways.set(gateway.region, gateway);
     }
     for (const node of this.graph.nodes.values()) {
       if (node.eid) this.cfg.eidByNode[node.id] = node.eid;
@@ -214,11 +256,30 @@ export class GraphService {
   }
 
   exportSummary(): GraphSummary {
-    return {
+    const mine = localRegion();
+    const partitioning = regionEnabled();
+    const tier = localTier(process.env, this.cfg.role);
+    let nodes = [...this.graph.nodes.values()];
+    let edges = [...this.graph.edges.values()];
+    if (partitioning && tier === 'edge') {
+      const me = this.cfg.nodeId;
+      const keep = new Set<string>([me, ...this.peers.keys()]);
+      nodes = nodes.filter((node) => keep.has(node.id));
+      edges = edges.filter((edge) => edge.direct === true && (edge.a === me || edge.b === me));
+    }
+    const summary: GraphSummary = {
       from: this.cfg.nodeId,
-      nodes: [...this.graph.nodes.values()],
-      edges: [...this.graph.edges.values()],
+      nodes: nodes.map((node) => ({
+        ...node,
+        region: node.region ?? mine ?? undefined,
+        tier: node.tier ?? parseTier(undefined, node.role),
+      })),
+      edges,
     };
+    if (partitioning && tier === 'backbone') {
+      summary.gateways = [...this.gateways.values()];
+    }
+    return summary;
   }
 
   decide(dst: string, now: number): RouteDecision {

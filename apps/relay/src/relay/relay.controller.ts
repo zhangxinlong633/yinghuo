@@ -1,5 +1,6 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Body,
   Controller,
   Get,
@@ -190,6 +191,10 @@ export class RelayController {
       });
     }
     const graph = this.requireGraph();
+    const decision = graph.evaluateJoin(body);
+    if (!decision.ok) {
+      throw new ForbiddenException({ ok: false, error: decision.error });
+    }
     graph.applyJoin(body);
     return graph.buildJoinResponse();
   }

@@ -247,3 +247,123 @@ test('ingest does not overwrite local coordinates', () => {
   assert.equal(self?.y, 2);
   assert.equal(self?.eid, 'ipn:1.1');
 });
+
+function restoreRegionEnv(prev: {
+  DTN_REGION: string | undefined;
+  DTN_TIER: string | undefined;
+  DTN_REGION_PEERS: string | undefined;
+}): void {
+  if (prev.DTN_REGION === undefined) delete process.env.DTN_REGION;
+  else process.env.DTN_REGION = prev.DTN_REGION;
+  if (prev.DTN_TIER === undefined) delete process.env.DTN_TIER;
+  else process.env.DTN_TIER = prev.DTN_TIER;
+  if (prev.DTN_REGION_PEERS === undefined) delete process.env.DTN_REGION_PEERS;
+  else process.env.DTN_REGION_PEERS = prev.DTN_REGION_PEERS;
+}
+
+test('evaluateJoin rejects foreign edge when DTN_REGION set', () => {
+  const prev = {
+    DTN_REGION: process.env.DTN_REGION,
+    DTN_TIER: process.env.DTN_TIER,
+    DTN_REGION_PEERS: process.env.DTN_REGION_PEERS,
+  };
+  process.env.DTN_REGION = 'earth';
+  process.env.DTN_TIER = 'backbone';
+  delete process.env.DTN_REGION_PEERS;
+  try {
+    const graph = new GraphService(cfg({ role: 'orbiter' }));
+    const no = graph.evaluateJoin({
+      nodeId: 'Phobos', eid: 'ipn:9.1', port: 9, x: 9, y: 0,
+      peerUrl: 'http://127.0.0.1:9', role: 'lander', region: 'mars',
+    });
+    assert.equal(no.ok, false);
+  } finally {
+    restoreRegionEnv(prev);
+  }
+});
+
+test('evaluateJoin allows foreign backbone listed in DTN_REGION_PEERS', () => {
+  const prev = {
+    DTN_REGION: process.env.DTN_REGION,
+    DTN_TIER: process.env.DTN_TIER,
+    DTN_REGION_PEERS: process.env.DTN_REGION_PEERS,
+  };
+  process.env.DTN_REGION = 'earth';
+  process.env.DTN_TIER = 'backbone';
+  process.env.DTN_REGION_PEERS = 'mars=http://127.0.0.1:3202';
+  try {
+    const graph = new GraphService(cfg({ role: 'orbiter' }));
+    const ok = graph.evaluateJoin({
+      nodeId: 'MarsGw', eid: 'ipn:3.1', port: 3202, x: 3, y: 0,
+      peerUrl: 'http://127.0.0.1:3202', role: 'orbiter', region: 'mars', tier: 'backbone',
+    });
+    assert.equal(ok.ok, true);
+  } finally {
+    restoreRegionEnv(prev);
+  }
+});
+
+test('edge exportSummary omits heard edges', () => {
+  const prev = {
+    DTN_REGION: process.env.DTN_REGION,
+    DTN_TIER: process.env.DTN_TIER,
+    DTN_REGION_PEERS: process.env.DTN_REGION_PEERS,
+  };
+  process.env.DTN_REGION = 'earth';
+  process.env.DTN_TIER = 'edge';
+  delete process.env.DTN_REGION_PEERS;
+  try {
+    const graph = new GraphService(cfg({ nodeId: 'Handset', role: 'lander' }));
+    graph.applyJoin({
+      nodeId: 'Relay', eid: 'ipn:2.1', port: 2, x: 1, y: 0,
+      peerUrl: 'http://127.0.0.1:2', role: 'orbiter', region: 'earth',
+    });
+    graph.ingestSummary({
+      from: 'Relay',
+      nodes: [{ id: 'Far', eid: 'ipn:8.1', x: 8, y: 0, region: 'earth' }],
+      edges: [{
+        a: 'Relay', b: 'Far', delayMs: 1, schedule: openNow, originatedAt: Date.now(), hopCount: 0,
+      }],
+    });
+    const sum = graph.exportSummary();
+    assert.equal(sum.edges.every((e) => e.direct === true || e.a === 'Handset' || e.b === 'Handset'), true);
+    assert.equal(sum.nodes.some((n) => n.id === 'Far'), false);
+  } finally {
+    restoreRegionEnv(prev);
+  }
+});
+
+test('backbone exportSummary lists foreign gateways and skips foreign eids', () => {
+  const prev = {
+    DTN_REGION: process.env.DTN_REGION,
+    DTN_TIER: process.env.DTN_TIER,
+    DTN_REGION_PEERS: process.env.DTN_REGION_PEERS,
+  };
+  process.env.DTN_REGION = 'earth';
+  process.env.DTN_TIER = 'backbone';
+  process.env.DTN_REGION_PEERS = 'mars=http://127.0.0.1:3202';
+  try {
+    const runtime = cfg({ role: 'orbiter' });
+    const graph = new GraphService(runtime);
+    graph.applyJoin({
+      nodeId: 'MarsGw', eid: 'ipn:3.1', port: 3202, x: 3, y: 0,
+      peerUrl: 'http://127.0.0.1:3202', role: 'orbiter', region: 'mars', tier: 'backbone',
+    });
+    graph.ingestSummary({
+      from: 'MarsGw',
+      nodes: [{ id: 'Phobos', eid: 'ipn:9.1', x: 9, y: 0, region: 'mars' }],
+      edges: [],
+      gateways: [{ region: 'venus', nodeId: 'VenusGw', eid: 'ipn:4.1' }],
+    });
+    assert.equal(runtime.eidByNode.Phobos, undefined);
+    assert.deepEqual(graph.listGateways(), [
+      { region: 'mars', nodeId: 'MarsGw', eid: 'ipn:3.1' },
+      { region: 'venus', nodeId: 'VenusGw', eid: 'ipn:4.1' },
+    ]);
+    const sum = graph.exportSummary();
+    assert.deepEqual(sum.gateways, graph.listGateways());
+    assert.equal(sum.nodes.some((n) => n.id === 'Phobos'), false);
+  } finally {
+    restoreRegionEnv(prev);
+  }
+});

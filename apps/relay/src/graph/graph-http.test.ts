@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { test } from 'node:test';
@@ -135,6 +135,52 @@ test('join and graph handlers record peers and ingest summaries', () => {
       return true;
     },
   );
+});
+
+test('peerJoin returns 403 REGION_MISMATCH before recording a foreign edge', () => {
+  const prev = {
+    DTN_REGION: process.env.DTN_REGION,
+    DTN_TIER: process.env.DTN_TIER,
+    DTN_REGION_PEERS: process.env.DTN_REGION_PEERS,
+  };
+  process.env.DTN_REGION = 'earth';
+  process.env.DTN_TIER = 'backbone';
+  delete process.env.DTN_REGION_PEERS;
+  try {
+    const runtime = cfg({ role: 'orbiter' });
+    const graph = new GraphService(runtime);
+    const contacts = new ContactService(runtime, graph);
+    const api = controller(graph, contacts, runtime);
+    assert.throws(
+      () =>
+        api.peerJoin({
+          nodeId: 'Phobos',
+          eid: 'ipn:9.1',
+          port: 9,
+          x: 9,
+          y: 0,
+          peerUrl: 'http://127.0.0.1:9',
+          role: 'lander',
+          region: 'mars',
+        }),
+      (err: unknown) => {
+        assert.ok(err instanceof ForbiddenException);
+        assert.equal(err.getStatus(), 403);
+        const body = err.getResponse() as { ok?: boolean; error?: string };
+        assert.equal(body.ok, false);
+        assert.equal(body.error, 'REGION_MISMATCH');
+        return true;
+      },
+    );
+    assert.equal(graph.peerUrl('Phobos'), undefined);
+  } finally {
+    if (prev.DTN_REGION === undefined) delete process.env.DTN_REGION;
+    else process.env.DTN_REGION = prev.DTN_REGION;
+    if (prev.DTN_TIER === undefined) delete process.env.DTN_TIER;
+    else process.env.DTN_TIER = prev.DTN_TIER;
+    if (prev.DTN_REGION_PEERS === undefined) delete process.env.DTN_REGION_PEERS;
+    else process.env.DTN_REGION_PEERS = prev.DTN_REGION_PEERS;
+  }
 });
 
 test('postJoin and postGraph update both sides over HTTP', async () => {
