@@ -392,4 +392,4 @@ bash apps/relay/scripts/unhealthy-retry.sh                  # unhealthy 故障�
 
 ## 许可
 
-MIT
+[BSD 3-Clause](./LICENSE)

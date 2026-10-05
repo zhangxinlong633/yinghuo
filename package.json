@@ -34,5 +34,5 @@
   "engines": {
     "node": ">=18"
   },
-  "license": "MIT"
+  "license": "BSD-3-Clause"
 }
